@@ -29,11 +29,19 @@ function App() {
     <div className={theme.page}>
       <header className={theme.header}>
         <div className="max-w-5xl mx-auto flex items-center justify-between px-6">
-          <div>
-            <h1 className="text-2xl font-bold">ChigyuSubs</h1>
-            <p className={`text-sm ${theme.subtext}`}>
-              Translate subtitles (VTT or SRT) using your Gemini API key.
-            </p>
+          <div className="flex items-center gap-4">
+            <img 
+              src="/gyudon.png" 
+              alt="Gyudon mascot" 
+              className="w-12 h-12 animate-float"
+              style={{ imageRendering: 'pixelated' }}
+            />
+            <div>
+              <h1 className="text-2xl font-bold">ChigyuSubs</h1>
+              <p className={`text-sm ${theme.subtext}`}>
+                Translate subtitles (VTT or SRT) using your Gemini API key.
+              </p>
+            </div>
           </div>
           <div>
             <Button tone="secondary" onClick={toggleTheme} className="text-sm">
