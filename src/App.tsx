@@ -462,7 +462,17 @@ function App() {
         </div>
       </main>
       <footer className={`${theme.header} text-center text-sm ${theme.subtext}`}>
-        <p className={theme.text}>ChigyuSubs — AI-powered subtitle translation</p>
+        <p className={theme.text}>
+          ChigyuSubs — AI-powered subtitle translation ·{' '}
+          <a
+            href="https://github.com/chigyusubs/chigyusubs.github.io"
+            className="underline"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub
+          </a>
+        </p>
       </footer>
     </div >
   )

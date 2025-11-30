@@ -4,7 +4,10 @@ __pycache__/
 .venv/
 venv/
 node_modules/
-bokesubs/node_modules/
 .DS_Store
 dist/
-bokesubs/dist/
+coverage/
+*.coverage
+*.log
+.vite/
+.eslintcache

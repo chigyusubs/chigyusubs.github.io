@@ -4,11 +4,16 @@ Browser-only subtitle translator for VTT or SRT files powered by Gemini. Upload 
 
 ## Quickstart (Node 18+)
 ```bash
-cd chigyusubs
 npm install
 npm run dev -- --host --port 5173
 ```
 Open http://localhost:5173, paste your Gemini API key, and translate. You can build with `npm run build` for a static bundle.
+
+## Deploy to GitHub Pages
+- The repo includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that builds on pushes to `main` and deploys the `dist/` bundle to Pages.
+- Set the Pages source to “GitHub Actions” in the repo settings.
+- The Vite base is `/` so it serves correctly at `https://chigyusubs.github.io`. If you later use a subpath or custom domain, adjust `base` in `vite.config.ts`.
+- To trigger manually, run the “Deploy to GitHub Pages” workflow from the Actions tab.
 
 ## Data flow & costs
 - Subtitles are sent to Gemini only when you click “Translate.” Media is sent only when you explicitly click “Upload media,” and the uploaded media is used for summary generation only (never embedded in translation prompts).
@@ -28,7 +33,7 @@ Open http://localhost:5173, paste your Gemini API key, and translate. You can bu
   For audio-only context: `ffmpeg -i input.mp4 -vn -ac 1 -ar 16000 -c:a aac -b:a 48k output.m4a`
 
 ## Project structure
-- `chigyusubs/` — React/Vite client (source under `src/`, utilities under `src/lib/`, assets bundled via Vite).
+- `src/` — React/Vite client (feature code under `src/`, shared utilities under `src/lib/`, assets bundled via Vite).
 - `.gitignore`, `LEGAL.md`, `LICENSE` — repository metadata.
 
 ## UI basics
