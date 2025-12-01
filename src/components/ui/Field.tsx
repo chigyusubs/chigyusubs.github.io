@@ -56,15 +56,23 @@ export function FilePicker({
 }: FilePickerProps) {
   const theme = useTheme()
   const isDisabled = !!rest.disabled
+  const isDark = theme.page.includes('theme-dark')
+  const isLight = theme.page.includes('theme-light')
+  const focusRingClass =
+    isDark
+      ? 'focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-stone-950 focus-within:ring-green-400/70'
+      : 'focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-orange-50 focus-within:ring-orange-300/70'
   return (
     <label
       className={`relative flex flex-col gap-2 border-2 border-dashed rounded-lg p-4 transition ${
         isDisabled
           ? 'opacity-60 cursor-not-allowed'
-          : theme.page.includes('bg-slate-95')
-            ? 'border-slate-700 hover:border-cyan-500 hover:bg-slate-800 cursor-pointer'
-            : 'border-slate-300 hover:border-blue-500 hover:bg-slate-50 cursor-pointer'
-      } ${className}`}
+          : isDark
+            ? 'border-stone-700 hover:border-green-400 hover:bg-stone-900 cursor-pointer'
+            : isLight
+              ? 'border-orange-100 hover:border-orange-400 hover:bg-orange-50 cursor-pointer'
+              : 'border-slate-300 hover:border-blue-500 hover:bg-slate-50 cursor-pointer'
+      } ${focusRingClass} ${className}`}
       aria-disabled={isDisabled}
     >
       <span className="text-sm font-medium">{label}</span>

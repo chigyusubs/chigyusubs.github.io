@@ -5,7 +5,6 @@ import { AUDIO_TOKENS_PER_SEC, VIDEO_TOKENS_PER_SEC_DEFAULT, VIDEO_TOKENS_PER_SE
 import { Button } from './ui/Button'
 import { SectionCard } from './ui/SectionCard'
 import { FilePicker } from './ui/Field'
-import { Spinner } from './Spinner'
 
 type Props = {
     vttFile: File | null
@@ -25,10 +24,11 @@ type Props = {
   submitting: boolean
   apiKey: string
   locked: boolean
+  mediaTooLargeWarning: boolean
 }
 
 function formatDuration(seconds: number | null): string {
-    if (!seconds || Number.isNaN(seconds)) return 'n/a'
+    if (seconds === null || Number.isNaN(seconds) || !Number.isFinite(seconds) || seconds <= 0) return 'n/a'
     const mins = Math.floor(seconds / 60)
     const secs = Math.round(seconds % 60)
     return `${mins}m ${secs.toString().padStart(2, '0')}s`
@@ -52,17 +52,31 @@ export function FileUploader({
     submitting,
     apiKey,
     locked,
+    mediaTooLargeWarning,
 }: Props) {
   const theme = useTheme()
+
+  const durationInfo =
+    videoDuration !== null && Number.isFinite(videoDuration) && videoDuration > 0
+      ? { seconds: videoDuration }
+      : null
+
   const estimateTokens = (): string | null => {
-    if (!videoDuration || Number.isNaN(videoDuration)) return null
-    const rate = useAudioOnly
+    if (!durationInfo) return null
+    const { seconds } = durationInfo
+    const isAudioFile = mediaFile?.type.startsWith('audio/')
+    const rate = isAudioFile || useAudioOnly
       ? AUDIO_TOKENS_PER_SEC
       : mediaResolution === 'low'
         ? VIDEO_TOKENS_PER_SEC_LOW
         : VIDEO_TOKENS_PER_SEC_DEFAULT
-    const est = Math.round(videoDuration * rate)
-    return `Est. tokens: ~${est.toLocaleString()} (${useAudioOnly ? 'audio-only' : `${mediaResolution} video`})`
+    const est = Math.round(seconds * rate)
+    const modeLabel = isAudioFile
+      ? 'audio file'
+      : useAudioOnly
+        ? 'audio-only'
+        : `${mediaResolution} video`
+    return `Est. tokens: ~${est.toLocaleString()} (${modeLabel})`
   }
   const isLocked = locked
   const videoProgress =
@@ -123,7 +137,6 @@ export function FileUploader({
                         onClick={handleUploadVideo}
                         disabled={!mediaFile || !apiKey || submitting || videoUploadState === 'uploading'}
                     >
-                        {videoUploadState === 'uploading' && <Spinner />}
                         {videoUploadState === 'uploading' ? LABELS.uploadMediaUploading : LABELS.uploadMedia}
                     </Button>
                     {videoRef && videoUploadState === 'ready' && (
@@ -149,11 +162,19 @@ export function FileUploader({
                 <p className={theme.helperText}>
                     {videoUploadMessage || 'Upload to verify Gemini processed the video.'}
                 </p>
-                {(videoSizeMb !== null || videoDuration !== null || estimateTokens()) && (
+                {mediaTooLargeWarning && (
+                  <p className={`${theme.warningText} text-xs`}>
+                    Selected media exceeds the 2&nbsp;GB Gemini/ffmpeg limit and cannot be uploaded.
+                  </p>
+                )}
+                {mediaFile && (
                     <div className={`${theme.helperText} space-y-1`}>
-                        {videoSizeMb !== null && <p>Size: {videoSizeMb.toFixed(2)} MB</p>}
-                        {videoDuration !== null && <p>Duration: {formatDuration(videoDuration)}</p>}
-                        {estimateTokens() && <p>{estimateTokens()}</p>}
+                        <p>Size: {videoSizeMb !== null ? `${videoSizeMb.toFixed(2)} MB` : 'n/a'}</p>
+                        <p>
+                          Duration:{' '}
+                          {durationInfo ? formatDuration(durationInfo.seconds) : 'n/a'}
+                        </p>
+                        <p>{estimateTokens() ?? 'Est. tokens: n/a'}</p>
                     </div>
                 )}
             </div>

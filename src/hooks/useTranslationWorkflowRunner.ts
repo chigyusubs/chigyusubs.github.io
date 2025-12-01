@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import {
   DEFAULT_CHUNK_SECONDS,
   DEFAULT_CONCURRENCY,
@@ -25,12 +25,14 @@ import { type ChunkStatus } from '../lib/translation'
 import { buildUserPrompt } from '../lib/prompts'
 import { parseSrt, parseVtt } from '../lib/vtt'
 import { useTranslationRunner } from './useTranslationRunner'
+import { getMediaDuration } from '../lib/mediaDuration'
 
 import { clearPrefs, loadPrefs, savePrefs, type UserPrefs } from '../lib/prefs'
 import { type CustomPreset, importPresets, downloadPresetFile, createPresetFromCurrent } from '../lib/presetImportExport'
 
 export function useTranslationWorkflowRunner() {
   const saved = loadPrefs()
+  const mediaProbeIdRef = useRef(0)
   const [vttFile, setVttFile] = useState<File | null>(null)
   const [mediaFile, setMediaFile] = useState<File | null>(null)
   const [useAudioOnly, setUseAudioOnly] = useState(saved?.useAudioOnly ?? DEFAULT_USE_AUDIO_ONLY)
@@ -54,6 +56,7 @@ export function useTranslationWorkflowRunner() {
   const [videoSizeMb, setVideoSizeMb] = useState<number | null>(null)
   const [videoUploadState, setVideoUploadState] = useState<'idle' | 'uploading' | 'ready' | 'error'>('idle')
   const [videoUploadMessage, setVideoUploadMessage] = useState('')
+  const [mediaTooLargeWarning, setMediaTooLargeWarning] = useState(false)
   const [temperature, setTemperature] = useState(saved?.temperature ?? DEFAULT_TEMPERATURE)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -95,24 +98,6 @@ export function useTranslationWorkflowRunner() {
   const normalizeCustomPrompt = (value: string) => {
     const trimmed = value.trim()
     return trimmed && trimmed === DEFAULT_SYSTEM_PROMPT_TEXT.trim() ? '' : trimmed
-  }
-
-  const getMediaDuration = async (file: File): Promise<number | null> => {
-    const isAudio = file.type.startsWith('audio/')
-    const el = document.createElement(isAudio ? 'audio' : 'video')
-    el.preload = 'metadata'
-    return await new Promise<number>((resolve, reject) => {
-      const url = URL.createObjectURL(file)
-      el.onloadedmetadata = () => {
-        URL.revokeObjectURL(url)
-        resolve(el.duration || 0)
-      }
-      el.onerror = (err) => {
-        URL.revokeObjectURL(url)
-        reject(err instanceof Error ? err : new Error('Unable to read media duration'))
-      }
-      el.src = url
-    }).catch(() => null)
   }
 
   useEffect(() => {
@@ -161,6 +146,7 @@ export function useTranslationWorkflowRunner() {
   ])
 
   const handleMediaChange = async (file: File | null) => {
+    const probeId = ++mediaProbeIdRef.current
     const maxUploadBytes = 2 * 1024 * 1024 * 1024 // 2GB limit for Gemini File API and ffmpeg wasm practicality
     if (file && file.size > maxUploadBytes) {
       setMediaFile(null)
@@ -170,6 +156,7 @@ export function useTranslationWorkflowRunner() {
       setVideoFileId(null)
       setVideoDuration(null)
       setVideoSizeMb(null)
+      setMediaTooLargeWarning(true)
       setUseSummary(false)
       setSummaryText('')
       setSummaryStatus('idle')
@@ -181,6 +168,7 @@ export function useTranslationWorkflowRunner() {
     setVideoRef(null)
     setVideoUploadState('idle')
     setVideoUploadMessage('')
+    setMediaTooLargeWarning(false)
     setVideoName(null)
     setVideoFileId(null)
     setVideoDuration(null)
@@ -193,7 +181,9 @@ export function useTranslationWorkflowRunner() {
       setVideoSizeMb(file.size / (1024 * 1024))
       try {
         const duration = await getMediaDuration(file)
-        setVideoDuration(duration || null)
+        if (mediaProbeIdRef.current === probeId) {
+          setVideoDuration(duration && Number.isFinite(duration) ? duration : null)
+        }
       } catch (err) {
         setVideoUploadMessage(err instanceof Error ? err.message : 'Unable to read video duration')
       }
@@ -220,8 +210,11 @@ export function useTranslationWorkflowRunner() {
         mediaToUpload = audio
         setVideoName(audio.name)
         setVideoSizeMb(audio.size / (1024 * 1024))
+        const probeId = ++mediaProbeIdRef.current
         const duration = await getMediaDuration(audio)
-        setVideoDuration(duration || null)
+        if (mediaProbeIdRef.current === probeId) {
+          setVideoDuration(duration && Number.isFinite(duration) ? duration : null)
+        }
       }
       const data = await uploadContextVideo(mediaToUpload, apiKey)
       setVideoRef(data.fileUri)
@@ -642,6 +635,7 @@ export function useTranslationWorkflowRunner() {
       videoRef,
       videoUploadState,
       videoUploadMessage,
+      mediaTooLargeWarning,
       videoSizeMb,
       videoDuration,
       temperature,

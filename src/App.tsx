@@ -88,6 +88,7 @@ function App() {
             submitting={state.submitting}
             apiKey={state.apiKey}
             locked={locked}
+            mediaTooLargeWarning={state.mediaTooLargeWarning}
           />
 
 
