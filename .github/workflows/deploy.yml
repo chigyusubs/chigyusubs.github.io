@@ -3,6 +3,13 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: ["main"]
+    paths-ignore:
+      - '**.md'
+      - '**.MD'
+      - '**/README.md'
+      - '**/USAGE.md'
+      - 'LICENSE'
+      - '.gitignore'
   workflow_dispatch:
 
 permissions:
@@ -10,8 +17,15 @@ permissions:
   pages: write
   id-token: write
 
+# avoid overlapping builds on rapid pushes
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
 jobs:
   build:
+    # allow manual runs; otherwise skip if message has [skip deploy]
+    if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip deploy]')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
