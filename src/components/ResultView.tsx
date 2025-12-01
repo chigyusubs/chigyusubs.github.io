@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { TranslateResult, ChunkStatus } from '../lib/translation'
 import { Button } from './ui/Button'
 import { SectionCard } from './ui/SectionCard'
@@ -29,6 +29,7 @@ function downloadText(filename: string, content: string, type = 'text/plain') {
 
 export function ResultView({ result, handleRetryChunk, retryingChunks, retryQueueIds = [] }: Props) {
     const theme = useTheme()
+    const [showPreview, setShowPreview] = useState(false)
     if (!result) return null
 
     return (
@@ -41,6 +42,23 @@ export function ResultView({ result, handleRetryChunk, retryingChunks, retryQueu
                     Download SRT
                 </Button>
             </div>
+            <div className="flex gap-2 mb-4">
+                <Button
+                    tone="secondary"
+                    onClick={() => setShowPreview((prev) => !prev)}
+                    disabled={!result.vtt}
+                >
+                    {showPreview ? 'Hide preview' : 'Show VTT preview'}
+                </Button>
+            </div>
+            {showPreview && result.vtt && (
+                <div
+                    className="mb-4 p-3 rounded border text-xs font-mono whitespace-pre-wrap max-h-64 overflow-y-auto"
+                    style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor }}
+                >
+                    {result.vtt}
+                </div>
+            )}
 
             {result.warnings.length > 0 && (
                 <div className={`mb-4 p-3 rounded text-sm ${theme.well.warning}`}>
