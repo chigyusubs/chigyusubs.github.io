@@ -66,6 +66,10 @@ export function GeminiDebugLog() {
 
   const latest = useMemo(() => entries.slice(0, 30), [entries]);
 
+  const tableHeaderClass = isDark ? "bg-stone-950 text-stone-100" : "bg-orange-50 text-orange-900"
+  const rowClasses = isDark
+    ? "border-t border-stone-900 bg-stone-950 text-stone-100 odd:bg-stone-900"
+    : "border-t border-orange-100 bg-orange-50 text-orange-900 odd:bg-orange-100"
   return (
     <SectionCard
       title="Debug log"
@@ -91,10 +95,8 @@ export function GeminiDebugLog() {
       </div>
       {open && (
         <div className="overflow-x-auto border rounded" style={{ borderColor: theme.borderColor }}>
-          <table
-            className={`min-w-full text-sm ${isDark ? "text-slate-100" : "text-slate-700"}`}
-          >
-            <thead className={isDark ? "bg-slate-800 text-slate-100" : "bg-slate-100 text-slate-700"}>
+          <table className={`min-w-full text-sm ${isDark ? "text-stone-100" : "text-orange-900"}`}>
+            <thead className={tableHeaderClass}>
               <tr>
                 <th className="px-3 py-2 text-left">Time</th>
                 <th className="px-3 py-2 text-left">Purpose</th>
@@ -110,14 +112,7 @@ export function GeminiDebugLog() {
             </thead>
             <tbody>
               {latest.map((entry) => (
-                <tr
-                  key={entry.id}
-                  className={
-                    isDark
-                      ? "border-t border-slate-800 bg-slate-900 text-slate-100 odd:bg-slate-800"
-                      : "border-t border-slate-200 bg-white text-slate-700 odd:bg-slate-50"
-                  }
-                >
+                <tr key={entry.id} className={rowClasses}>
                   <td className="px-3 py-2 whitespace-nowrap">{formatTime(entry.timestamp)}</td>
                   <td className="px-3 py-2 whitespace-nowrap">
                     {entry.purpose}
