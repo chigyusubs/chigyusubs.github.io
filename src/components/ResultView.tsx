@@ -53,7 +53,7 @@ export function ResultView({ result, handleRetryChunk, retryingChunks, retryQueu
             </div>
             {showPreview && result.vtt && (
                 <div
-                    className="mb-4 p-3 rounded border text-xs font-mono whitespace-pre-wrap max-h-64 overflow-y-auto"
+                    className="mb-4 p-3 rounded border text-base font-mono whitespace-pre-wrap max-h-64 overflow-y-auto"
                     style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor }}
                 >
                     {result.vtt}
@@ -137,36 +137,55 @@ export function ResultView({ result, handleRetryChunk, retryingChunks, retryQueu
                         )}
                         <details className="mt-2">
                             <summary className={`cursor-pointer text-xs ${theme.mutedText}`}>
-                                Show details (Prompt, Raw Output, Parsed VTT)
+                                Show details
                             </summary>
                             <div className="mt-2 space-y-2">
                                 <div>
-                                    <p className="text-xs font-semibold">Prompt Sent:</p>
+                                    <p className="text-sm font-semibold">Prompt Sent:</p>
                                     <pre
-                                        className="p-2 rounded border text-xs font-mono whitespace-pre-wrap max-h-40 overflow-y-auto"
+                                        className="p-2 rounded border text-base font-mono whitespace-pre-wrap max-h-40 overflow-y-auto"
                                         style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor }}
                                     >
                                         {chunk.prompt || '(no prompt recorded)'}
                                     </pre>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-semibold">Raw Model Output:</p>
+                                    <p className="text-sm font-semibold">Raw Model Output:</p>
                                     <pre
-                                        className="p-2 rounded border text-xs font-mono whitespace-pre-wrap max-h-40 overflow-y-auto"
+                                        className="p-2 rounded border text-base font-mono whitespace-pre-wrap max-h-40 overflow-y-auto"
                                         style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor }}
                                     >
                                         {chunk.raw_model_output || '(no output)'}
                                     </pre>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-semibold">Parsed VTT:</p>
+                                    <p className="text-sm font-semibold">Parsed VTT:</p>
                                     <pre
-                                        className="p-2 rounded border text-xs font-mono whitespace-pre-wrap max-h-40 overflow-y-auto"
+                                        className="p-2 rounded border text-base font-mono whitespace-pre-wrap max-h-40 overflow-y-auto"
                                         style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor }}
                                     >
                                         {chunk.vtt || '(no valid vtt)'}
                                     </pre>
                                 </div>
+                                {chunk.status === 'ok' && (
+                                    <div className="pt-2 flex justify-between items-center">
+                                        <p className={`text-[10px] ${theme.mutedText}`}>
+                                            Use this if the chunk has hallucinations or repeated lines.
+                                        </p>
+                                        <Button
+                                            className="text-xs px-2 py-1"
+                                            tone="secondary"
+                                            onClick={() => handleRetryChunk(chunk)}
+                                            disabled={retryingChunks.includes(chunk.idx) || retryQueueIds.includes(chunk.idx)}
+                                        >
+                                            {retryingChunks.includes(chunk.idx)
+                                                ? 'Retrying...'
+                                                : retryQueueIds.includes(chunk.idx)
+                                                    ? 'Queued'
+                                                    : 'Retry'}
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         </details>
                     </div>

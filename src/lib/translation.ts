@@ -28,6 +28,9 @@ export type ChunkStatus = {
   system_prompt?: string;
   started_at: number;
   finished_at: number;
+  model_name?: string;
+  temperature?: number;
+  duration_ms?: number;
 };
 
 function baseChunkStatus(

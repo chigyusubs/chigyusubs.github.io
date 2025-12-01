@@ -66,7 +66,7 @@ export function GeminiDebugLog() {
 
   const latest = useMemo(() => entries.slice(0, 30), [entries]);
 
-  const tableHeaderClass = isDark ? "bg-stone-950 text-stone-100" : "bg-orange-50 text-orange-900"
+  const tableHeaderClass = isDark ? "bg-stone-950 text-stone-100" : "bg-orange-50/50 text-orange-800"
   const rowClasses = isDark
     ? "border-t border-stone-900 bg-stone-950 text-stone-100 odd:bg-stone-900"
     : "border-t border-orange-100 bg-orange-50 text-orange-900 odd:bg-orange-100"

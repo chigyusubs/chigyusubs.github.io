@@ -28,12 +28,15 @@ export const TextInput = React.forwardRef<HTMLInputElement, InputProps>(
 )
 TextInput.displayName = 'TextInput'
 
-type TextAreaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>
+type TextAreaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
+  variant?: 'default' | 'code'
+}
 
 export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
-  ({ className = '', ...rest }, ref) => {
+  ({ className = '', variant = 'default', ...rest }, ref) => {
     const theme = useTheme()
-    const merged = `${theme.input} ${className}`.trim()
+    const baseClass = variant === 'code' ? theme.inputCode : theme.input
+    const merged = `${baseClass} ${className}`.trim()
     return <textarea ref={ref} className={merged} {...rest} />
   },
 )
@@ -64,15 +67,14 @@ export function FilePicker({
       : 'focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-orange-50 focus-within:ring-orange-300/70'
   return (
     <label
-      className={`relative flex flex-col gap-2 border-2 border-dashed rounded-lg p-4 transition ${
-        isDisabled
+      className={`relative flex flex-col gap-2 border-2 border-dashed rounded-lg p-4 transition ${isDisabled
           ? 'opacity-60 cursor-not-allowed'
           : isDark
             ? 'border-stone-700 hover:border-green-400 hover:bg-stone-900 cursor-pointer'
             : isLight
               ? 'border-orange-100 hover:border-orange-400 hover:bg-orange-50 cursor-pointer'
               : 'border-slate-300 hover:border-blue-500 hover:bg-slate-50 cursor-pointer'
-      } ${focusRingClass} ${className}`}
+        } ${focusRingClass} ${className}`}
       aria-disabled={isDisabled}
     >
       <span className="text-sm font-medium">{label}</span>

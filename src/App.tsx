@@ -30,9 +30,9 @@ function App() {
       <header className={theme.header}>
         <div className="max-w-5xl mx-auto flex items-center justify-between px-6">
           <div className="flex items-center gap-4">
-            <img 
-              src="/gyudon.png" 
-              alt="Gyudon mascot" 
+            <img
+              src="/gyudon.png"
+              alt="Gyudon mascot"
               className="w-12 h-12 animate-float"
               style={{ imageRendering: 'pixelated' }}
             />
@@ -205,7 +205,7 @@ function App() {
 
             <details className="mt-3 mb-2">
               <summary className={`cursor-pointer text-sm ${theme.subtext}`}>
-                Summary prompt (editable)
+                Summary Prompt
               </summary>
               <div className="flex justify-end mb-1">
                 <RestoreButton
@@ -215,6 +215,7 @@ function App() {
                 />
               </div>
               <TextArea
+                variant="code"
                 className="h-24 mt-2"
                 value={state.summaryPrompt}
                 onChange={(e) => actions.setSummaryPrompt(e.target.value)}
@@ -224,7 +225,7 @@ function App() {
 
             <details className="mt-3 mb-2">
               <summary className={`cursor-pointer text-sm ${theme.subtext}`}>
-                Glossary prompt (editable)
+                Glossary Prompt
               </summary>
               <div className="flex justify-end mb-1">
                 <RestoreButton
@@ -234,6 +235,7 @@ function App() {
                 />
               </div>
               <TextArea
+                variant="code"
                 className="h-24 mt-2"
                 value={state.glossaryPrompt}
                 onChange={(e) => actions.setGlossaryPrompt(e.target.value)}
@@ -243,7 +245,7 @@ function App() {
 
             <details className="mt-4">
               <summary className={`cursor-pointer text-sm ${theme.subtext}`}>
-                Custom System Prompt
+                Translation System Prompt
               </summary>
               <div className="flex justify-end mt-2">
                 <RestoreButton
@@ -253,7 +255,8 @@ function App() {
                 />
               </div>
               <TextArea
-                className="h-32 mt-2 font-mono text-xs"
+                variant="code"
+                className="h-32 mt-2"
                 value={state.customPrompt}
                 onChange={(e) => actions.setCustomPrompt(e.target.value)}
                 placeholder="Override the default system prompt..."
@@ -263,10 +266,10 @@ function App() {
 
             <details className="mt-4">
               <summary className={`cursor-pointer text-sm ${theme.subtext}`}>
-                Preview User Prompt
+                User Prompt Preview
               </summary>
               <pre
-                className="mt-2 p-3 rounded border text-xs font-mono whitespace-pre-wrap h-48 overflow-y-auto"
+                className="mt-2 p-3 rounded border text-base font-mono whitespace-pre-wrap h-48 overflow-y-auto"
                 style={{
                   backgroundColor: theme.codeBackground,
                   borderColor: theme.borderColor,
@@ -298,7 +301,8 @@ function App() {
               <p className={`text-sm ${theme.dangerText} mb-2`}>{state.summaryError}</p>
             )}
             <TextArea
-              className="h-32 font-mono text-xs"
+              variant="code"
+              className="h-32"
               placeholder="Summary context..."
               value={state.summaryText}
               onChange={(e) => {
@@ -331,7 +335,8 @@ function App() {
               </Button>
             </div>
             <TextArea
-              className="h-32 font-mono text-xs"
+              variant="code"
+              className="h-32"
               placeholder="Glossary (source,target)..."
               value={state.glossary}
               onChange={(e) => {

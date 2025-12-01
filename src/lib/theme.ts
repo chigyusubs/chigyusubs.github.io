@@ -7,6 +7,7 @@ export type Theme = {
   section: string;
   label: string;
   input: string;
+  inputCode: string;
   borderColor: string;
   buttonPrimary: string;
   buttonSecondary: string;
@@ -52,6 +53,8 @@ export const lightTheme: Theme = {
   label: "block text-sm font-bold mb-1 text-slate-700",
   input:
     "w-full rounded-xl border border-slate-200 p-2.5 text-sm bg-white text-slate-900 focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all",
+  inputCode:
+    "w-full rounded-xl border border-slate-200 p-2.5 text-base font-mono bg-white text-slate-900 focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all",
   borderColor: "#fed7aa", // orange-200
   buttonPrimary:
     "px-5 py-2.5 rounded-xl bg-orange-500 text-white font-semibold shadow-sm hover:bg-orange-600 hover:shadow hover:-translate-y-0.5 active:translate-y-0 disabled:bg-orange-200 disabled:shadow-none disabled:cursor-not-allowed transition-all",
@@ -75,12 +78,12 @@ export const lightTheme: Theme = {
   badge: {
     ok: "bg-green-100 text-green-800 border border-green-200 rounded-lg px-2 py-0.5 font-medium",
     processing: "bg-orange-100 text-orange-800 border border-orange-200 rounded-lg px-2 py-0.5 font-medium animate-pulse",
-    error: "bg-rose-100 text-rose-800 border border-rose-200 rounded-lg px-2 py-0.5 font-medium",
+    error: "bg-orange-100 text-orange-800 border border-orange-200 rounded-lg px-2 py-0.5 font-medium",
     neutral: "bg-slate-100 text-slate-700 border border-slate-200 rounded-lg px-2 py-0.5 font-medium",
   },
   statusCard: {
-    ok: "border-green-200 bg-green-50/50 rounded-xl",
-    failed: "border-rose-200 bg-rose-50/50 rounded-xl",
+    ok: "border-green-200 bg-green-100/50 rounded-xl",
+    failed: "border-orange-200 bg-orange-100/50 rounded-xl",
     neutral: "border-slate-200 bg-slate-50/50 rounded-xl",
   },
   well: {
@@ -101,6 +104,8 @@ export const darkTheme: Theme = {
   label: "block text-sm font-bold mb-1 text-stone-200",
   input:
     "w-full rounded-xl border border-stone-700 p-2.5 text-sm bg-stone-950 text-stone-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all",
+  inputCode:
+    "w-full rounded-xl border border-stone-700 p-2.5 text-base font-mono bg-stone-950 text-stone-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all",
   borderColor: "#1c1917", // stone-900
   buttonPrimary:
     "px-5 py-2.5 rounded-xl bg-orange-600 text-white font-semibold shadow-sm hover:bg-orange-500 hover:shadow hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all",
@@ -124,12 +129,12 @@ export const darkTheme: Theme = {
   badge: {
     ok: "bg-green-900/30 text-green-300 border border-green-800 rounded-lg px-2 py-0.5 font-medium",
     processing: "bg-orange-900/30 text-orange-300 border border-orange-800 rounded-lg px-2 py-0.5 font-medium animate-pulse",
-    error: "bg-rose-900/30 text-rose-300 border border-rose-800 rounded-lg px-2 py-0.5 font-medium",
+    error: "bg-orange-900/30 text-orange-300 border border-orange-800 rounded-lg px-2 py-0.5 font-medium",
     neutral: "bg-stone-800 text-stone-300 border border-stone-700 rounded-lg px-2 py-0.5 font-medium",
   },
   statusCard: {
-    ok: "border-green-800 bg-green-900/20 rounded-xl",
-    failed: "border-rose-800 bg-rose-900/20 rounded-xl",
+    ok: "border-green-800/50 bg-green-900/20 rounded-xl",
+    failed: "border-orange-800/50 bg-orange-900/20 rounded-xl",
     neutral: "border-stone-800 bg-stone-900/20 rounded-xl",
   },
   well: {
