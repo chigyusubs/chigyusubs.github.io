@@ -53,7 +53,7 @@ export function ResultView({ result, handleRetryChunk, retryingChunks, retryQueu
             </div>
             {showPreview && result.vtt && (
                 <div
-                    className="mb-4 p-3 rounded border text-base font-mono whitespace-pre-wrap max-h-64 overflow-y-auto"
+                    className="mb-4 p-3 rounded border text-base whitespace-pre-wrap max-h-64 overflow-y-auto"
                     style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor }}
                 >
                     {result.vtt}
@@ -143,7 +143,7 @@ export function ResultView({ result, handleRetryChunk, retryingChunks, retryQueu
                                 <div>
                                     <p className="text-sm font-semibold">Prompt Sent:</p>
                                     <pre
-                                        className="p-2 rounded border text-base font-mono whitespace-pre-wrap max-h-40 overflow-y-auto"
+                                        className="p-2 rounded border text-base whitespace-pre-wrap max-h-40 overflow-y-auto"
                                         style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor }}
                                     >
                                         {chunk.prompt || '(no prompt recorded)'}
@@ -152,7 +152,7 @@ export function ResultView({ result, handleRetryChunk, retryingChunks, retryQueu
                                 <div>
                                     <p className="text-sm font-semibold">Raw Model Output:</p>
                                     <pre
-                                        className="p-2 rounded border text-base font-mono whitespace-pre-wrap max-h-40 overflow-y-auto"
+                                        className="p-2 rounded border text-base whitespace-pre-wrap max-h-40 overflow-y-auto"
                                         style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor }}
                                     >
                                         {chunk.raw_model_output || '(no output)'}
@@ -161,7 +161,7 @@ export function ResultView({ result, handleRetryChunk, retryingChunks, retryQueu
                                 <div>
                                     <p className="text-sm font-semibold">Parsed VTT:</p>
                                     <pre
-                                        className="p-2 rounded border text-base font-mono whitespace-pre-wrap max-h-40 overflow-y-auto"
+                                        className="p-2 rounded border text-base whitespace-pre-wrap max-h-40 overflow-y-auto"
                                         style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor }}
                                     >
                                         {chunk.vtt || '(no valid vtt)'}

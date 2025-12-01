@@ -52,9 +52,9 @@ export const lightTheme: Theme = {
     "shadow-sm rounded-xl p-5 mb-4 border border-orange-100/50 bg-white transition-colors hover:shadow-md",
   label: "block text-sm font-bold mb-1 text-slate-700",
   input:
-    "w-full rounded-xl border border-slate-200 p-2.5 text-sm bg-white text-slate-900 focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all",
+    "w-full rounded-xl border border-slate-200 p-2.5 text-base bg-white text-slate-900 focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all",
   inputCode:
-    "w-full rounded-xl border border-slate-200 p-2.5 text-base font-mono bg-white text-slate-900 focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all",
+    "w-full rounded-xl border border-slate-200 p-2.5 text-base bg-white text-slate-900 focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all",
   borderColor: "#fed7aa", // orange-200
   buttonPrimary:
     "px-5 py-2.5 rounded-xl bg-orange-500 text-white font-semibold shadow-sm hover:bg-orange-600 hover:shadow hover:-translate-y-0.5 active:translate-y-0 disabled:bg-orange-200 disabled:shadow-none disabled:cursor-not-allowed transition-all",
@@ -103,9 +103,9 @@ export const darkTheme: Theme = {
     "shadow-sm rounded-xl p-5 mb-4 border border-stone-800 bg-stone-900/50 transition-colors hover:bg-stone-900",
   label: "block text-sm font-bold mb-1 text-stone-200",
   input:
-    "w-full rounded-xl border border-stone-700 p-2.5 text-sm bg-stone-950 text-stone-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all",
+    "w-full rounded-xl border border-stone-700 p-2.5 text-base bg-stone-950 text-stone-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all",
   inputCode:
-    "w-full rounded-xl border border-stone-700 p-2.5 text-base font-mono bg-stone-950 text-stone-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all",
+    "w-full rounded-xl border border-stone-700 p-2.5 text-base bg-stone-950 text-stone-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all",
   borderColor: "#1c1917", // stone-900
   buttonPrimary:
     "px-5 py-2.5 rounded-xl bg-orange-600 text-white font-semibold shadow-sm hover:bg-orange-500 hover:shadow hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all",

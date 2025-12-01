@@ -269,7 +269,7 @@ function App() {
                 User Prompt Preview
               </summary>
               <pre
-                className="mt-2 p-3 rounded border text-base font-mono whitespace-pre-wrap h-48 overflow-y-auto"
+                className="mt-2 p-3 rounded border text-base whitespace-pre-wrap h-48 overflow-y-auto"
                 style={{
                   backgroundColor: theme.codeBackground,
                   borderColor: theme.borderColor,
