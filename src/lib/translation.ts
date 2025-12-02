@@ -1,7 +1,6 @@
 import { chunkCues, type Chunk } from "./chunker";
 import {
   buildUserPrompt,
-  systemPromptMultimodal,
   systemPromptTextOnly,
 } from "./prompts";
 import { deriveSrt, stitchVtt } from "./stitcher";
@@ -155,9 +154,9 @@ async function translateChunk(
     targetLang: opts.targetLang,
     glossary: opts.glossary,
     customPrompt: opts.customPrompt,
-    videoUri: opts.videoUri,
-    videoLabel: opts.videoLabel,
-    mediaKind: opts.mediaKind,
+    videoUri: undefined,
+    videoLabel: null,
+    mediaKind: undefined,
     temperature: opts.temperature,
     summaryText: opts.summaryText,
     useGlossary: opts.useGlossary,
@@ -249,9 +248,7 @@ export async function translateChunkFromText(
     summaryText,
     useGlossary,
   );
-  const systemPrompt = videoUri
-    ? systemPromptMultimodal(customPrompt, mediaKind || "video")
-    : systemPromptTextOnly(customPrompt);
+  const systemPrompt = systemPromptTextOnly(customPrompt);
 
   let translated = "";
   try {
@@ -260,7 +257,7 @@ export async function translateChunkFromText(
       modelName,
       systemPrompt,
       userPrompt,
-      videoUri: videoUri || undefined,
+      videoUri: undefined,
       temperature,
       safetyOff,
       trace: {
@@ -452,9 +449,8 @@ export async function translateCues(
     temperature,
     safetyOff,
   } = opts;
-  const effectiveTarget =
-    mediaKind === "audio" ? Math.min(targetSeconds ?? 600, 300) : targetSeconds;
-  const effectiveOverlap = mediaKind === "audio" ? 1 : (overlap ?? 2);
+  const effectiveTarget = targetSeconds;
+  const effectiveOverlap = (overlap ?? 2);
   const chunks = chunkCues(cues, effectiveTarget, effectiveOverlap);
   const requestedLimit =
     typeof concurrency === "number" ? concurrency : Math.max(1, chunks.length);
@@ -485,9 +481,6 @@ export async function translateCues(
         targetLang,
         glossary,
         customPrompt,
-        videoUri,
-        videoLabel,
-        mediaKind,
         temperature,
         summaryText,
         useGlossary,
@@ -530,9 +523,6 @@ export async function translateCues(
           targetLang,
           glossary,
           customPrompt,
-          videoUri,
-          videoLabel,
-          mediaKind,
           temperature,
           summaryText,
           useGlossary,
@@ -575,6 +565,6 @@ export async function translateCues(
     chunks: chunkResults,
     vtt: finalVtt,
     srt: finalSrt,
-    video_ref: videoUri || null,
+    video_ref: opts.videoUri, // Return the video reference that was passed in
   };
 }

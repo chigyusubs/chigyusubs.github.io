@@ -155,7 +155,6 @@ export function useTranslationRunner() {
         chunks: pending,
         vtt: "",
         srt: "",
-        video_ref: opts.videoRef,
       });
       setProgress("Translating…");
       setIsRunning(true);
@@ -169,9 +168,7 @@ export function useTranslationRunner() {
       glossary: opts.glossary,
       useGlossary: opts.useGlossary && opts.glossary.trim() ? true : false,
       customPrompt: opts.customPrompt,
-      // Context video/audio is intentionally not passed here to avoid extra
-      // generation cost/rate-limit hits; change to opts.videoRef if re-enabled.
-      videoUri: undefined,
+      videoUri: opts.videoRef,
       videoLabel: null,
       mediaKind: undefined,
       concurrency: opts.concurrency,
@@ -243,7 +240,6 @@ export function useTranslationRunner() {
             chunks: merged,
             vtt: stitchedVtt,
             srt: stitchedVtt ? deriveSrt(stitchedVtt) : "",
-            video_ref: prev?.video_ref ?? opts.videoRef ?? null,
           };
           resultRef.current = nextResult;
           return nextResult;
@@ -292,7 +288,7 @@ export function useTranslationRunner() {
           c.idx === chunk.idx
             ? {
                 ...c,
-                status: "processing",
+                status: "processing" as const,
                 started_at: now,
                 finished_at: 0,
               }
@@ -312,8 +308,6 @@ export function useTranslationRunner() {
         targetLang: opts.targetLang,
         glossary: opts.glossary,
         customPrompt: opts.customPrompt,
-        // Context video/audio is intentionally not passed here to avoid extra
-        // generation cost/rate-limit hits; change to opts.videoRef if re-enabled.
         videoUri: undefined,
         videoLabel: null,
         mediaKind: undefined,

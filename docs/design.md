@@ -174,6 +174,11 @@ if (summaryText?.trim()) {
 **Alternative considered**: Single generic prompt
 - ❌ **Rejected**: Model would either ignore media or over-rely on it
 
+**Note (Updated 2025-12-02)**: While all three variants are preserved for compatibility,
+the actual translation workflow was modified to always use text-only prompts to avoid
+sending media data during subtitle translation (removing stale multimodal codepath).
+The audio/video variants are now primarily used for summary generation.
+
 ---
 
 ## 🚧 Implementation Constraints
@@ -810,7 +815,19 @@ const glossary =
 
 ## 📜 Version History
 
-### v2.0 - Current (2025-12-02)
+### v2.1 - Current (2025-12-02)
+**Design Changes**:
+- Removed stale multimodal codepath from translation workflow
+- Translation now exclusively uses text-only prompts to avoid sending media
+- Audio/video system prompts now primarily used for summary generation
+- Added note about preserved compatibility for summary generation
+
+**Implementation**:
+- Modified `translateChunkFromText()` to always use text-only system prompt
+- Removed videoUri parameter from translation API calls
+- Updated tests to use correct header format in mocks
+
+### v2.0 - Previous (2025-12-02)
 **Design Changes**:
 - Added source/target language support (`<source>`, `<target>` placeholders)
 - Documented three system prompt variants (text/audio/video)

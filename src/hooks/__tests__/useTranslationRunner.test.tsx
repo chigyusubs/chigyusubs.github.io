@@ -45,7 +45,6 @@ describe("useTranslationRunner", () => {
         chunks: [chunk],
         vtt: chunk.vtt,
         srt: "1\n00:00:00,000 --> 00:00:01,000\nline",
-        video_ref: null,
       };
       return result;
     });
@@ -87,7 +86,6 @@ describe("useTranslationRunner", () => {
       chunks: [chunk],
       vtt: chunk.vtt,
       srt: "",
-      video_ref: null,
     });
     translationMocks.translateChunkFromTextMock.mockImplementation(async () => {
       await new Promise((resolve) => setTimeout(resolve, 20));

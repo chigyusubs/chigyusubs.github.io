@@ -12,19 +12,6 @@ export function systemPromptTextOnly(custom: string | undefined): string {
   return DEFAULT_SYSTEM_PROMPT_TEXT;
 }
 
-export function systemPromptMultimodal(
-  custom: string | undefined,
-  mediaKind: "audio" | "video",
-): string {
-  // Only used when the internal multimodal translation path attaches media; no UI expose.
-  const base =
-    mediaKind === "audio"
-      ? DEFAULT_SYSTEM_PROMPT_AUDIO
-      : DEFAULT_SYSTEM_PROMPT_VIDEO;
-  if (custom?.trim()) return custom.trim();
-  return base;
-}
-
 export function glossarySystemPrompt(
   custom: string | undefined,
   targetLang: string,

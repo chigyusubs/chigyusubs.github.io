@@ -103,22 +103,11 @@ export const DEFAULT_SYSTEM_PROMPT_TEXT =
   "- If unsure, choose the most natural target-language phrasing without adding content.\n" +
   "- Return ONLY the WebVTT cues. No explanations, no headers unless present in input.\n\n";
 
-// These multimodal defaults are used only when the hidden multimodal translation path selects
-// video/audio processing; the UI exposes no direct toggle for these variants.
-export const DEFAULT_SYSTEM_PROMPT_VIDEO =
-  "You are a professional subtitle translator. Use the attached video only to disambiguate tone, sarcasm, laughter, and on-screen captions. " +
-  "Keep timing and line breaks EXACTLY as provided. Do NOT invent content or change any timecodes. Translate ONLY the supplied cues; do not add new cues or text outside the provided timecodes. Every cue must contain translated text; never leave cue text blank. Do NOT echo acknowledgments or filler. Output ONLY WebVTT cues (no extra text).";
-
-export const DEFAULT_SYSTEM_PROMPT_AUDIO =
-  "You are a professional subtitle translator. Audio-only context is provided; use it only to resolve tone and meaning. " +
-  "Keep timing and line breaks EXACTLY as provided. Do NOT invent content or change any timecodes. Translate ONLY the supplied cues; do not add new cues or text outside the provided timecodes. Every cue must contain translated text; never leave cue text blank. Do NOT echo acknowledgments or filler. Output ONLY WebVTT cues (no extra text).";
 
 export const PROMPT_PRESETS = {
   general: {
     name: "General Purpose",
     systemText: DEFAULT_SYSTEM_PROMPT_TEXT,
-    systemVideo: DEFAULT_SYSTEM_PROMPT_VIDEO,
-    systemAudio: DEFAULT_SYSTEM_PROMPT_AUDIO,
     summary: DEFAULT_SUMMARY_PROMPT,
     glossary: DEFAULT_GLOSSARY_PROMPT,
   },

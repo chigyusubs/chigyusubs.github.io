@@ -39,6 +39,7 @@ describe("useTranslationRunner", () => {
     useSummary: false,
     summaryText: "",
     videoRef: null as string | null,
+    safetyOff: false,
   };
 
   const mkChunk = (idx = 0): ChunkStatus => ({
@@ -71,7 +72,6 @@ describe("useTranslationRunner", () => {
           chunks: [mkChunk()],
           vtt: "WEBVTT",
           srt: "SRT",
-          video_ref: null,
         };
       },
     );
@@ -98,7 +98,6 @@ describe("useTranslationRunner", () => {
       chunks: [mkChunk()],
       vtt: "WEBVTT",
       srt: "SRT",
-      video_ref: null,
     });
 
     translationMocks.translateChunkFromTextMock.mockResolvedValue({
@@ -127,6 +126,8 @@ describe("useTranslationRunner", () => {
         temperature: baseOpts.temperature,
         useSummary: baseOpts.useSummary,
         summaryText: baseOpts.summaryText,
+        safetyOff: false,
+        concurrency: 2,
       });
     });
 

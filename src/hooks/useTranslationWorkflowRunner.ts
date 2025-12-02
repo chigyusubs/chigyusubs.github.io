@@ -583,11 +583,7 @@ export function useTranslationWorkflowRunner() {
         setSubmitting(false);
         return;
       }
-      if (data.video_ref) {
-        setVideoRef(data.video_ref);
-        setVideoUploadState("ready");
-        setVideoUploadMessage("Video already uploaded and ready for retries.");
-      } else if (activeVideoRef) {
+      if (activeVideoRef) {
         setVideoUploadState("ready");
         setVideoUploadMessage("Video already uploaded and ready for retries.");
       }

@@ -4,7 +4,6 @@ import {
   buildUserPrompt,
   glossarySystemPrompt,
   summarySystemPrompt,
-  systemPromptMultimodal,
   systemPromptTextOnly,
 } from "../prompts";
 
@@ -40,11 +39,7 @@ describe("prompts", () => {
 
   it("uses defaults only when custom prompts are empty", () => {
     expect(systemPromptTextOnly(undefined)).toContain("WebVTT cues");
-    expect(systemPromptMultimodal(undefined, "video")).toContain(
-      "attached video",
-    );
     expect(systemPromptTextOnly(" custom ")).toBe("custom");
-    expect(systemPromptMultimodal(" override ", "audio")).toBe("override");
   });
 
   describe("glossarySystemPrompt", () => {

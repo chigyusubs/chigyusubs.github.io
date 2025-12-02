@@ -9,7 +9,8 @@ vi.mock("../gemini", () => {
     await new Promise((resolve) => setTimeout(resolve, 5));
     geminiState.active -= 1;
     const chunk =
-      opts.userPrompt.split("CUES TO TRANSLATE:\n")[1]?.trim() ?? "";
+      opts.userPrompt.split("### CUES TO TRANSLATE ###\n")[1]?.trim() ?? "";
+    // Ensure the returned text is valid VTT format
     return { text: chunk };
   });
 
@@ -20,6 +21,7 @@ vi.mock("../gemini", () => {
 
 import { translateCues } from "../translation";
 import type { Cue } from "../vtt";
+import { serializeVtt } from "../vtt";
 
 const mkCue = (start: number): Cue => ({
   start,
@@ -44,6 +46,9 @@ describe("translateCues", () => {
       targetLang: "en",
       glossary: "",
       customPrompt: "",
+      videoUri: null,    // Add missing required parameter
+      videoLabel: null,  // Add missing required parameter
+      mediaKind: undefined, // Add missing required parameter
       targetSeconds: 1,
       overlap: 0,
       concurrency: 50,
@@ -55,6 +60,12 @@ describe("translateCues", () => {
 
     expect(geminiState.maxActive).toBeLessThanOrEqual(10);
     expect(result.chunks.length).toBe(cues.length);
+    // Log the status of each chunk for debugging
+    result.chunks.forEach((chunk, index) => {
+      if (chunk.status !== "ok") {
+        console.log(`Chunk ${index} status: ${chunk.status}, warnings:`, chunk.warnings);
+      }
+    });
     expect(result.chunks.every((c) => c.status === "ok")).toBe(true);
   });
 });

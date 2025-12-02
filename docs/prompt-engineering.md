@@ -193,9 +193,10 @@ Each translation job processes a single VTT chunk concurrently.
 
 **System Prompt Variants:**
 
-The system uses three different system prompts depending on the media context:
+The system includes three different system prompts, but currently only the text-only variant
+is used for translation:
 
-#### Variant A: Text-Only Translation
+#### Variant A: Text-Only Translation (Used for actual translation)
 
 ```js
 export const DEFAULT_SYSTEM_PROMPT_TEXT =
@@ -209,7 +210,7 @@ export const DEFAULT_SYSTEM_PROMPT_TEXT =
   "- Return ONLY the WebVTT cues. No explanations, no headers unless present in input.\n\n";
 ```
 
-#### Variant B: Video-Context Translation
+#### Variant B: Video-Context Translation (Preserved for summary generation)
 
 ```js
 export const DEFAULT_SYSTEM_PROMPT_VIDEO =
@@ -221,7 +222,7 @@ export const DEFAULT_SYSTEM_PROMPT_VIDEO =
   "(no extra text).";
 ```
 
-#### Variant C: Audio-Context Translation
+#### Variant C: Audio-Context Translation (Preserved for summary generation)
 
 ```js
 export const DEFAULT_SYSTEM_PROMPT_AUDIO =
@@ -232,9 +233,13 @@ export const DEFAULT_SYSTEM_PROMPT_AUDIO =
   "cue text blank. Do NOT echo acknowledgments or filler. Output ONLY WebVTT cues (no extra text).";
 ```
 
-**Selection Logic:**
-- No media attached → Text-only variant
-- Media attached → Video or Audio variant based on user preference
+**Selection Logic for Translation**:
+- Translation workflow now exclusively uses Text-only variant to avoid sending media data
+
+**Note (Updated 2025-12-02)**: The actual translation workflow was modified to always use
+the text-only variant to avoid sending media data during subtitle translation
+(removing stale multimodal codepath). The audio/video variants are now primarily
+used for summary generation, not for translation chunks.
 
 **User Prompt Structure:**
 
