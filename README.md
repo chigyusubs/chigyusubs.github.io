@@ -42,11 +42,19 @@ npm run dev -- --host --port 5173
 
 Open http://localhost:5173, paste your Gemini API key, and translate. You can build with `npm run build` for a static bundle.
 
-## Usage
+## 📚 Documentation
 
-For detailed documentation on features, controls, and workflows, see [USAGE.md](USAGE.md).
+### For Users
+- **[Usage Guide](./docs/usage.md)** — Detailed documentation on features, controls, and workflows
+- **[Gemini API Setup](./docs/gemini.md)** — How to get and use your Gemini API key
+- **[Legal](./docs/legal.md)** — Terms and privacy information
 
-### Quick overview
+### For Developers & Agents
+- **[Agent Instructions](./AGENTS.md)** — Guidelines for AI agents working with this codebase
+- **[Design Guide](./docs/design.md)** — Architecture decisions, constraints, and future enhancements
+- **[Prompt Engineering](./docs/prompt-engineering.md)** — Technical details of the translation prompt system
+
+### Quick Overview
 
 - **Inputs**: Upload VTT or SRT subtitles; optionally upload media for AI-generated context summaries
 - **Prompts**: Customize system and user prompts; import/export preset configurations
@@ -67,8 +75,8 @@ This repo uses GitHub Pages with GitHub Actions. See `.github/workflows/deploy.y
 ## Project structure
 
 - `src/` — React/Vite client (feature code under `src/`, shared utilities under `src/lib/`, assets bundled via Vite)
-- `USAGE.md` — Detailed usage guide with button documentation and media prep tips
-- `.gitignore`, `LEGAL.md`, `LICENSE` — Repository metadata
+- `docs/` — Documentation (usage guide, API setup, design docs, prompt engineering reference)
+- `.gitignore`, `LICENSE`, `AGENTS.md` — Repository metadata and agent guidelines
 
 ## Support & maintenance
 

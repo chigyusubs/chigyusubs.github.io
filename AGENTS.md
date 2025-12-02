@@ -1,5 +1,14 @@
 # Repository Guidelines
 
+## 📚 Documentation Reference
+
+Before working on this codebase, familiarize yourself with:
+
+- **[Design Guide](./docs/design.md)** — Architecture decisions, constraints, limitations, and future enhancement opportunities
+- **[Prompt Engineering](./docs/prompt-engineering.md)** — Technical details of the translation prompt system
+- **[Usage Guide](./docs/usage.md)** — User-facing documentation to understand features
+- **[README.md](./README.md)** — Project overview and quick start
+
 ## Project Structure & Module Organization
 
 - Keep primary source under `src/`; group by domain, not by technical layer alone. Shared utilities live in `src/lib` and feature-specific code under `src/<feature>/`.
