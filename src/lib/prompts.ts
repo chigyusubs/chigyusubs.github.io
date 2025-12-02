@@ -2,6 +2,9 @@ import {
   DEFAULT_SYSTEM_PROMPT_AUDIO,
   DEFAULT_SYSTEM_PROMPT_TEXT,
   DEFAULT_SYSTEM_PROMPT_VIDEO,
+  DEFAULT_GLOSSARY_PROMPT,
+  DEFAULT_SUMMARY_PROMPT,
+  DEFAULT_USER_PROMPT_STRUCTURE,
 } from "../config/defaults";
 
 export function systemPromptTextOnly(custom: string | undefined): string {
@@ -13,6 +16,7 @@ export function systemPromptMultimodal(
   custom: string | undefined,
   mediaKind: "audio" | "video",
 ): string {
+  // Only used when the internal multimodal translation path attaches media; no UI expose.
   const base =
     mediaKind === "audio"
       ? DEFAULT_SYSTEM_PROMPT_AUDIO
@@ -21,43 +25,70 @@ export function systemPromptMultimodal(
   return base;
 }
 
-export function buildUserPrompt(
-  sourceLang: string,
+export function glossarySystemPrompt(
+  custom: string | undefined,
   targetLang: string,
-  style: string,
+): string {
+  const template = (custom?.trim() || DEFAULT_GLOSSARY_PROMPT).trim();
+  return applyTargetPlaceholders(template, targetLang);
+}
+
+export function summarySystemPrompt(
+  custom: string | undefined,
+  targetLang: string,
+  fileLabel: string,
+): string {
+  const template = (custom?.trim() || DEFAULT_SUMMARY_PROMPT).trim();
+  return applyFilePlaceholders(
+    applyTargetPlaceholders(template, targetLang),
+    fileLabel,
+  );
+}
+
+export function buildUserPrompt(
+  targetLang: string,
   glossary: string | undefined,
   context: string,
   chunk: string,
   summaryText?: string,
   useGlossary?: boolean,
 ): string {
+  const structure = DEFAULT_USER_PROMPT_STRUCTURE;
   const parts: string[] = [];
+  const expand = (text: string) => applyTargetPlaceholders(text, targetLang);
 
-  // 1. Language Header
-  parts.push(`LANGUAGE: ${sourceLang} → ${targetLang}`);
-
-  // 2. Style (optional)
-  if (style.trim()) {
-    parts.push(`STYLE: ${style.trim()}`);
-  }
-
-  // 3. Glossary (optional)
   if (useGlossary !== false && glossary?.trim()) {
-    parts.push(`GLOSSARY (source->target):\n${glossary.trim()}`);
+    parts.push(`${expand(structure.glossaryHeader)}\n${glossary.trim()}`);
   }
 
-  // 4. Summary (optional)
   if (summaryText?.trim()) {
-    parts.push(`SUMMARY:\n${summaryText.trim()}`);
+    parts.push(`${expand(structure.summaryHeader)}\n${summaryText.trim()}`);
   }
 
-  // 5. Context (optional)
   if (context.trim()) {
-    parts.push(`PREVIOUS CONTEXT (do not re-emit):\n${context.trim()}`);
+    parts.push(`${expand(structure.contextHeader)}\n${context.trim()}`);
   }
 
-  // 6. Chunk (required)
-  parts.push(`CUES TO TRANSLATE:\n${chunk.trim()}`);
+  parts.push(`${expand(structure.chunkHeader)}\n${chunk.trim()}`);
 
   return parts.join("\n\n");
+}
+
+function applyTargetPlaceholders(template: string, targetLang: string): string {
+  return template.replace(/<target>/g, targetLang);
+}
+
+function applyFilePlaceholders(template: string, fileLabel: string): string {
+  return template.replace(/<file>/g, fileLabel);
+}
+
+export function buildSummaryUserPrompt(
+  template: string,
+  targetLang: string,
+  replacements: { text?: string; glossary?: string },
+): string {
+  let prompt = template;
+  prompt = prompt.replace(/<glossary>/g, replacements.glossary ?? "");
+  prompt = prompt.replace(/<text>/g, replacements.text ?? "");
+  return applyTargetPlaceholders(prompt, targetLang);
 }

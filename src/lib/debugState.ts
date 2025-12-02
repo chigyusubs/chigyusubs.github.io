@@ -3,44 +3,44 @@
 // (e.g., console or a download/export hook).
 
 type DebugEvent = {
-  ts: number
-  kind: string
-  runId?: number
-  chunkIdx?: number
-  message?: string
-  data?: Record<string, unknown>
-}
+  ts: number;
+  kind: string;
+  runId?: number;
+  chunkIdx?: number;
+  message?: string;
+  data?: Record<string, unknown>;
+};
 
-const MAX_ENTRIES = 500
-let buffer: DebugEvent[] = []
-let enabled = false
-let writer: ((event: DebugEvent) => void) | null = null
+const MAX_ENTRIES = 500;
+let buffer: DebugEvent[] = [];
+let enabled = false;
+let writer: ((event: DebugEvent) => void) | null = null;
 
 export function enableDebugEvents() {
-  enabled = true
+  enabled = true;
 }
 
 export function disableDebugEvents() {
-  enabled = false
+  enabled = false;
 }
 
 export function setDebugWriter(fn: ((event: DebugEvent) => void) | null) {
-  writer = fn
+  writer = fn;
 }
 
-export function logDebugEvent(event: Omit<DebugEvent, 'ts'>) {
-  const entry: DebugEvent = { ts: Date.now(), ...event }
-  buffer = [entry, ...buffer].slice(0, MAX_ENTRIES)
-  if (!enabled) return
+export function logDebugEvent(event: Omit<DebugEvent, "ts">) {
+  const entry: DebugEvent = { ts: Date.now(), ...event };
+  buffer = [entry, ...buffer].slice(0, MAX_ENTRIES);
+  if (!enabled) return;
   try {
-    writer?.(entry)
+    writer?.(entry);
   } catch {
     // ignore writer errors
   }
 }
 
 export function getDebugBuffer() {
-  return buffer.slice()
+  return buffer.slice();
 }
 
 export function copyDebugBuffer(): string {
@@ -61,5 +61,5 @@ export function copyDebugBuffer(): string {
         2,
       ),
     )
-    .join('\n')
+    .join("\n");
 }

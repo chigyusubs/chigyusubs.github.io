@@ -1,183 +1,214 @@
-import React from 'react'
-import { LABELS } from '../config/ui'
-import { useTheme } from '../lib/themeContext'
-import { AUDIO_TOKENS_PER_SEC, VIDEO_TOKENS_PER_SEC_DEFAULT, VIDEO_TOKENS_PER_SEC_LOW } from '../config/defaults'
-import { Button } from './ui/Button'
-import { SectionCard } from './ui/SectionCard'
-import { FilePicker } from './ui/Field'
+import React from "react";
+import { LABELS } from "../config/ui";
+import { useTheme } from "../lib/themeContext";
+import {
+  AUDIO_TOKENS_PER_SEC,
+  VIDEO_TOKENS_PER_SEC_DEFAULT,
+  VIDEO_TOKENS_PER_SEC_LOW,
+} from "../config/defaults";
+import { Button } from "./ui/Button";
+import { SectionCard } from "./ui/SectionCard";
+import { FilePicker } from "./ui/Field";
 
 type Props = {
-    vttFile: File | null
-    setVttFile: (file: File | null) => void
-    mediaFile: File | null
-    setMediaFile: (file: File | null) => void
-    useAudioOnly: boolean
-    setUseAudioOnly: (use: boolean) => void
-    videoRef: string | null
-    videoUploadState: 'idle' | 'uploading' | 'ready' | 'error'
-  videoUploadMessage: string
-  videoSizeMb: number | null
-  videoDuration: number | null
-  mediaResolution: 'low' | 'standard'
-  handleUploadVideo: () => void
-  handleDeleteVideo: () => void
-  submitting: boolean
-  apiKey: string
-  locked: boolean
-  mediaTooLargeWarning: boolean
-}
+  vttFile: File | null;
+  setVttFile: (file: File | null) => void;
+  mediaFile: File | null;
+  setMediaFile: (file: File | null) => void;
+  useAudioOnly: boolean;
+  setUseAudioOnly: (use: boolean) => void;
+  videoRef: string | null;
+  videoUploadState: "idle" | "uploading" | "ready" | "error";
+  videoUploadMessage: string;
+  videoSizeMb: number | null;
+  videoDuration: number | null;
+  mediaResolution: "low" | "standard";
+  handleUploadVideo: () => void;
+  handleDeleteVideo: () => void;
+  submitting: boolean;
+  apiKey: string;
+  locked: boolean;
+  mediaTooLargeWarning: boolean;
+};
 
 function formatDuration(seconds: number | null): string {
-    if (seconds === null || Number.isNaN(seconds) || !Number.isFinite(seconds) || seconds <= 0) return 'n/a'
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.round(seconds % 60)
-    return `${mins}m ${secs.toString().padStart(2, '0')}s`
+  if (
+    seconds === null ||
+    Number.isNaN(seconds) ||
+    !Number.isFinite(seconds) ||
+    seconds <= 0
+  )
+    return "n/a";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${mins}m ${secs.toString().padStart(2, "0")}s`;
 }
 
 export function FileUploader({
-    vttFile,
-    setVttFile,
-    mediaFile,
-    setMediaFile,
-    useAudioOnly,
-    setUseAudioOnly,
-    videoRef,
-    videoUploadState,
-    videoUploadMessage,
-    videoSizeMb,
-    videoDuration,
-    mediaResolution,
-    handleUploadVideo,
-    handleDeleteVideo,
-    submitting,
-    apiKey,
-    locked,
-    mediaTooLargeWarning,
+  vttFile,
+  setVttFile,
+  mediaFile,
+  setMediaFile,
+  useAudioOnly,
+  setUseAudioOnly,
+  videoRef,
+  videoUploadState,
+  videoUploadMessage,
+  videoSizeMb,
+  videoDuration,
+  mediaResolution,
+  handleUploadVideo,
+  handleDeleteVideo,
+  submitting,
+  apiKey,
+  locked,
+  mediaTooLargeWarning,
 }: Props) {
-  const theme = useTheme()
+  const theme = useTheme();
 
   const durationInfo =
-    videoDuration !== null && Number.isFinite(videoDuration) && videoDuration > 0
+    videoDuration !== null &&
+    Number.isFinite(videoDuration) &&
+    videoDuration > 0
       ? { seconds: videoDuration }
-      : null
+      : null;
 
   const estimateTokens = (): string | null => {
-    if (!durationInfo) return null
-    const { seconds } = durationInfo
-    const isAudioFile = mediaFile?.type.startsWith('audio/')
-    const rate = isAudioFile || useAudioOnly
-      ? AUDIO_TOKENS_PER_SEC
-      : mediaResolution === 'low'
-        ? VIDEO_TOKENS_PER_SEC_LOW
-        : VIDEO_TOKENS_PER_SEC_DEFAULT
-    const est = Math.round(seconds * rate)
+    if (!durationInfo) return null;
+    const { seconds } = durationInfo;
+    const isAudioFile = mediaFile?.type.startsWith("audio/");
+    const rate =
+      isAudioFile || useAudioOnly
+        ? AUDIO_TOKENS_PER_SEC
+        : mediaResolution === "low"
+          ? VIDEO_TOKENS_PER_SEC_LOW
+          : VIDEO_TOKENS_PER_SEC_DEFAULT;
+    const est = Math.round(seconds * rate);
     const modeLabel = isAudioFile
-      ? 'audio file'
+      ? "audio file"
       : useAudioOnly
-        ? 'audio-only'
-        : `${mediaResolution} video`
-    return `Est. tokens: ~${est.toLocaleString()} (${modeLabel})`
-  }
-  const isLocked = locked
+        ? "audio-only"
+        : `${mediaResolution} video`;
+    return `Est. tokens: ~${est.toLocaleString()} (${modeLabel})`;
+  };
+  const isLocked = locked;
   const videoProgress =
-        videoUploadState === 'ready' || videoUploadState === 'error'
-            ? 100
-            : videoUploadState === 'uploading'
-                ? 70
-                : 0
+    videoUploadState === "ready" || videoUploadState === "error"
+      ? 100
+      : videoUploadState === "uploading"
+        ? 70
+        : 0;
 
   return (
-        <SectionCard
-            title="Files"
-            subtitle="Upload subtitles (required) and optional context media to improve summaries."
-        >
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <FilePicker
-                    label="Subtitles (VTT or SRT, required)"
-                    description="Click or drop your subtitle file"
-                    accept=".vtt,.srt,text/vtt,text/srt"
-                    onChange={(e) => setVttFile(e.target.files?.[0] || null)}
-                    required
-                    fileName={vttFile?.name || null}
-                    fileMeta={vttFile ? `${(vttFile.size / 1024 / 1024).toFixed(2)} MB` : null}
-                    disabled={isLocked}
-                />
-                <FilePicker
-                    label="Context media (optional)"
-                    description="Video or audio, used only for summary (keep small to reduce tokens)"
-                    accept="video/mp4,video/*,audio/*"
-                    onChange={(e) => void setMediaFile(e.target.files?.[0] || null)}
-                    fileName={mediaFile?.name || null}
-                    fileMeta={mediaFile ? `${(mediaFile.size / 1024 / 1024).toFixed(2)} MB` : null}
-                    disabled={isLocked}
-                />
-            </div>
+    <SectionCard
+      title="Files"
+      subtitle="Upload subtitles (required) and optional context media to improve summaries."
+    >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <FilePicker
+          label="Subtitles (VTT or SRT, required)"
+          description="Click or drop your subtitle file"
+          accept=".vtt,.srt,text/vtt,text/srt"
+          onChange={(e) => setVttFile(e.target.files?.[0] || null)}
+          required
+          fileName={vttFile?.name || null}
+          fileMeta={
+            vttFile ? `${(vttFile.size / 1024 / 1024).toFixed(2)} MB` : null
+          }
+          disabled={isLocked}
+        />
+        <FilePicker
+          label="Context media (optional)"
+          description="Video or audio, used only for summary (keep small to reduce tokens)"
+          accept="video/mp4,video/*,audio/*"
+          onChange={(e) => void setMediaFile(e.target.files?.[0] || null)}
+          fileName={mediaFile?.name || null}
+          fileMeta={
+            mediaFile ? `${(mediaFile.size / 1024 / 1024).toFixed(2)} MB` : null
+          }
+          disabled={isLocked}
+        />
+      </div>
 
-            <div className="flex flex-col gap-2">
-                <label className="inline-flex items-center gap-2 text-sm">
-                    <input
-                        type="checkbox"
-                        checked={useAudioOnly}
-                        onChange={(e) => setUseAudioOnly(e.target.checked)}
-                        disabled={isLocked}
-                        title="Extract mono audio from video before upload to reduce size and token cost."
-                    />
-                    <span>Upload audio-only (smaller upload; recommended for free tier)</span>
-                </label>
-                <p className={theme.helperText}>
-                    Media is only used to generate the optional summary; translation uses the text + summary.
-                </p>
-            </div>
+      <div className="flex flex-col gap-2">
+        <label className="inline-flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={useAudioOnly}
+            onChange={(e) => setUseAudioOnly(e.target.checked)}
+            disabled={isLocked}
+            title="Extract mono audio from video before upload to reduce size and token cost."
+          />
+          <span>
+            Upload audio-only (smaller upload; recommended for free tier)
+          </span>
+        </label>
+        <p className={theme.helperText}>
+          Media is only used to generate the optional summary; translation uses
+          the text + summary.
+        </p>
+      </div>
 
-            <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                    <Button
-                        type="button"
-                        tone="upload"
-                        onClick={handleUploadVideo}
-                        disabled={!mediaFile || !apiKey || submitting || videoUploadState === 'uploading'}
-                    >
-                        {videoUploadState === 'uploading' ? LABELS.uploadMediaUploading : LABELS.uploadMedia}
-                    </Button>
-                    {videoRef && videoUploadState === 'ready' && (
-                        <span className={`text-xs ${theme.successText}`}>Ready</span>
-                    )}
-                    {videoRef && (
-                        <Button
-                            type="button"
-                            tone="danger"
-                            onClick={handleDeleteVideo}
-                            disabled={submitting || videoUploadState === 'uploading'}
-                        >
-                            Delete uploaded media
-                        </Button>
-                    )}
-                </div>
-                <div className={`h-2 rounded overflow-hidden ${theme.progressTrack}`}>
-                    <div
-                        className={`h-2 ${videoUploadState === 'error' ? theme.progressError : videoUploadState === 'ready' ? theme.progressOk : theme.progressBar} ${videoUploadState === 'uploading' ? 'animate-pulse' : ''}`}
-                        style={{ width: `${videoProgress}%` }}
-                    />
-                </div>
-                <p className={theme.helperText}>
-                    {videoUploadMessage || 'Upload to verify Gemini processed the video.'}
-                </p>
-                {mediaTooLargeWarning && (
-                  <p className={`${theme.warningText} text-xs`}>
-                    Selected media exceeds the 2&nbsp;GB Gemini/ffmpeg limit and cannot be uploaded.
-                  </p>
-                )}
-                {mediaFile && (
-                    <div className={`${theme.helperText} space-y-1`}>
-                        <p>Size: {videoSizeMb !== null ? `${videoSizeMb.toFixed(2)} MB` : 'n/a'}</p>
-                        <p>
-                          Duration:{' '}
-                          {durationInfo ? formatDuration(durationInfo.seconds) : 'n/a'}
-                        </p>
-                        <p>{estimateTokens() ?? 'Est. tokens: n/a'}</p>
-                    </div>
-                )}
-            </div>
-        </SectionCard>
-    )
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            tone="upload"
+            onClick={handleUploadVideo}
+            disabled={
+              !mediaFile ||
+              !apiKey ||
+              submitting ||
+              videoUploadState === "uploading"
+            }
+          >
+            {videoUploadState === "uploading"
+              ? LABELS.uploadMediaUploading
+              : LABELS.uploadMedia}
+          </Button>
+          {videoRef && videoUploadState === "ready" && (
+            <span className={`text-xs ${theme.successText}`}>Ready</span>
+          )}
+          {videoRef && (
+            <Button
+              type="button"
+              tone="danger"
+              onClick={handleDeleteVideo}
+              disabled={submitting || videoUploadState === "uploading"}
+            >
+              Delete uploaded media
+            </Button>
+          )}
+        </div>
+        <div className={`h-2 rounded overflow-hidden ${theme.progressTrack}`}>
+          <div
+            className={`h-2 ${videoUploadState === "error" ? theme.progressError : videoUploadState === "ready" ? theme.progressOk : theme.progressBar} ${videoUploadState === "uploading" ? "animate-pulse" : ""}`}
+            style={{ width: `${videoProgress}%` }}
+          />
+        </div>
+        <p className={theme.helperText}>
+          {videoUploadMessage || "Upload to verify Gemini processed the video."}
+        </p>
+        {mediaTooLargeWarning && (
+          <p className={`${theme.warningText} text-xs`}>
+            Selected media exceeds the 2&nbsp;GB Gemini/ffmpeg limit and cannot
+            be uploaded.
+          </p>
+        )}
+        {mediaFile && (
+          <div className={`${theme.helperText} space-y-1`}>
+            <p>
+              Size:{" "}
+              {videoSizeMb !== null ? `${videoSizeMb.toFixed(2)} MB` : "n/a"}
+            </p>
+            <p>
+              Duration:{" "}
+              {durationInfo ? formatDuration(durationInfo.seconds) : "n/a"}
+            </p>
+            <p>{estimateTokens() ?? "Est. tokens: n/a"}</p>
+          </div>
+        )}
+      </div>
+    </SectionCard>
+  );
 }

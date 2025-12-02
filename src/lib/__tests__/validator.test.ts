@@ -52,6 +52,8 @@ describe("validateVtt", () => {
     const result = validateVtt(input);
     expect(result.errors).toHaveLength(0);
     expect(result.warnings).toContain("Removed duplicate WEBVTT header");
-    expect(result.warnings.some((w) => w.includes("Inserted blank line"))).toBe(true);
+    expect(result.warnings.some((w) => w.includes("Inserted blank line"))).toBe(
+      true,
+    );
   });
 });

@@ -71,9 +71,7 @@ type TranslateOptions = {
   cues: Cue[];
   apiKey: string;
   modelName: string;
-  sourceLang: string;
   targetLang: string;
-  style: string;
   glossary?: string;
   customPrompt?: string;
   videoUri?: string | null;
@@ -99,9 +97,7 @@ type ChunkRetryOptions = {
   idx: number;
   apiKey: string;
   modelName: string;
-  sourceLang: string;
   targetLang: string;
-  style: string;
   glossary?: string;
   customPrompt?: string;
   videoUri?: string | null;
@@ -132,7 +128,10 @@ function pausedChunk(chunk: Chunk): ChunkStatus {
 
 async function translateChunk(
   chunk: Chunk,
-  opts: Omit<TranslateOptions, "cues" | "targetSeconds" | "concurrency" | "onChunkUpdate">,
+  opts: Omit<
+    TranslateOptions,
+    "cues" | "targetSeconds" | "concurrency" | "onChunkUpdate"
+  >,
   onChunkUpdate?: (chunk: ChunkStatus) => void,
 ): Promise<ChunkStatus> {
   if (opts.shouldCancel?.()) return cancelledChunk(chunk);
@@ -153,9 +152,7 @@ async function translateChunk(
     idx: chunk.idx,
     apiKey: opts.apiKey,
     modelName: opts.modelName,
-    sourceLang: opts.sourceLang,
     targetLang: opts.targetLang,
-    style: opts.style,
     glossary: opts.glossary,
     customPrompt: opts.customPrompt,
     videoUri: opts.videoUri,
@@ -213,9 +210,7 @@ export async function translateChunkFromText(
     contextVtt,
     apiKey,
     modelName,
-    sourceLang,
     targetLang,
-    style,
     glossary,
     customPrompt,
     videoUri,
@@ -247,9 +242,7 @@ export async function translateChunkFromText(
   }
   // Build prompts
   const userPrompt = buildUserPrompt(
-    sourceLang,
     targetLang,
-    style,
     glossary,
     contextVtt,
     chunkVtt,
@@ -270,7 +263,11 @@ export async function translateChunkFromText(
       videoUri: videoUri || undefined,
       temperature,
       safetyOff,
-      trace: { purpose: "translateChunk", chunkIdx: opts.idx, runId: opts.runId },
+      trace: {
+        purpose: "translateChunk",
+        chunkIdx: opts.idx,
+        runId: opts.runId,
+      },
     });
     translated = response.text;
   } catch (err) {
@@ -440,9 +437,7 @@ export async function translateCues(
     cues,
     apiKey,
     modelName,
-    sourceLang,
     targetLang,
-    style,
     glossary,
     customPrompt,
     videoUri,
@@ -487,9 +482,7 @@ export async function translateCues(
       const res = await translateChunk(chunk, {
         apiKey,
         modelName,
-        sourceLang,
         targetLang,
-        style,
         glossary,
         customPrompt,
         videoUri,
@@ -534,9 +527,7 @@ export async function translateCues(
         return translateChunk(chunk, {
           apiKey,
           modelName,
-          sourceLang,
           targetLang,
-          style,
           glossary,
           customPrompt,
           videoUri,

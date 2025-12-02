@@ -1,14 +1,19 @@
-import React from 'react'
-import { Button } from './ui/Button'
+import React from "react";
+import { Button } from "./ui/Button";
 
 type Props = {
-  onClick: () => void
-  disabled: boolean
-  title: string
-  children?: React.ReactNode
-}
+  onClick: () => void;
+  disabled: boolean;
+  title: string;
+  children?: React.ReactNode;
+};
 
-export function RestoreButton({ onClick, disabled, title, children = 'Restore default' }: Props) {
+export function RestoreButton({
+  onClick,
+  disabled,
+  title,
+  children = "Restore default",
+}: Props) {
   return (
     <Button
       type="button"
@@ -20,5 +25,5 @@ export function RestoreButton({ onClick, disabled, title, children = 'Restore de
     >
       {children}
     </Button>
-  )
+  );
 }

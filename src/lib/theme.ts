@@ -44,7 +44,8 @@ export type Theme = {
 
 export const lightTheme: Theme = {
   page: "theme-light min-h-screen bg-orange-50 text-slate-900 font-sans",
-  header: "bg-white/80 backdrop-blur-md border-b border-orange-100 p-4 shadow-sm sticky top-0 z-10",
+  header:
+    "bg-white/80 backdrop-blur-md border-b border-orange-100 p-4 shadow-sm sticky top-0 z-10",
   text: "text-slate-900",
   subtext: "text-slate-600",
   mutedText: "text-slate-500",
@@ -77,9 +78,12 @@ export const lightTheme: Theme = {
   spinnerLead: "#f97316", // orange-500
   badge: {
     ok: "bg-green-100 text-green-800 border border-green-200 rounded-lg px-2 py-0.5 font-medium",
-    processing: "bg-orange-100 text-orange-800 border border-orange-200 rounded-lg px-2 py-0.5 font-medium animate-pulse",
-    error: "bg-orange-100 text-orange-800 border border-orange-200 rounded-lg px-2 py-0.5 font-medium",
-    neutral: "bg-slate-100 text-slate-700 border border-slate-200 rounded-lg px-2 py-0.5 font-medium",
+    processing:
+      "bg-orange-100 text-orange-800 border border-orange-200 rounded-lg px-2 py-0.5 font-medium animate-pulse",
+    error:
+      "bg-orange-100 text-orange-800 border border-orange-200 rounded-lg px-2 py-0.5 font-medium",
+    neutral:
+      "bg-slate-100 text-slate-700 border border-slate-200 rounded-lg px-2 py-0.5 font-medium",
   },
   statusCard: {
     ok: "border-green-200 bg-green-100/50 rounded-xl",
@@ -95,7 +99,8 @@ export const lightTheme: Theme = {
 
 export const darkTheme: Theme = {
   page: "theme-dark min-h-screen bg-stone-950 text-stone-100 font-sans",
-  header: "bg-stone-900/80 backdrop-blur-md border-b border-stone-800 p-4 shadow-sm sticky top-0 z-10",
+  header:
+    "bg-stone-900/80 backdrop-blur-md border-b border-stone-800 p-4 shadow-sm sticky top-0 z-10",
   text: "text-stone-100",
   subtext: "text-stone-400",
   mutedText: "text-stone-500",
@@ -128,9 +133,12 @@ export const darkTheme: Theme = {
   spinnerLead: "#f97316", // orange-500
   badge: {
     ok: "bg-green-900/30 text-green-300 border border-green-800 rounded-lg px-2 py-0.5 font-medium",
-    processing: "bg-orange-900/30 text-orange-300 border border-orange-800 rounded-lg px-2 py-0.5 font-medium animate-pulse",
-    error: "bg-orange-900/30 text-orange-300 border border-orange-800 rounded-lg px-2 py-0.5 font-medium",
-    neutral: "bg-stone-800 text-stone-300 border border-stone-700 rounded-lg px-2 py-0.5 font-medium",
+    processing:
+      "bg-orange-900/30 text-orange-300 border border-orange-800 rounded-lg px-2 py-0.5 font-medium animate-pulse",
+    error:
+      "bg-orange-900/30 text-orange-300 border border-orange-800 rounded-lg px-2 py-0.5 font-medium",
+    neutral:
+      "bg-stone-800 text-stone-300 border border-stone-700 rounded-lg px-2 py-0.5 font-medium",
   },
   statusCard: {
     ok: "border-green-800/50 bg-green-900/20 rounded-xl",
@@ -138,7 +146,8 @@ export const darkTheme: Theme = {
     neutral: "border-stone-800 bg-stone-900/20 rounded-xl",
   },
   well: {
-    warning: "bg-amber-900/20 border border-amber-800 text-amber-200 rounded-xl",
+    warning:
+      "bg-amber-900/20 border border-amber-800 text-amber-200 rounded-xl",
     info: "bg-blue-900/20 border border-blue-800 text-blue-200 rounded-xl",
     error: "bg-red-900/20 border border-red-800 text-red-200 rounded-xl",
   },

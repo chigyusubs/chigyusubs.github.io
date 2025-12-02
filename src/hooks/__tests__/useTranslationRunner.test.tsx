@@ -62,9 +62,7 @@ describe("useTranslationRunner", () => {
         chunkOverlap: 0,
         apiKey: "k",
         modelName: "m",
-        sourceLang: "ja",
         targetLang: "en",
-        style: "",
         glossary: "",
         useGlossary: true,
         customPrompt: "",
@@ -105,9 +103,7 @@ describe("useTranslationRunner", () => {
         chunkOverlap: 0,
         apiKey: "k",
         modelName: "m",
-        sourceLang: "ja",
         targetLang: "en",
-        style: "",
         glossary: "",
         useGlossary: true,
         customPrompt: "",
@@ -125,9 +121,7 @@ describe("useTranslationRunner", () => {
         chunk: result.current.state.result!.chunks[0],
         apiKey: "k",
         modelName: "m",
-        sourceLang: "ja",
         targetLang: "en",
-        style: "",
         glossary: "",
         useGlossary: true,
         customPrompt: "",
@@ -141,9 +135,7 @@ describe("useTranslationRunner", () => {
         chunk: result.current.state.result!.chunks[0],
         apiKey: "k",
         modelName: "m",
-        sourceLang: "ja",
         targetLang: "en",
-        style: "",
         glossary: "",
         useGlossary: true,
         customPrompt: "",
@@ -159,6 +151,8 @@ describe("useTranslationRunner", () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
-    expect(translationMocks.translateChunkFromTextMock).toHaveBeenCalledTimes(1);
+    expect(translationMocks.translateChunkFromTextMock).toHaveBeenCalledTimes(
+      1,
+    );
   });
 });

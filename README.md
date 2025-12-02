@@ -34,10 +34,12 @@ whisper --model large --task transcribe --output_format vtt input.mp4
 This creates `input.vtt` in the current directory. For better accuracy, consider using the `large` or `large-v3` model.
 
 ## Quickstart
+
 ```bash
 npm install
 npm run dev -- --host --port 5173
 ```
+
 Open http://localhost:5173, paste your Gemini API key, and translate. You can build with `npm run build` for a static bundle.
 
 ## Usage
@@ -52,13 +54,14 @@ For detailed documentation on features, controls, and workflows, see [USAGE.md](
 - **Translation**: Configurable chunk size, concurrency, and temperature for optimal results
 
 ## Deploy
+
 This repo uses GitHub Pages with GitHub Actions. See `.github/workflows/deploy.yml` for the build and deploy steps (it builds from `main` with `npm run build` and publishes the `dist/` bundle).
 
 ## How it uses Gemini
 
 - **Subtitles**: Sent to Gemini only when you click "Translate" (chunked according to your settings).
 - **Media**: Sent only when you explicitly click "Upload media," and used solely for summary generation (never embedded in translation prompts).
-- **Prompts**: System and user prompts are fully customizable. You can import/export custom prompt presets as JSON to share configurations.
+- **Prompts**: System, glossary, summary, and chunk prompts are fully customizable and share the default scaffolding (the `<target>` and new `<file>` placeholders resolve to the selected target language and whether the request uses media or transcript context). You can import/export custom prompt presets as JSON to share configurations.
 - **API costs**: Usage may incur costs per your Google billing/quotas. You control the key and model selection.
 
 ## Project structure
@@ -77,11 +80,13 @@ This project is provided as-is with no guarantees or SLAs.
 - **Scope**: This tool will stay minimal and focused.
 
 ## Scripts
+
 - `npm run dev` — start the dev server.
 - `npm run build` — production build.
 - `npm run preview` — preview the production build locally.
 
 ## Security & privacy
+
 - **Browser-only**: No backend; your Gemini API key stays in page state and is sent only to Gemini endpoints (never persisted).
 - **API keys and files never stored**: API keys and uploaded files are kept in memory only and cleared on page refresh.
 - **Media scope**: Uploads are used only to generate summaries; translation prompts remain text-only.
@@ -89,11 +94,13 @@ This project is provided as-is with no guarantees or SLAs.
 - **Concurrency limits**: Capped at 10 to align with free-tier limits and reduce API abuse risk.
 
 ## Storage & preferences
-- **What's saved**: Theme, model choice, prompts (system/summary/glossary), language/style/chunk/concurrency/temperature settings, and toggles are saved in `localStorage` for convenience.
+
+- **What's saved**: Theme, model choice, prompts (system/summary/glossary), target language, chunk/concurrency/temperature settings, and toggles (including “Use glossary in summary generation”) are saved in `localStorage` for convenience.
 - **What's NOT saved**: API keys and uploaded files are never persisted.
 - **Clear storage**: Use browser storage clear if you want a fresh start.
 
 ## Debugging
+
 - **API call logs**: Gemini API calls appear in the Debug log table.
 - **Internal events**: A dev-only event buffer logs run/chunk/retry lifecycle. Enable via `?debug=1` or `localStorage.debugEvents="1"`.
 - **Export events**: When enabled, a "Copy internal events" button exports a chronological JSON dump. Internal events never include keys or prompts.
@@ -101,9 +108,11 @@ This project is provided as-is with no guarantees or SLAs.
 ## Contributing
 
 Small, focused PRs are welcome. Please:
+
 - Keep changes minimal and scoped to a single improvement
 - Test locally with `npm run dev` and `npm run build` before submitting
 - Explain the problem you're solving in the PR description
 
 ## License
+
 MIT. See `LICENSE` for details.

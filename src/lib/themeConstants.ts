@@ -12,7 +12,9 @@ export function getPreferredTheme(initialName?: ThemeName): ThemeName {
   if (typeof window !== "undefined") {
     const stored = window.localStorage.getItem("theme") as ThemeName | null;
     if (stored === "light" || stored === "dark") return stored;
-    const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+    const prefersDark = window.matchMedia?.(
+      "(prefers-color-scheme: dark)",
+    ).matches;
     return prefersDark ? "dark" : "light";
   }
   return "light";

@@ -11,12 +11,19 @@ function formatTime(ts: number) {
   return d.toLocaleTimeString();
 }
 
-function formatTokens(tokens?: { promptTokens?: number; responseTokens?: number; totalTokens?: number }) {
+function formatTokens(tokens?: {
+  promptTokens?: number;
+  responseTokens?: number;
+  totalTokens?: number;
+}) {
   if (!tokens) return "—";
   const parts: string[] = [];
-  if (typeof tokens.totalTokens === "number") parts.push(`tot ${tokens.totalTokens}`);
-  if (typeof tokens.promptTokens === "number") parts.push(`in ${tokens.promptTokens}`);
-  if (typeof tokens.responseTokens === "number") parts.push(`out ${tokens.responseTokens}`);
+  if (typeof tokens.totalTokens === "number")
+    parts.push(`tot ${tokens.totalTokens}`);
+  if (typeof tokens.promptTokens === "number")
+    parts.push(`in ${tokens.promptTokens}`);
+  if (typeof tokens.responseTokens === "number")
+    parts.push(`out ${tokens.responseTokens}`);
   return parts.length ? parts.join(" / ") : "—";
 }
 
@@ -66,10 +73,12 @@ export function GeminiDebugLog() {
 
   const latest = useMemo(() => entries.slice(0, 30), [entries]);
 
-  const tableHeaderClass = isDark ? "bg-stone-950 text-stone-100" : "bg-orange-50/50 text-orange-800"
+  const tableHeaderClass = isDark
+    ? "bg-stone-950 text-stone-100"
+    : "bg-orange-50/50 text-orange-800";
   const rowClasses = isDark
     ? "border-t border-stone-900 bg-stone-950 text-stone-100 odd:bg-stone-900"
-    : "border-t border-orange-100 bg-orange-50 text-orange-900 odd:bg-orange-100"
+    : "border-t border-orange-100 bg-orange-50 text-orange-900 odd:bg-orange-100";
   return (
     <SectionCard
       title="Debug log"
@@ -81,10 +90,7 @@ export function GeminiDebugLog() {
             {open ? "Hide log" : "Show log"} ({entries.length})
           </Button>
           {debugOn && (
-            <Button
-              tone="secondary"
-              onClick={copyEvents}
-            >
+            <Button tone="secondary" onClick={copyEvents}>
               Copy internal events
             </Button>
           )}
@@ -94,8 +100,13 @@ export function GeminiDebugLog() {
         </Button>
       </div>
       {open && (
-        <div className="overflow-x-auto border rounded" style={{ borderColor: theme.borderColor }}>
-          <table className={`min-w-full text-sm ${isDark ? "text-stone-100" : "text-orange-900"}`}>
+        <div
+          className="overflow-x-auto border rounded"
+          style={{ borderColor: theme.borderColor }}
+        >
+          <table
+            className={`min-w-full text-sm ${isDark ? "text-stone-100" : "text-orange-900"}`}
+          >
             <thead className={tableHeaderClass}>
               <tr>
                 <th className="px-3 py-2 text-left">Time</th>
@@ -113,27 +124,49 @@ export function GeminiDebugLog() {
             <tbody>
               {latest.map((entry) => (
                 <tr key={entry.id} className={rowClasses}>
-                  <td className="px-3 py-2 whitespace-nowrap">{formatTime(entry.timestamp)}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {formatTime(entry.timestamp)}
+                  </td>
                   <td className="px-3 py-2 whitespace-nowrap">
                     {entry.purpose}
-                    {typeof entry.chunkIdx === "number" ? ` #${entry.chunkIdx}` : ""}
+                    {typeof entry.chunkIdx === "number"
+                      ? ` #${entry.chunkIdx}`
+                      : ""}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap">{entry.runId ?? "—"}</td>
-                  <td className="px-3 py-2 whitespace-nowrap">{entry.model || "—"}</td>
                   <td className="px-3 py-2 whitespace-nowrap">
-                    {typeof entry.temperature === "number" ? entry.temperature : "—"}
+                    {entry.runId ?? "—"}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap">{entry.safetyOff ? "Off" : "On"}</td>
-                  <td className="px-3 py-2 whitespace-nowrap">{formatTokens(entry.tokens)}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {entry.model || "—"}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {typeof entry.temperature === "number"
+                      ? entry.temperature
+                      : "—"}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {entry.safetyOff ? "Off" : "On"}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {formatTokens(entry.tokens)}
+                  </td>
                   <td className="px-3 py-2 whitespace-nowrap">
                     {formatDurationMs(entry.durationMs)}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">
-                    <span className={entry.status === "ok" ? theme.successText : theme.dangerText}>
+                    <span
+                      className={
+                        entry.status === "ok"
+                          ? theme.successText
+                          : theme.dangerText
+                      }
+                    >
                       {entry.status}
                     </span>
                   </td>
-                  <td className="px-3 py-2 whitespace-pre-wrap">{entry.message || "—"}</td>
+                  <td className="px-3 py-2 whitespace-pre-wrap">
+                    {entry.message || "—"}
+                  </td>
                 </tr>
               ))}
               {!latest.length && (

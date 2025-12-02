@@ -1,8 +1,4 @@
-import {
-  addGeminiLog,
-  type GeminiTrace,
-  type GeminiUsage,
-} from "./geminiLog";
+import { addGeminiLog, type GeminiTrace, type GeminiUsage } from "./geminiLog";
 import { clearRateLimitWait, setRateLimitWait } from "./rateLimit";
 
 const API_ROOT = "https://generativelanguage.googleapis.com/v1beta";
@@ -102,8 +98,7 @@ function extractUsage(data: unknown): GeminiUsage | undefined {
           ? u.prompt_token_count
           : typeof u.prompt_tokens === "number"
             ? u.prompt_tokens
-            : undefined) ??
-      undefined,
+            : undefined) ?? undefined,
     responseTokens:
       (typeof u.candidatesTokenCount === "number"
         ? u.candidatesTokenCount
@@ -111,8 +106,7 @@ function extractUsage(data: unknown): GeminiUsage | undefined {
           ? u.candidates_token_count
           : typeof u.response_tokens === "number"
             ? u.response_tokens
-            : undefined) ??
-      undefined,
+            : undefined) ?? undefined,
     totalTokens:
       (typeof u.totalTokenCount === "number"
         ? u.totalTokenCount
@@ -120,8 +114,7 @@ function extractUsage(data: unknown): GeminiUsage | undefined {
           ? u.total_token_count
           : typeof u.total_tokens === "number"
             ? u.total_tokens
-            : undefined) ??
-      undefined,
+            : undefined) ?? undefined,
   };
 }
 
@@ -154,9 +147,15 @@ async function callGenerateContent(
     system_instruction: { parts: [{ text: systemPrompt }] },
   };
   if (typeof temperature === "number" || mediaResolution) {
+    const resolutionValue =
+      mediaResolution === "low"
+        ? "MEDIA_RESOLUTION_LOW"
+        : mediaResolution === "standard"
+          ? "MEDIA_RESOLUTION_STANDARD"
+          : undefined;
     body.generationConfig = {
       ...(typeof temperature === "number" ? { temperature } : {}),
-      ...(mediaResolution ? { mediaResolution } : {}),
+      ...(resolutionValue ? { mediaResolution: resolutionValue } : {}),
     };
   }
   if (safetyOff) {
@@ -215,7 +214,9 @@ async function callGenerateContent(
 
 function isRateLimited(err: unknown): boolean {
   const msg =
-    err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
+    err instanceof Error
+      ? err.message.toLowerCase()
+      : String(err).toLowerCase();
   return (
     msg.includes("rate limit") ||
     msg.includes("quota") ||
@@ -246,7 +247,10 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 2): Promise<T> {
       const retryAfter = parseRetryAfter(err);
       if (isRateLimited(err)) {
         if (i < attempts - 1) {
-          const delayMs = Math.min(120_000, Math.max(1000, (retryAfter ?? 2 ** i) * 1000));
+          const delayMs = Math.min(
+            120_000,
+            Math.max(1000, (retryAfter ?? 2 ** i) * 1000),
+          );
           setRateLimitWait(delayMs);
           await sleep(delayMs);
           continue;
@@ -312,11 +316,12 @@ export async function uploadContextVideo(
   }
 
   // Poll file status until ACTIVE
-  const path = fileName && fileName.startsWith("files/")
-    ? fileName
-    : fileName
-      ? `files/${fileName}`
-      : fileUri;
+  const path =
+    fileName && fileName.startsWith("files/")
+      ? fileName
+      : fileName
+        ? `files/${fileName}`
+        : fileUri;
 
   const statusUrl = `${API_ROOT}/${path}?key=${encodeURIComponent(apiKey)}`;
   let isActive = false;

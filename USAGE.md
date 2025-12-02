@@ -20,8 +20,8 @@ Detailed documentation for ChigyuSubs features and workflows.
 
 - **Inputs**: VTT or SRT subtitles; optional media for context summary only (not sent with chunk prompts).
 - **Context**: you can generate a media summary (optional) and a glossary from subtitles; both are editable and can be toggled on/off.
-- **Prompts**: the system prompt holds the guardrails (editable). User prompt is structured data (langs, style, optional summary/glossary, context, cues). Glossary lives in the user prompt only.
-  - **Controls**: concurrency, chunk length, style (freeform), temperature, summary/glossary toggles. Defaults are tuned for Gemini 2.5 Pro (10m chunks, concurrency 2). Concurrency is capped at 10 even if you enter a higher number (to respect Gemini 2.5 Flash free-tier RPM). Overlap pulls prior cues (default 2) as context; raise if you see continuity issues.
+- **Prompts**: the system prompt holds the guardrails (editable). Summary, glossary, and chunk prompts pull from shared scaffolding in the defaults so `<target>` and the new `<file>` placeholder resolve to the selected language and the context (media video vs. transcript). The user prompt still combines glossary/context cues before the chunked cues, but there is no dedicated style input anymore; edits happen via the prompt sections.
+- **Controls**: concurrency, chunk length, temperature, summary/glossary toggles, and the new “Use glossary in summary generation” checkbox. Defaults are tuned for Gemini 2.5 Pro (10m chunks, concurrency 2). Concurrency is capped at 10 even if you enter a higher number (to respect Gemini 2.5 Flash free-tier RPM). Overlap pulls prior cues (default 2) as context; raise if you see continuity issues.
 
 ## Guidance for glossary & summary
 
@@ -37,6 +37,7 @@ Detailed documentation for ChigyuSubs features and workflows.
 - **Refresh models**: lists available Gemini models using your API key and updates the dropdown.
 - **Generate summary from media**: runs a summary request against the uploaded media; fills the summary text field.
 - **Generate from subtitles (glossary)**: builds a glossary from your subtitles (local heuristic if no API key; Gemini call if key is present).
+- **Use glossary in summary generation**: tick the checkbox next to “Generate summary…” to prepend the glossary (with the `### GLOSSARY ###` header) to the summary prompt so Gemini sees the glossary plus the selected media/subtitle source before producing bullets.
 - **Toggles**: "Upload audio-only" controls extraction during upload; "Use summary in translation" and "Use glossary in translation" decide whether those optional contexts are included in the prompt payload.
 - **Pause**: stops starting new chunks/retries (in-flight calls continue). Designed to avoid wasting RPM/TPM/cost on stale runs.
 - **Reset**: clears progress and drops queued work while keeping uploaded media.

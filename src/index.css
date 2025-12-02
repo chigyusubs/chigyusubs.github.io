@@ -4,7 +4,11 @@
 
 @layer base {
   :root {
-    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-family:
+      "Inter",
+      system-ui,
+      -apple-system,
+      sans-serif;
     accent-color: #f97316;
     /* orange-500 */
   }
@@ -149,7 +153,9 @@
   border: 2px solid var(--slider-thumb-stroke);
   border-radius: 9999px;
   box-shadow: 0 0 0 0 transparent;
-  transition: box-shadow 0.15s ease, transform 0.1s ease;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
 }
 
 .range-input::-moz-range-thumb {
@@ -159,7 +165,9 @@
   border: 2px solid var(--slider-thumb-stroke);
   border-radius: 9999px;
   box-shadow: 0 0 0 0 transparent;
-  transition: box-shadow 0.15s ease, transform 0.1s ease;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
 }
 
 .range-input:focus-visible::-webkit-slider-thumb,

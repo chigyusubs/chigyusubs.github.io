@@ -8,7 +8,8 @@ vi.mock("../gemini", () => {
     geminiState.maxActive = Math.max(geminiState.maxActive, geminiState.active);
     await new Promise((resolve) => setTimeout(resolve, 5));
     geminiState.active -= 1;
-    const chunk = opts.userPrompt.split("CUES TO TRANSLATE:\n")[1]?.trim() ?? "";
+    const chunk =
+      opts.userPrompt.split("CUES TO TRANSLATE:\n")[1]?.trim() ?? "";
     return { text: chunk };
   });
 
@@ -40,9 +41,7 @@ describe("translateCues", () => {
       cues,
       apiKey: "key",
       modelName: "model",
-      sourceLang: "ja",
       targetLang: "en",
-      style: "",
       glossary: "",
       customPrompt: "",
       targetSeconds: 1,
