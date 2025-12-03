@@ -1,6 +1,29 @@
+import type { ProviderType } from "./providers/types";
+
+export type ProviderConfig = {
+  apiKey?: string;
+  baseUrl?: string; // For Ollama
+};
+
 export type UserPrefs = {
+  // Provider selection
+  selectedProvider?: ProviderType;
+  providerConfigs?: Record<ProviderType, ProviderConfig>;
+
+  // Provider-specific configurations (e.g., OpenAI transcription settings)
+  providerSpecificConfigs?: {
+    openai?: {
+      transcriptionEnabled?: boolean;
+      transcriptionModel?: "whisper-1";
+      transcriptionLanguage?: string;
+    };
+  };
+
+  // Legacy fields (for backward compatibility)
   modelName?: string;
   models?: string[];
+
+  // Current settings
   mediaResolution?: "low" | "standard";
   useAudioOnly?: boolean;
   targetLang?: string;
@@ -26,7 +49,20 @@ export function loadPrefs(): UserPrefs | null {
   try {
     const raw = window.localStorage.getItem(PREFS_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as UserPrefs;
+    const prefs = JSON.parse(raw) as UserPrefs;
+
+    // Migration: If old format (no selectedProvider), migrate to new format
+    if (!prefs.selectedProvider) {
+      prefs.selectedProvider = "gemini"; // Default to Gemini for existing users
+      prefs.providerConfigs = prefs.providerConfigs || {
+        gemini: {},
+        openai: {},
+        anthropic: {},
+        ollama: { baseUrl: "http://localhost:11434" },
+      };
+    }
+
+    return prefs;
   } catch {
     return null;
   }

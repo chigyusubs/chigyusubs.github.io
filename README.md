@@ -1,6 +1,6 @@
 # ChigyuSubs
 
-Browser-only subtitle translator for VTT or SRT files powered by Gemini. Upload subtitles, optionally provide media context, and translate to your target language directly from the page. Chunking, validation, and Gemini calls all run in the client with your API key.
+Browser-only subtitle translator for VTT or SRT files powered by AI. Supports Gemini, OpenAI, Anthropic, and Ollama local models. Upload subtitles, optionally provide media context, and translate to your target language directly from the page. Chunking, validation, and API calls all run in the client with your API key.
 
 Live app: https://chigyusubs.github.io (built from `main` via GitHub Actions)
 
@@ -17,7 +17,11 @@ Live app: https://chigyusubs.github.io (built from `main` via GitHub Actions)
 ## Prerequisites
 
 - **Node.js 18+** (for local development)
-- **Gemini API key** — [Get one from Google AI Studio](https://aistudio.google.com/apikey)
+- **API Key** — Choose one or more providers:
+  - [Gemini API](https://aistudio.google.com/apikey) (default, recommended)
+  - [OpenAI API](https://platform.openai.com/api-keys)
+  - [Anthropic API](https://console.anthropic.com/)
+  - [Ollama](https://ollama.ai/) (local, no API key required)
 
 ## Generating VTT subtitles
 
@@ -46,7 +50,8 @@ Open http://localhost:5173, paste your Gemini API key, and translate. You can bu
 
 ### For Users
 - **[Usage Guide](./docs/usage.md)** — Detailed documentation on features, controls, and workflows
-- **[Gemini API Setup](./docs/gemini.md)** — How to get and use your Gemini API key
+- **[API Provider Setup](./docs/providers.md)** — Multi-provider support: Gemini, OpenAI, Anthropic, Ollama
+- **[Gemini API Setup](./docs/gemini.md)** — How to get and use your Gemini API key  
 - **[Legal](./docs/legal.md)** — Terms and privacy information
 
 ### For Developers & Agents

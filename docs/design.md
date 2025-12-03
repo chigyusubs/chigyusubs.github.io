@@ -3,7 +3,8 @@
 > **Document Type**: Design Specification & Architecture Guide  
 > **Last Updated**: 2025-12-02  
 > **Status**: Living document - reflects design decisions and future direction  
-> **Related**: See [prompt-engineering.md](./prompt-engineering.md) for technical implementation details
+> **Related**: See [prompt-engineering.md](./prompt-engineering.md) for technical implementation details  
+> **Related**: See [providers.md](./providers.md) for multi-provider API support
 
 ## Table of Contents
 

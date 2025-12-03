@@ -22,10 +22,12 @@ export type RunnerProgress = {
 
 type RunOptions = {
   cues: Cue[];
+  provider: ProviderType;
   chunkSeconds: number;
   chunkOverlap: number;
   apiKey: string;
   modelName: string;
+  baseUrl?: string;
   targetLang: string;
   glossary: string;
   useGlossary: boolean;
@@ -40,8 +42,10 @@ type RunOptions = {
 
 type RetryOptions = {
   chunk: ChunkStatus;
+  provider: ProviderType;
   apiKey: string;
   modelName: string;
+  baseUrl?: string;
   targetLang: string;
   glossary: string;
   useGlossary: boolean;
@@ -162,8 +166,10 @@ export function useTranslationRunner() {
 
     const data = await translateCues({
       cues: opts.cues,
+      provider: opts.provider,
       apiKey: opts.apiKey,
       modelName: opts.modelName,
+      baseUrl: opts.baseUrl,
       targetLang: opts.targetLang,
       glossary: opts.glossary,
       useGlossary: opts.useGlossary && opts.glossary.trim() ? true : false,
@@ -303,8 +309,10 @@ export function useTranslationRunner() {
         idx: chunk.idx,
         chunkVtt: chunk.chunk_vtt || "",
         contextVtt: chunk.context_vtt || "",
+        provider: opts.provider,
         apiKey: opts.apiKey,
         modelName: opts.modelName,
+        baseUrl: opts.baseUrl,
         targetLang: opts.targetLang,
         glossary: opts.glossary,
         customPrompt: opts.customPrompt,

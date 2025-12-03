@@ -57,6 +57,7 @@ describe("useTranslationRunner", () => {
           { start: 0, end: 1, text: "a" },
           { start: 1, end: 2, text: "b" },
         ],
+        provider: "gemini",
         chunkSeconds: 1,
         chunkOverlap: 0,
         apiKey: "k",
@@ -97,6 +98,7 @@ describe("useTranslationRunner", () => {
     await act(async () => {
       await result.current.actions.runTranslation({
         cues: [{ start: 0, end: 1, text: "a" }],
+        provider: "gemini",
         chunkSeconds: 1,
         chunkOverlap: 0,
         apiKey: "k",
@@ -117,6 +119,7 @@ describe("useTranslationRunner", () => {
     await act(async () => {
       await result.current.actions.retryChunk({
         chunk: result.current.state.result!.chunks[0],
+        provider: "gemini",
         apiKey: "k",
         modelName: "m",
         targetLang: "en",
@@ -131,6 +134,7 @@ describe("useTranslationRunner", () => {
       });
       await result.current.actions.retryChunk({
         chunk: result.current.state.result!.chunks[0],
+        provider: "gemini",
         apiKey: "k",
         modelName: "m",
         targetLang: "en",

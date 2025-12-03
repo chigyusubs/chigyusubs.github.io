@@ -26,6 +26,7 @@ vi.mock("../../lib/translation", async () => {
 
 describe("useTranslationRunner", () => {
   const baseOpts = {
+    provider: "gemini" as const,
     chunkSeconds: 600,
     chunkOverlap: 2,
     apiKey: "key",
@@ -117,6 +118,7 @@ describe("useTranslationRunner", () => {
     await act(async () => {
       await result.current.actions.retryChunk({
         chunk: mkChunk(),
+        provider: baseOpts.provider,
         apiKey: baseOpts.apiKey,
         modelName: baseOpts.modelName,
         targetLang: baseOpts.targetLang,

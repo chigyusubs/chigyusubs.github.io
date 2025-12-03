@@ -8,7 +8,7 @@ import {
 } from "../config/defaults";
 import { Button } from "./ui/Button";
 import { SectionCard } from "./ui/SectionCard";
-import { FilePicker } from "./ui/Field";
+import { FilePicker, TextArea } from "./ui/Field";
 
 type Props = {
   vttFile: File | null;
@@ -29,6 +29,17 @@ type Props = {
   apiKey: string;
   locked: boolean;
   mediaTooLargeWarning: boolean;
+
+  // Audio Transcription Props
+  showAudioUpload?: boolean;
+  audioFile?: File | null;
+  setAudioFile?: (file: File | null) => void;
+  transcriptionText?: string;
+  setTranscriptionText?: (text: string) => void;
+  transcriptionStatus?: "idle" | "loading" | "success" | "error";
+  onTranscribe?: () => void;
+  useTranscription?: boolean;
+  setUseTranscription?: (use: boolean) => void;
 };
 
 function formatDuration(seconds: number | null): string {
@@ -63,13 +74,23 @@ export function FileUploader({
   apiKey,
   locked,
   mediaTooLargeWarning,
+
+  showAudioUpload = false,
+  audioFile,
+  setAudioFile,
+  transcriptionText = "",
+  setTranscriptionText,
+  transcriptionStatus = "idle",
+  onTranscribe,
+  useTranscription = false,
+  setUseTranscription,
 }: Props) {
   const theme = useTheme();
 
   const durationInfo =
     videoDuration !== null &&
-    Number.isFinite(videoDuration) &&
-    videoDuration > 0
+      Number.isFinite(videoDuration) &&
+      videoDuration > 0
       ? { seconds: videoDuration }
       : null;
 
@@ -105,18 +126,36 @@ export function FileUploader({
       subtitle="Upload subtitles (required) and optional context media to improve summaries."
     >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {/* Subtitle File Upload */}
         <FilePicker
           label="Subtitles (VTT or SRT, required)"
           description="Click or drop your subtitle file"
           accept=".vtt,.srt,text/vtt,text/srt"
           onChange={(e) => setVttFile(e.target.files?.[0] || null)}
-          required
+          required={!useTranscription} // Not required if using transcription
           fileName={vttFile?.name || null}
           fileMeta={
             vttFile ? `${(vttFile.size / 1024 / 1024).toFixed(2)} MB` : null
           }
-          disabled={isLocked}
+          disabled={isLocked || useTranscription}
         />
+
+        {/* Audio File Upload (for Transcription) */}
+        {showAudioUpload && setAudioFile && (
+          <FilePicker
+            label="Audio for Transcription (optional)"
+            description="Upload audio to generate subtitles"
+            accept="audio/*,video/*"
+            onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
+            fileName={audioFile?.name || null}
+            fileMeta={
+              audioFile ? `${(audioFile.size / 1024 / 1024).toFixed(2)} MB` : null
+            }
+            disabled={isLocked || transcriptionStatus === "loading"}
+          />
+        )}
+
+        {/* Context Media Upload */}
         <FilePicker
           label="Context media (optional)"
           description="Video or audio, used only for summary (keep small to reduce tokens)"
@@ -129,6 +168,56 @@ export function FileUploader({
           disabled={isLocked}
         />
       </div>
+
+      {/* Transcription Controls */}
+      {showAudioUpload && audioFile && onTranscribe && (
+        <div className="space-y-3 pt-4 border-t" style={{ borderColor: theme.borderColor }}>
+          <div className="flex items-center gap-4">
+            <Button
+              type="button"
+              tone="primary"
+              onClick={onTranscribe}
+              disabled={transcriptionStatus === "loading" || isLocked}
+            >
+              {transcriptionStatus === "loading" ? "Transcribing..." : "Transcribe Audio"}
+            </Button>
+            {transcriptionStatus === "success" && (
+              <span className={`text-sm ${theme.successText}`}>Transcription complete!</span>
+            )}
+            {transcriptionStatus === "error" && (
+              <span className={`text-sm ${theme.dangerText}`}>Transcription failed</span>
+            )}
+          </div>
+
+          {/* Transcription Preview */}
+          {(transcriptionText || transcriptionStatus === "success") && setTranscriptionText && setUseTranscription && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="inline-flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={useTranscription}
+                    onChange={(e) => setUseTranscription(e.target.checked)}
+                    disabled={isLocked}
+                  />
+                  <span>Use Transcription as Subtitles</span>
+                </label>
+              </div>
+
+              {useTranscription && (
+                <TextArea
+                  value={transcriptionText}
+                  onChange={(e) => setTranscriptionText(e.target.value)}
+                  placeholder="Transcription output will appear here..."
+                  rows={6}
+                  variant="code"
+                  disabled={isLocked}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-col gap-2">
         <label className="inline-flex items-center gap-2 text-sm">

@@ -4,7 +4,7 @@ import {
   systemPromptTextOnly,
 } from "./prompts";
 import { deriveSrt, stitchVtt } from "./stitcher";
-import { GeminiTranslationError, translateChunkText } from "./gemini";
+import { ProviderTranslationError } from "./providers";
 import {
   autoRepairVtt,
   validateTimecodeConsistency,
@@ -12,6 +12,8 @@ import {
 } from "./validator";
 import { parseVtt, serializeVtt, type Cue } from "./vtt";
 import { MAX_CONCURRENCY } from "../config/defaults";
+import type { ProviderType } from "./providers/types";
+import { ProviderFactory } from "./providers/ProviderFactory";
 
 export type ChunkStatus = {
   idx: number;
@@ -68,8 +70,10 @@ export type TranslateResult = {
 
 type TranslateOptions = {
   cues: Cue[];
+  provider: ProviderType;
   apiKey: string;
   modelName: string;
+  baseUrl?: string;
   targetLang: string;
   glossary?: string;
   customPrompt?: string;
@@ -94,8 +98,10 @@ type ChunkRetryOptions = {
   chunkVtt: string;
   contextVtt: string;
   idx: number;
+  provider: ProviderType;
   apiKey: string;
   modelName: string;
+  baseUrl?: string;
   targetLang: string;
   glossary?: string;
   customPrompt?: string;
@@ -149,8 +155,10 @@ async function translateChunk(
     chunkVtt,
     contextVtt,
     idx: chunk.idx,
+    provider: opts.provider,
     apiKey: opts.apiKey,
     modelName: opts.modelName,
+    baseUrl: opts.baseUrl,
     targetLang: opts.targetLang,
     glossary: opts.glossary,
     customPrompt: opts.customPrompt,
@@ -207,8 +215,10 @@ export async function translateChunkFromText(
   const {
     chunkVtt,
     contextVtt,
+    provider,
     apiKey,
     modelName,
+    baseUrl,
     targetLang,
     glossary,
     customPrompt,
@@ -252,28 +262,42 @@ export async function translateChunkFromText(
 
   let translated = "";
   try {
-    const response = await translateChunkText({
-      apiKey,
+    // Use the provider from the options
+    const providerType = provider;
+
+    // Create provider instance
+    const config = {
+      apiKey: providerType !== "ollama" ? apiKey : undefined,
       modelName,
+      baseUrl: providerType === "ollama" ? baseUrl ?? "http://localhost:11434" : baseUrl,
+    };
+
+    const providerInstance = ProviderFactory.create(providerType, config);
+
+    // Prepare the request
+    const request = {
       systemPrompt,
       userPrompt,
-      videoUri: undefined,
       temperature,
+      // Note: videoUri is ignored here since it's passed as undefined in original code
       safetyOff,
-      trace: {
-        purpose: "translateChunk",
-        chunkIdx: opts.idx,
-        runId: opts.runId,
-      },
-    });
+    };
+
+    const trace = {
+      purpose: "translateChunk",
+      chunkIdx: opts.idx,
+      runId: opts.runId,
+    };
+
+    const response = await providerInstance.generateContent(request, trace);
     translated = response.text;
   } catch (err) {
     const warn =
-      err instanceof GeminiTranslationError
+      err instanceof ProviderTranslationError
         ? err.message
         : err instanceof Error
           ? err.message
-          : "Gemini translation failed";
+          : "Translation failed";
     return {
       idx: opts.idx,
       status: "failed",
@@ -432,8 +456,10 @@ export async function translateCues(
 ): Promise<TranslateResult> {
   const {
     cues,
+    provider,
     apiKey,
     modelName,
+    baseUrl,
     targetLang,
     glossary,
     customPrompt,
@@ -476,8 +502,10 @@ export async function translateCues(
         }
       }
       const res = await translateChunk(chunk, {
+        provider,
         apiKey,
         modelName,
+        baseUrl,
         targetLang,
         glossary,
         customPrompt,
@@ -518,8 +546,10 @@ export async function translateCues(
           finished_at: 0,
         });
         return translateChunk(chunk, {
+          provider,
           apiKey,
           modelName,
+          baseUrl,
           targetLang,
           glossary,
           customPrompt,

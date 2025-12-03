@@ -1,10 +1,10 @@
 import React from "react";
 import { useTranslationWorkflowRunner } from "./hooks/useTranslationWorkflowRunner";
-import { GeminiSettings } from "./components/GeminiSettings";
+import { ProviderSettings } from "./components/ProviderSettings";
 import { FileUploader } from "./components/FileUploader";
 import { TranslationProgress } from "./components/TranslationProgress";
 import { ResultView } from "./components/ResultView";
-import { GeminiDebugLog } from "./components/GeminiDebugLog";
+import { ProviderDebugLog } from "./components/ProviderDebugLog";
 import { Button } from "./components/ui/Button";
 import { SectionCard } from "./components/ui/SectionCard";
 import { FieldLabel, TextArea, TextInput } from "./components/ui/Field";
@@ -31,7 +31,7 @@ function App() {
         ? "Generate summary from media"
         : "Generate summary from subtitles";
   const canGenerateSummary =
-    !!state.apiKey &&
+    (state.selectedProvider === "ollama" || !!state.apiKey) &&
     (state.mediaFile ? !!state.videoRef : !!state.vttFile) &&
     state.summaryStatus !== "loading" &&
     !locked;
@@ -50,7 +50,7 @@ function App() {
             <div>
               <h1 className="text-2xl font-bold">ChigyuSubs</h1>
               <p className={`text-sm ${theme.subtext}`}>
-                Translate subtitles (VTT or SRT) using your Gemini API key.
+                Translate subtitles (VTT or SRT) using AI translation.
               </p>
             </div>
           </div>
@@ -63,9 +63,15 @@ function App() {
       </header>
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-6 pb-20">
         <form className="space-y-6" onSubmit={actions.handleSubmit}>
-          <GeminiSettings
-            apiKey={state.apiKey}
+          <ProviderSettings
+            selectedProvider={state.selectedProvider}
+            setSelectedProvider={actions.setSelectedProvider}
+            apiKeys={state.apiKeys}
             setApiKey={actions.setApiKey}
+            ollamaBaseUrl={state.ollamaBaseUrl}
+            setOllamaBaseUrl={actions.setOllamaBaseUrl}
+            providerConfigs={state.providerConfigs}
+            onProviderConfigChange={actions.updateProviderConfig}
             modelName={state.modelName}
             setModelName={actions.setModelName}
             models={state.models}
@@ -100,6 +106,17 @@ function App() {
             apiKey={state.apiKey}
             locked={locked}
             mediaTooLargeWarning={state.mediaTooLargeWarning}
+
+            // Transcription props
+            showAudioUpload={state.selectedProvider === "openai" && state.providerConfigs.openai.transcriptionEnabled}
+            audioFile={state.audioFile}
+            setAudioFile={actions.setAudioFile}
+            transcriptionText={state.transcriptionText}
+            setTranscriptionText={actions.setTranscriptionText}
+            transcriptionStatus={state.transcriptionStatus}
+            onTranscribe={actions.handleTranscribeAudio}
+            useTranscription={state.useTranscription}
+            setUseTranscription={actions.setUseTranscription}
           />
 
           <SectionCard
@@ -244,7 +261,7 @@ function App() {
                   disabled={
                     locked ||
                     state.glossaryPrompt.trim() ===
-                      DEFAULT_GLOSSARY_PROMPT.trim()
+                    DEFAULT_GLOSSARY_PROMPT.trim()
                   }
                   title="Restore default glossary system prompt"
                 />
@@ -295,7 +312,7 @@ function App() {
                   disabled={
                     locked ||
                     state.customPrompt.trim() ===
-                      DEFAULT_SYSTEM_PROMPT_TEXT.trim()
+                    DEFAULT_SYSTEM_PROMPT_TEXT.trim()
                   }
                   title="Restore default system prompt"
                 />
@@ -527,7 +544,7 @@ function App() {
               type="submit"
               tone="upload"
               disabled={
-                state.submitting || !state.vttFile || !state.apiKey || locked
+                state.submitting || !state.vttFile || (state.selectedProvider !== "ollama" && !state.apiKey) || locked
               }
             >
               {state.submitting ? (
@@ -555,7 +572,7 @@ function App() {
           </div>
         )}
 
-        <GeminiDebugLog />
+        <ProviderDebugLog />
         <div className="flex justify-end">
           <Button
             type="button"

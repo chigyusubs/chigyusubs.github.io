@@ -1,22 +1,54 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const geminiState = vi.hoisted(() => ({ active: 0, maxActive: 0 }));
+const callState = vi.hoisted(() => ({ active: 0, maxActive: 0 }));
 
-vi.mock("../gemini", () => {
-  const translateChunkText = vi.fn(async (opts: { userPrompt: string }) => {
-    geminiState.active += 1;
-    geminiState.maxActive = Math.max(geminiState.maxActive, geminiState.active);
-    await new Promise((resolve) => setTimeout(resolve, 5));
-    geminiState.active -= 1;
-    const chunk =
-      opts.userPrompt.split("### CUES TO TRANSLATE ###\n")[1]?.trim() ?? "";
-    // Ensure the returned text is valid VTT format
-    return { text: chunk };
-  });
+vi.mock("../providers/ProviderFactory", async (importOriginal) => {
+  const original = await importOriginal();
+  const ProviderFactoryOriginal = (original as any).ProviderFactory;
 
-  class GeminiTranslationError extends Error {}
+  // Create a mock provider that behaves like the original mock
+  class MockProvider {
+    constructor(config: any) {
+      this.config = config;
+    }
+    config: any;
+    readonly type = "gemini";
+    readonly capabilities = {
+      supportsMediaUpload: true,
+      supportsVision: true,
+      supportsTemperature: true,
+      supportsSafetySettings: true,
+      requiresApiKey: true,
+      supportsStreaming: false,
+    };
 
-  return { translateChunkText, GeminiTranslationError };
+    async generateContent(opts: { userPrompt: string }) {
+      callState.active += 1;
+      callState.maxActive = Math.max(callState.maxActive, callState.active);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      callState.active -= 1;
+      const chunk =
+        opts.userPrompt.split("### CUES TO TRANSLATE ###\n")[1]?.trim() ?? "";
+      // Ensure the returned text is valid VTT format
+      return { text: chunk };
+    }
+
+    validateConfig(_config: any) {
+      return true;
+    }
+
+    async listModels() {
+      return [];
+    }
+  }
+
+  // Mock the ProviderFactory to return our mock provider
+  const mockProviderFactory = {
+    ...ProviderFactoryOriginal,
+    create: vi.fn((type, config) => new MockProvider(config)),
+  };
+
+  return { ...original, ProviderFactory: mockProviderFactory };
 });
 
 import { translateCues } from "../translation";
@@ -32,8 +64,8 @@ const mkCue = (start: number): Cue => ({
 describe("translateCues", () => {
   afterEach(() => {
     vi.clearAllMocks();
-    geminiState.active = 0;
-    geminiState.maxActive = 0;
+    callState.active = 0;
+    callState.maxActive = 0;
   });
 
   it("clamps concurrency to a maximum of 10 while processing all chunks", async () => {
@@ -41,8 +73,10 @@ describe("translateCues", () => {
 
     const result = await translateCues({
       cues,
+      provider: "gemini", // Added required provider field
       apiKey: "key",
       modelName: "model",
+      baseUrl: "https://generativelanguage.googleapis.com", // Added required baseUrl field
       targetLang: "en",
       glossary: "",
       customPrompt: "",
@@ -58,7 +92,7 @@ describe("translateCues", () => {
       onChunkUpdate: () => {},
     });
 
-    expect(geminiState.maxActive).toBeLessThanOrEqual(10);
+    expect(callState.maxActive).toBeLessThanOrEqual(10);
     expect(result.chunks.length).toBe(cues.length);
     // Log the status of each chunk for debugging
     result.chunks.forEach((chunk, index) => {

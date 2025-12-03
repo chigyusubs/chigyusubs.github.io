@@ -20,12 +20,8 @@ import {
   PROMPT_PRESETS,
   type PromptPresetId,
 } from "../config/defaults";
-import {
-  deleteUploadedFile,
-  listModels,
-  translateChunkText,
-  uploadContextVideo,
-} from "../lib/gemini";
+import { parseModelName, ProviderFactory } from "../lib/providers/ProviderFactory";
+import type { ProviderType, GenerateRequest } from "../lib/providers/types";
 import { extractAudioToOggMono } from "../lib/ffmpeg";
 import { type ChunkStatus } from "../lib/translation";
 import {
@@ -49,6 +45,32 @@ import {
 export function useTranslationWorkflowRunner() {
   const saved = loadPrefs();
   const mediaProbeIdRef = useRef(0);
+
+  // Provider state
+  const [selectedProvider, setSelectedProvider] = useState<ProviderType>(
+    saved?.selectedProvider ?? "gemini"
+  );
+  const [apiKeys, setApiKeys] = useState<Record<ProviderType, string>>(() => {
+    const defaultKeys: Record<ProviderType, string> = {
+      gemini: "",
+      openai: "",
+      anthropic: "",
+      ollama: "",
+    };
+    if (saved?.providerConfigs) {
+      Object.entries(saved.providerConfigs).forEach(([provider, config]) => {
+        if (config.apiKey) {
+          defaultKeys[provider as ProviderType] = config.apiKey;
+        }
+      });
+    }
+    return defaultKeys;
+  });
+  const [ollamaBaseUrl, setOllamaBaseUrl] = useState(
+    saved?.providerConfigs?.ollama?.baseUrl ?? "http://localhost:11434"
+  );
+
+  // File state
   const [vttFile, setVttFile] = useState<File | null>(null);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [useAudioOnly, setUseAudioOnly] = useState(
@@ -77,7 +99,14 @@ export function useTranslationWorkflowRunner() {
   const [useGlossary, setUseGlossary] = useState(
     saved?.useGlossary ?? DEFAULT_USE_GLOSSARY,
   );
-  const [apiKey, setApiKey] = useState("");
+
+  // Current API key (derived from selected provider)
+  const apiKey = apiKeys[selectedProvider];
+  const setApiKey = (provider: ProviderType, key: string) => {
+    setApiKeys(prev => ({ ...prev, [provider]: key }));
+  };
+
+  // Video/media state
   const [videoName, setVideoName] = useState<string | null>(null);
   const [videoRef, setVideoRef] = useState<string | null>(null);
   const [videoFileId, setVideoFileId] = useState<string | null>(null);
@@ -135,6 +164,60 @@ export function useTranslationWorkflowRunner() {
     }
   });
 
+  // Provider-specific configurations
+  const [providerConfigs, setProviderConfigs] = useState<{
+    openai: {
+      transcriptionEnabled: boolean;
+      transcriptionModel?: "whisper-1";
+      transcriptionLanguage?: string;
+    };
+  }>(() => {
+    const defaultConfig = {
+      openai: {
+        transcriptionEnabled: false,
+        transcriptionModel: "whisper-1" as const,
+        transcriptionLanguage: "",
+      },
+    };
+    // Try to load from saved prefs
+    if (saved?.providerSpecificConfigs?.openai) {
+      return {
+        openai: { ...defaultConfig.openai, ...saved.providerSpecificConfigs.openai },
+      };
+    }
+    return defaultConfig;
+  });
+
+  // Audio transcription state (for OpenAI)
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [transcriptionText, setTranscriptionText] = useState("");
+  const [transcriptionStatus, setTranscriptionStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [useTranscription, setUseTranscription] = useState(false);
+
+  const providerLabels: Record<ProviderType, string> = {
+    gemini: "Gemini",
+    openai: "OpenAI",
+    anthropic: "Anthropic",
+    ollama: "Ollama",
+  };
+
+  const resolveProviderConfig = () => {
+    const parsed = parseModelName(modelName);
+    const providerType = parsed.provider;
+    return {
+      providerType,
+      providerLabel: providerLabels[providerType],
+      selectedLabel: providerLabels[selectedProvider],
+      mismatch: providerType !== selectedProvider,
+      modelForProvider: parsed.model,
+      apiKeyForProvider: apiKeys[providerType] ?? "",
+      baseUrlForProvider:
+        providerType === "ollama" ? ollamaBaseUrl : undefined,
+    };
+  };
+
   const { state: runnerState, actions: runnerActions } = useTranslationRunner();
 
   // Save custom presets to localStorage whenever they change
@@ -165,7 +248,16 @@ export function useTranslationWorkflowRunner() {
   };
 
   useEffect(() => {
+    const providerConfigs: Record<ProviderType, import("../lib/prefs").ProviderConfig> = {
+      gemini: { apiKey: apiKeys.gemini },
+      openai: { apiKey: apiKeys.openai },
+      anthropic: { apiKey: apiKeys.anthropic },
+      ollama: { apiKey: apiKeys.ollama, baseUrl: ollamaBaseUrl },
+    };
     const prefs: UserPrefs = {
+      selectedProvider,
+      providerConfigs,
+      providerSpecificConfigs: providerConfigs as any, // Cast to match UserPrefs type
       modelName,
       models,
       mediaResolution,
@@ -187,6 +279,10 @@ export function useTranslationWorkflowRunner() {
     };
     savePrefs(prefs);
   }, [
+    selectedProvider,
+    apiKeys,
+    ollamaBaseUrl,
+    providerConfigs, // Added dependency
     modelName,
     models,
     mediaResolution,
@@ -263,13 +359,13 @@ export function useTranslationWorkflowRunner() {
       setError("Select a context media file to upload");
       return;
     }
-    if (!apiKey) {
-      setError("Gemini API key is required to upload video");
+    if (selectedProvider !== "ollama" && !apiKey) {
+      setError(`${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key is required to upload video`);
       return;
     }
     setError("");
     setVideoUploadState("uploading");
-    setVideoUploadMessage("Uploading media to Gemini…");
+    setVideoUploadMessage(`Uploading media to ${selectedProvider}…`);
     try {
       let mediaToUpload: File = mediaFile;
       const isAudio = mediaToUpload.type.startsWith("audio/");
@@ -286,7 +382,21 @@ export function useTranslationWorkflowRunner() {
           );
         }
       }
-      const data = await uploadContextVideo(mediaToUpload, apiKey);
+      // Create provider instance for media upload
+      const config = {
+        apiKey: selectedProvider !== "ollama" ? apiKey : undefined,
+        modelName: modelName,
+        baseUrl: selectedProvider === "ollama" ? ollamaBaseUrl : undefined,
+      };
+
+      const provider = ProviderFactory.create(selectedProvider, config);
+
+      // Check if provider supports media upload
+      if (!provider.uploadMedia) {
+        throw new Error(`${selectedProvider} does not support media upload`);
+      }
+
+      const data = await provider.uploadMedia(mediaToUpload);
       setVideoRef(data.fileUri);
       setVideoName(
         (prev) => prev || data.fileName || mediaToUpload.name || null,
@@ -323,34 +433,62 @@ export function useTranslationWorkflowRunner() {
     runnerActions.setProgress("Deleting uploaded video from Gemini…");
     setError("");
     try {
-      await deleteUploadedFile(target, apiKey);
+      // Create provider instance for media deletion
+      const config = {
+        apiKey: selectedProvider !== "ollama" ? apiKey : undefined,
+        modelName: modelName,
+        baseUrl: selectedProvider === "ollama" ? ollamaBaseUrl : undefined,
+      };
+
+      const provider = ProviderFactory.create(selectedProvider, config);
+
+      // Check if provider supports media deletion
+      if (!provider.deleteMedia) {
+        throw new Error(`${selectedProvider} does not support media deletion`);
+      }
+
+      await provider.deleteMedia(target);
       setVideoRef(null);
       setVideoName(null);
       setVideoFileId(null);
       setContextMediaKind(null);
       setVideoUploadState("idle");
-      setVideoUploadMessage("Deleted from Gemini");
+      setVideoUploadMessage("Deleted from provider");
       runnerActions.setProgress("");
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to delete uploaded video",
+        err instanceof Error ? err.message : "Failed to delete uploaded media",
       );
       runnerActions.setProgress("");
     }
   };
 
   const handleLoadModels = async () => {
-    if (!apiKey) {
-      setError("Gemini API key is required to load models");
+    // Ollama doesn't require an API key
+    if (selectedProvider !== "ollama" && !apiKey) {
+      setError(`${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key is required to load models`);
       return;
     }
     setError("");
     runnerActions.setProgress("Loading models…");
     try {
-      const names = await listModels(apiKey);
+      const { ProviderFactory } = await import("../lib/providers");
+      const config: import("../lib/providers/types").ProviderConfig = {
+        apiKey,
+        modelName: "", // Not needed for listing models
+      };
+      if (selectedProvider === "ollama") {
+        config.baseUrl = ollamaBaseUrl;
+      }
+      const provider = ProviderFactory.create(selectedProvider, config);
+      const modelList = await provider.listModels();
+      // Always prefix model names with their provider to ensure correct routing
+      const names = modelList.map(m => `${m.provider}/${m.displayName}`);
       if (names.length > 0) {
         setModels(names);
         setModelName(names[0]);
+      } else {
+        setError("No models available from provider");
       }
       runnerActions.setProgress("");
     } catch (err) {
@@ -364,54 +502,61 @@ export function useTranslationWorkflowRunner() {
       setGlossaryError("Load subtitles first to generate glossary");
       return;
     }
+    const resolvedProvider = resolveProviderConfig();
+    if (resolvedProvider.mismatch) {
+      setGlossaryStatus("idle");
+      setGlossaryError(
+        `Selected provider (${resolvedProvider.selectedLabel}) does not match the model's provider (${resolvedProvider.providerLabel}). Refresh and choose a ${resolvedProvider.selectedLabel} model.`,
+      );
+      return;
+    }
+    if (resolvedProvider.providerType !== "ollama" && !resolvedProvider.apiKeyForProvider) {
+      setGlossaryStatus("idle");
+      setGlossaryError(`${resolvedProvider.providerLabel} API key required to generate glossary`);
+      return;
+    }
     setGlossaryStatus("loading");
     try {
-      const text = await vttFile.text();
+      const fileText = await vttFile.text();
       let cues: ReturnType<typeof parseVtt>;
       try {
         cues = vttFile.name.toLowerCase().endsWith(".srt")
-          ? parseSrt(text)
-          : parseVtt(text);
+          ? parseSrt(fileText)
+          : parseVtt(fileText);
       } catch {
-        cues = parseSrt(text);
+        cues = parseSrt(fileText);
       }
       const rawText = cues.map((c) => `${c.text}`).join("\n");
       const truncated = rawText.slice(0, 8000);
-      if (apiKey) {
-        const systemPrompt = glossarySystemPrompt(glossaryPrompt, targetLang);
-        const userPrompt =
-          "Generate a glossary for these subtitles. Output ONLY CSV lines: source,target. Focus on recurring names/terms that should stay consistent. Text follows:\n\n" +
-          truncated;
-        const generated = await translateChunkText({
-          apiKey,
-          modelName,
-          systemPrompt,
-          userPrompt,
-          temperature: DEFAULT_TEMPERATURE,
-          safetyOff,
-          trace: { purpose: "glossary" },
-        });
-        const text = generated.text.trim();
-        setGlossary(text);
-        setUseGlossary(!!text);
-      } else {
-        const counts = new Map<string, number>();
-        for (const cue of cues) {
-          const tokens = cue.text
-            .replace(/\d+:\d+:\d+\.\d+/g, " ")
-            .split(/[^A-Za-z0-9\u3040-\u30ff\u3400-\u9fffー]+/)
-            .map((t) => t.trim())
-            .filter((t) => t.length > 1);
-          tokens.forEach((t) => counts.set(t, (counts.get(t) || 0) + 1));
-        }
-        const top = Array.from(counts.entries())
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 12)
-          .map(([term]) => `${term},`)
-          .join("\n");
-        setGlossary(top);
-        setUseGlossary(!!top.trim());
-      }
+      const systemPrompt = glossarySystemPrompt(glossaryPrompt, targetLang);
+      const userPrompt =
+        "Generate a glossary for these subtitles. Output ONLY CSV lines: source,target. Focus on recurring names/terms that should stay consistent. Text follows:\n\n" +
+        truncated;
+      const { providerType, modelForProvider, apiKeyForProvider, baseUrlForProvider } = resolvedProvider;
+
+      // Create provider instance
+      const config = {
+        apiKey: providerType !== "ollama" ? apiKeyForProvider : undefined,
+        modelName: modelForProvider,
+        baseUrl: baseUrlForProvider,
+      };
+
+      const provider = ProviderFactory.create(providerType, config);
+
+      // Prepare the request
+      const request = {
+        systemPrompt,
+        userPrompt,
+        temperature: DEFAULT_TEMPERATURE,
+        safetyOff,
+      };
+
+      const trace = { purpose: "glossary" };
+
+      const generated = await provider.generateContent(request, trace);
+      const text = generated.text.trim();
+      setGlossary(text);
+      setUseGlossary(!!text);
       setGlossaryError("");
     } catch (err) {
       setGlossaryError(
@@ -423,8 +568,15 @@ export function useTranslationWorkflowRunner() {
   };
 
   const handleGenerateSummary = async () => {
-    if (!apiKey) {
-      setSummaryError("Gemini API key required to generate summary");
+    const resolvedProvider = resolveProviderConfig();
+    if (resolvedProvider.mismatch) {
+      setSummaryError(
+        `Selected provider (${resolvedProvider.selectedLabel}) does not match the model's provider (${resolvedProvider.providerLabel}). Refresh and choose a ${resolvedProvider.selectedLabel} model.`,
+      );
+      return;
+    }
+    if (resolvedProvider.providerType !== "ollama" && !resolvedProvider.apiKeyForProvider) {
+      setSummaryError(`${resolvedProvider.providerLabel} API key required to generate summary`);
       return;
     }
     const isMediaSummary = !!mediaFile;
@@ -455,6 +607,7 @@ export function useTranslationWorkflowRunner() {
         : DEFAULT_SUMMARY_USER_PROMPT.subtitles;
       let transcriptText: string | undefined;
       if (!isMediaSummary) {
+        if (!vttFile) throw new Error("Subtitle file is required for subtitle summary");
         const fileText = await vttFile.text();
         let cues: ReturnType<typeof parseVtt>;
         const lowerName = vttFile.name.toLowerCase();
@@ -482,26 +635,30 @@ export function useTranslationWorkflowRunner() {
         glossary: glossaryBlock,
         text: transcriptText,
       });
-      const generateOptions: Parameters<typeof translateChunkText>[0] = {
-        apiKey,
-        modelName,
+      // Determine provider from model name (parseModelName handles defaulting to gemini)
+      const { providerType, modelForProvider, apiKeyForProvider, baseUrlForProvider } = resolvedProvider;
+
+      // Create provider instance
+      const config = {
+        apiKey: providerType !== "ollama" ? apiKeyForProvider : undefined,
+        modelName: modelForProvider,
+        baseUrl: baseUrlForProvider,
+      };
+
+      const provider = ProviderFactory.create(providerType, config);
+
+      // Prepare the request - including mediaUri if supported
+      const request: GenerateRequest = {
         systemPrompt,
         userPrompt,
         temperature: DEFAULT_TEMPERATURE,
         safetyOff,
-        trace: { purpose: isMediaSummary ? "summary" : "summary-subtitles" },
+        mediaUri: (isMediaSummary && provider.capabilities.supportsMediaUpload && videoRef) ? videoRef : undefined,
       };
 
-      if (isMediaSummary) {
-        generateOptions.videoUri = videoRef;
-        const resolution =
-          contextMediaKind === "video" ? mediaResolution : undefined;
-        if (resolution) {
-          generateOptions.mediaResolution = resolution;
-        }
-      }
+      const trace = { purpose: isMediaSummary ? "summary" : "summary-subtitles" };
 
-      const summary = await translateChunkText(generateOptions);
+      const summary = await provider.generateContent(request, trace);
       const text = summary.text.trim();
       setSummaryText(text);
       setUseSummary(!!text);
@@ -515,17 +672,73 @@ export function useTranslationWorkflowRunner() {
     }
   };
 
+  const updateProviderConfig = (
+    provider: "openai",
+    config: typeof providerConfigs.openai
+  ) => {
+    setProviderConfigs((prev) => ({
+      ...prev,
+      [provider]: config,
+    }));
+  };
+
+  const handleTranscribeAudio = async () => {
+    if (!audioFile) return;
+
+    try {
+      setTranscriptionStatus("loading");
+      setError("");
+
+      // Create provider instance
+      const provider = ProviderFactory.create("openai", {
+        apiKey: apiKeys.openai,
+        modelName: "whisper-1", // Model name doesn't matter for transcription endpoint but required by type
+      }) as import("../lib/providers/OpenAIProvider").OpenAIProvider;
+
+      if (!provider.transcribeAudio) {
+        throw new Error("Provider does not support transcription");
+      }
+
+      const vttContent = await provider.transcribeAudio(
+        audioFile,
+        providerConfigs.openai.transcriptionLanguage || undefined
+      );
+
+      setTranscriptionText(vttContent);
+      setTranscriptionStatus("success");
+      setUseTranscription(true);
+    } catch (err) {
+      setTranscriptionStatus("error");
+      const errorMsg =
+        err instanceof Error ? err.message : "Transcription failed";
+      setError(`Transcription failed: ${errorMsg}`);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     runnerActions.setResult(null);
     runnerActions.setProgress("");
-    if (!vttFile) {
-      setError("Subtitle file is required");
+
+    // Validate input: Need either VTT file OR enabled transcription
+    const hasVttFile = Boolean(vttFile);
+    const hasTranscription = Boolean(useTranscription && transcriptionText);
+
+    if (!hasVttFile && !hasTranscription) {
+      setError("Please provide either a subtitle file or generate a transcription");
       return;
     }
-    if (!apiKey) {
-      setError("Gemini API key is required");
+
+    const resolvedProvider = resolveProviderConfig();
+    if (resolvedProvider.mismatch) {
+      setError(
+        `Selected provider (${resolvedProvider.selectedLabel}) does not match the model's provider (${resolvedProvider.providerLabel}). Refresh and choose a ${resolvedProvider.selectedLabel} model.`,
+      );
+      return;
+    }
+    if (resolvedProvider.providerType !== "ollama" && !resolvedProvider.apiKeyForProvider) {
+      setError(`${resolvedProvider.providerLabel} API key is required`);
       return;
     }
 
@@ -533,8 +746,15 @@ export function useTranslationWorkflowRunner() {
     runnerActions.setProgress("Reading subtitles…");
 
     let vttText = "";
+    let fileNameForParsing = "transcription.vtt";
+
     try {
-      vttText = await vttFile.text();
+      if (useTranscription && transcriptionText) {
+        vttText = transcriptionText;
+      } else if (vttFile) {
+        vttText = await vttFile.text();
+        fileNameForParsing = vttFile.name;
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to read VTT file");
       setSubmitting(false);
@@ -542,7 +762,7 @@ export function useTranslationWorkflowRunner() {
     }
 
     let cues: ReturnType<typeof parseVtt>;
-    const lowerName = vttFile.name.toLowerCase();
+    const lowerName = fileNameForParsing.toLowerCase();
     try {
       if (lowerName.endsWith(".srt")) {
         cues = parseSrt(vttText);
@@ -566,8 +786,9 @@ export function useTranslationWorkflowRunner() {
         cues,
         chunkSeconds,
         chunkOverlap,
-        apiKey,
-        modelName,
+        provider: resolvedProvider.providerType,
+        apiKey: resolvedProvider.apiKeyForProvider,
+        modelName: resolvedProvider.modelForProvider,
         targetLang,
         glossary,
         useGlossary,
@@ -578,6 +799,7 @@ export function useTranslationWorkflowRunner() {
         summaryText,
         videoRef: activeVideoRef,
         safetyOff,
+        baseUrl: resolvedProvider.baseUrlForProvider,
       });
       if (!data) {
         setSubmitting(false);
@@ -600,8 +822,19 @@ export function useTranslationWorkflowRunner() {
   };
 
   const handleRetryChunk = async (chunk: ChunkStatus) => {
-    if (!apiKey || !runnerState.result) {
-      setError("Gemini API key required to retry");
+    const resolvedProvider = resolveProviderConfig();
+    if (!runnerState.result) {
+      setError("No translation run found to retry");
+      return;
+    }
+    if (resolvedProvider.mismatch) {
+      setError(
+        `Selected provider (${resolvedProvider.selectedLabel}) does not match the model's provider (${resolvedProvider.providerLabel}). Refresh and choose a ${resolvedProvider.selectedLabel} model before retrying.`,
+      );
+      return;
+    }
+    if (resolvedProvider.providerType !== "ollama" && !resolvedProvider.apiKeyForProvider) {
+      setError(`${resolvedProvider.providerLabel} API key required to retry`);
       return;
     }
     if (!chunk.chunk_vtt) {
@@ -611,8 +844,9 @@ export function useTranslationWorkflowRunner() {
     runnerActions
       .retryChunk({
         chunk,
-        apiKey,
-        modelName,
+        provider: resolvedProvider.providerType,
+        apiKey: resolvedProvider.apiKeyForProvider,
+        modelName: resolvedProvider.modelForProvider,
         targetLang,
         glossary,
         useGlossary,
@@ -622,6 +856,7 @@ export function useTranslationWorkflowRunner() {
         summaryText,
         safetyOff,
         concurrency,
+        baseUrl: resolvedProvider.baseUrlForProvider,
       })
       .catch((err) =>
         setError(err instanceof Error ? err.message : "Retry error"),
@@ -771,6 +1006,11 @@ export function useTranslationWorkflowRunner() {
 
   return {
     state: {
+      // Provider state
+      selectedProvider,
+      apiKeys,
+      ollamaBaseUrl,
+      // Files
       vttFile,
       mediaFile,
       useAudioOnly,
@@ -815,10 +1055,25 @@ export function useTranslationWorkflowRunner() {
       customPresets,
       allPresets,
       useGlossaryInSummary,
+      // Transcription state
+      providerConfigs,
+      audioFile,
+      transcriptionText,
+      transcriptionStatus,
+      useTranscription,
     },
     actions: {
+      // Provider actions
+      setSelectedProvider,
+      setApiKey,
+      setOllamaBaseUrl,
+      updateProviderConfig, // New action
+      // File actions
       setVttFile,
       setMediaFile: handleMediaChange,
+      setAudioFile, // New action
+      setTranscriptionText, // New action
+      setUseTranscription, // New action
       setUseAudioOnly,
       setTargetLang,
       setConcurrency: setConcurrencyClamped,
@@ -828,25 +1083,25 @@ export function useTranslationWorkflowRunner() {
       setCustomPrompt,
       setGlossary,
       setUseGlossary,
-      setApiKey,
       setTemperature,
-      setSummaryPrompt,
-      setUseSummary,
-      setGlossaryPrompt,
-      setSafetyOff,
-      setMediaResolution,
+      handleSubmit,
       handleLoadModels,
-      handleUploadVideo,
-      handleDeleteVideo,
       handleGenerateGlossary,
       handleGenerateSummary,
-      setSummaryText,
-      handleSubmit,
+      handleTranscribeAudio, // New action
       handleRetryChunk,
+      handleUploadVideo,
+      handleDeleteVideo,
       resetWorkflow,
+      clearPreferences,
+      setSummaryText,
+      setUseSummary,
+      setGlossaryPrompt,
+      setSummaryPrompt,
+      setSafetyOff,
+      setMediaResolution,
       pause: runnerActions.pause,
       resume: runnerActions.resume,
-      clearPreferences,
       applyPreset,
       applyCustomPreset,
       exportCurrentAsPreset,
