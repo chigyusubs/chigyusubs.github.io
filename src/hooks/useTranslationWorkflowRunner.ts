@@ -27,6 +27,7 @@ import {
 } from "../config/defaults";
 import { parseModelName, ProviderFactory } from "../lib/providers/ProviderFactory";
 import type { ProviderType, GenerateRequest } from "../lib/providers/types";
+import { getProviderCapability } from "../lib/providers/capabilities";
 import { type ChunkStatus } from "../lib/translation";
 import {
   buildSummaryUserPrompt,
@@ -210,10 +211,10 @@ export function useTranslationWorkflowRunner() {
   );
 
   const providerLabels: Record<ProviderType, string> = {
-    gemini: "Gemini",
-    openai: "OpenAI",
-    anthropic: "Anthropic",
-    ollama: "Ollama",
+    gemini: getProviderCapability("gemini").label,
+    openai: getProviderCapability("openai").label,
+    anthropic: getProviderCapability("anthropic").label,
+    ollama: getProviderCapability("ollama").label,
   };
 
   const resolveProviderConfig = () => {

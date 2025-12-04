@@ -2,6 +2,7 @@ import React from "react";
 import type { ProviderType } from "../lib/providers/types";
 import { LABELS } from "../config/ui";
 import { useTheme } from "../lib/themeContext";
+import { getProviderCapability } from "../lib/providers/capabilities";
 import { Button } from "./ui/Button";
 import { SectionCard } from "./ui/SectionCard";
 import { FieldLabel, TextInput } from "./ui/Field";
@@ -77,15 +78,16 @@ export function ProviderSettings({
     const theme = useTheme();
 
     const currentApiKey = apiKeys[selectedProvider] || "";
-    const requiresApiKey = selectedProvider !== "ollama";
-    const supportsMediaUpload = selectedProvider === "gemini";
-    const supportsSafetySettings = selectedProvider === "gemini";
+    const capability = getProviderCapability(selectedProvider);
+    const requiresApiKey = capability.requiresApiKey;
+    const supportsMediaUpload = capability.supportsMediaUpload;
+    const supportsSafetySettings = capability.supportsSafetySettings;
 
     const providerLabels: Record<ProviderType, string> = {
-        gemini: "Google Gemini",
-        openai: "OpenAI",
-        anthropic: "Anthropic Claude",
-        ollama: "Ollama (Local)",
+        gemini: getProviderCapability("gemini").label,
+        openai: getProviderCapability("openai").label,
+        anthropic: getProviderCapability("anthropic").label,
+        ollama: getProviderCapability("ollama").label,
     };
 
     const providerDescriptions: Record<ProviderType, string> = {
