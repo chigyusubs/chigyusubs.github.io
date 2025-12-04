@@ -444,7 +444,7 @@ function App() {
                 type="button"
                 tone="upload"
                 onClick={actions.handleGenerateSummary}
-                disabled={!canGenerateSummary}
+                disabled={!canGenerateSummary || state.workflowMode === "transcription"}
               >
                 {summaryButtonLabel}
               </Button>
