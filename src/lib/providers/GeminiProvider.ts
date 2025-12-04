@@ -91,19 +91,25 @@ export class GeminiProvider extends BaseProvider {
 
         const parts: unknown[] = [];
         if (mediaUri) {
-            const videoMetadata = typeof request.mediaStartSeconds === "number" || typeof request.mediaEndSeconds === "number"
-                ? {
-                    startOffset: request.mediaStartSeconds !== undefined ? `${request.mediaStartSeconds}s` : undefined,
-                    endOffset: request.mediaEndSeconds !== undefined ? `${request.mediaEndSeconds}s` : undefined,
-                }
-                : undefined;
-            parts.push({
-                fileData: {
-                    fileUri: mediaUri,
-                    // @ts-expect-error: videoMetadata is supported in Gemini fileData but not typed in our interface
-                    videoMetadata,
-                },
-            });
+            const hasOffsets =
+                typeof request.mediaStartSeconds === "number" ||
+                typeof request.mediaEndSeconds === "number";
+            const part: Record<string, unknown> = {
+                fileData: { fileUri: mediaUri },
+            };
+            if (hasOffsets) {
+                part.videoMetadata = {
+                    startOffset:
+                        request.mediaStartSeconds !== undefined
+                            ? `${request.mediaStartSeconds}s`
+                            : undefined,
+                    endOffset:
+                        request.mediaEndSeconds !== undefined
+                            ? `${request.mediaEndSeconds}s`
+                            : undefined,
+                };
+            }
+            parts.push(part);
         }
         parts.push({ text: userPrompt });
 
