@@ -41,6 +41,7 @@ import {
 } from "../lib/prompts";
 import { parseSrt, parseVtt, serializeVtt } from "../lib/vtt";
 import { deriveSrt } from "../lib/stitcher";
+import { autoRepairVtt } from "../lib/validator";
 import { useTranslationRunner } from "./useTranslationRunner";
 import { getMediaDuration } from "../lib/mediaDuration";
 import { extractAudioToOggMono } from "../lib/ffmpeg";
@@ -913,7 +914,8 @@ export function useTranslationWorkflowRunner() {
           chunkIdx: i,
         });
         const text = response.text.trim();
-        const { cues, normalized } = normalizeVttForParse(text);
+        const repair = autoRepairVtt(text);
+        const { cues, normalized } = normalizeVttForParse(repair.repaired);
         const shifted = cues.map((cue) => ({
           ...cue,
           start: cue.start + start,
@@ -922,6 +924,11 @@ export function useTranslationWorkflowRunner() {
         const integrityError = validateCueIntegrity(shifted);
         if (integrityError) warnings.push(`Chunk ${i + 1}: ${integrityError}`);
         if (normalized) warnings.push(`Chunk ${i + 1}: normalized timecodes`);
+        if (repair.warnings.length) {
+          repair.warnings.forEach((w) =>
+            warnings.push(`Chunk ${i + 1}: ${w}`),
+          );
+        }
         aggregatedCues.push(...shifted);
 
         const stitchedChunk = serializeVtt(cues);
