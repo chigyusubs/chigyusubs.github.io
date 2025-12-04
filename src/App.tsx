@@ -404,10 +404,76 @@ function App() {
             </SectionCard>
           )}
 
-          <SectionCard
-            title="Context (optional)"
-            subtitle="Generate media summary and glossary to guide translations."
-          >
+          {state.workflowMode === "transcription" && (
+            <SectionCard
+              title="Transcription settings"
+              subtitle="Chunking and parallelism for Gemini transcription."
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <FieldLabel>Chunk Length</FieldLabel>
+                  <select
+                    className={theme.input}
+                    value={state.providerConfigs.openai.transcriptionChunkSeconds ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS}
+                    onChange={(e) =>
+                      actions.updateProviderConfig("openai", {
+                        ...state.providerConfigs.openai,
+                        transcriptionChunkSeconds: Number(e.target.value),
+                      })
+                    }
+                    disabled={locked}
+                  >
+                    {[60, 120, 300, 600, 900, 1200].map((sec) => (
+                      <option key={sec} value={sec}>
+                        {Math.round(sec / 60)} min
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <FieldLabel>Chunk Overlap</FieldLabel>
+                  <select
+                    className={theme.input}
+                    value={state.chunkOverlap}
+                    onChange={(e) => actions.setChunkOverlap(Number(e.target.value))}
+                    disabled={locked}
+                  >
+                    {[0, 1, 2, 3, 4, 5].map((ov) => (
+                      <option key={ov} value={ov}>
+                        {ov} cue{ov === 1 ? "" : "s"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <FieldLabel>Concurrency</FieldLabel>
+                  <select
+                    className={theme.input}
+                    value={state.providerConfigs.openai.transcriptionConcurrency ?? TRANSCRIPTION_DEFAULT_CONCURRENCY}
+                    onChange={(e) =>
+                      actions.updateProviderConfig("openai", {
+                        ...state.providerConfigs.openai,
+                        transcriptionConcurrency: Number(e.target.value),
+                      })
+                    }
+                    disabled={locked}
+                  >
+                    {[1, 2, 3, 4].map((c) => (
+                      <option key={c} value={c}>
+                        {c === 1 ? "Single" : `${c} parallel`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </SectionCard>
+          )}
+
+          {state.workflowMode === "translation" && (
+            <SectionCard
+              title="Context (optional)"
+              subtitle="Generate media summary and glossary to guide translations."
+            >
             <div className="flex items-center gap-2 mb-3">
               <Button
                 type="button"
@@ -509,7 +575,8 @@ function App() {
               />
               <span>Use summary for translation</span>
             </label>
-          </SectionCard>
+            </SectionCard>
+          )}
 
           {state.workflowMode === "translation" && (
             <SectionCard
