@@ -245,6 +245,42 @@ export function useTranslationWorkflowRunner() {
     return null;
   };
 
+  const normalizeVttTimecode = (code: string): string => {
+    const cleaned = code.replace(",", ".");
+    const parts = cleaned.split(":");
+    let h = "00";
+    let m = "00";
+    let s = "00.000";
+    if (parts.length === 2) {
+      // mm:ss(.ms)
+      [m, s] = parts;
+    } else {
+      // take last 3 parts as h:m:s
+      const tail = parts.slice(-3);
+      [h, m, s] = tail;
+    }
+    const [sec, msRaw = "000"] = s.split(".");
+    const ms = `${msRaw}000`.slice(0, 3);
+    return `${h.padStart(2, "0")}:${m.padStart(2, "0")}:${sec.padStart(2, "0")}.${ms}`;
+  };
+
+  const normalizeVttForParse = (text: string): { cues: ReturnType<typeof parseVtt>; normalized: boolean } => {
+    try {
+      return { cues: parseVtt(text), normalized: false };
+    } catch {
+      const lines = text.split("\n").map((line) => {
+        if (line.includes("-->")) {
+          const [startRaw, endRaw] = line.split("-->").map((p) => p.trim());
+          const start = normalizeVttTimecode(startRaw);
+          const end = normalizeVttTimecode(endRaw.split(" ")[0]);
+          return `${start} --> ${end}`;
+        }
+        return line;
+      });
+      return { cues: parseVtt(lines.join("\n")), normalized: true };
+    }
+  };
+
   const resolveProviderConfig = () => {
     const parsed = parseModelName(modelName);
     const providerType = parsed.provider;
@@ -877,14 +913,16 @@ export function useTranslationWorkflowRunner() {
           chunkIdx: i,
         });
         const text = response.text.trim();
-        const cues = parseVtt(text).map((cue) => ({
+        const { cues, normalized } = normalizeVttForParse(text);
+        const shifted = cues.map((cue) => ({
           ...cue,
           start: cue.start + start,
           end: cue.end + start,
         }));
-        const integrityError = validateCueIntegrity(cues);
+        const integrityError = validateCueIntegrity(shifted);
         if (integrityError) warnings.push(`Chunk ${i + 1}: ${integrityError}`);
-        aggregatedCues.push(...cues);
+        if (normalized) warnings.push(`Chunk ${i + 1}: normalized timecodes`);
+        aggregatedCues.push(...shifted);
 
         const stitchedChunk = serializeVtt(cues);
         chunkStatuses.push({
