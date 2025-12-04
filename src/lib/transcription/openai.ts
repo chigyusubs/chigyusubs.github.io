@@ -51,7 +51,9 @@ export async function transcribeOpenAiMedia({
   }
 
   const filesToTranscribe: Array<{ file: File; offset: number }> = [];
+  const isGpt4o = model.includes("gpt-4o");
   const shouldChunk =
+    isGpt4o &&
     typeof duration === "number" &&
     Number.isFinite(duration) &&
     duration > chunkSeconds;
@@ -84,7 +86,6 @@ export async function transcribeOpenAiMedia({
     filesToTranscribe.push({ file: workingFile, offset: 0 });
   }
 
-  const isGpt4o = model.includes("gpt-4o");
   const combinedVttCues: Array<{ start: number; end: number; text: string }> = [];
   const combinedText: Array<{ offset: number; text: string; index: number }> = [];
 
