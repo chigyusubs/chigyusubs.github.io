@@ -434,13 +434,17 @@ function App() {
                   <FieldLabel>Chunk Overlap</FieldLabel>
                   <select
                     className={theme.input}
-                    value={state.chunkOverlap}
-                    onChange={(e) => actions.setChunkOverlap(Number(e.target.value))}
+                    value={state.transcriptionOverlapSeconds ?? TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS}
+                    onChange={(e) =>
+                      actions.setTranscriptionOverlapSeconds(
+                        Math.max(0, Number(e.target.value) || 0),
+                      )
+                    }
                     disabled={locked}
                   >
-                    {[0, 1, 2, 3, 4, 5].map((ov) => (
+                    {[0, 1, 2, 3, 4, 5, 10].map((ov) => (
                       <option key={ov} value={ov}>
-                        {ov} cue{ov === 1 ? "" : "s"}
+                        {ov}s overlap
                       </option>
                     ))}
                   </select>
