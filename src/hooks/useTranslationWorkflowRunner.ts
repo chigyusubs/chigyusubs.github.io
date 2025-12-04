@@ -857,9 +857,11 @@ export function useTranslationWorkflowRunner() {
 
       const aggregatedCues: Array<ReturnType<typeof parseVtt>[number]> = [];
       const warnings: string[] = [];
+      const chunkStatuses: ChunkStatus[] = [];
 
       for (let i = 0; i < ranges.length; i += 1) {
         const { start, end } = ranges[i];
+        runnerActions.setProgress(`Transcribing chunk ${i + 1}/${ranges.length}…`);
         const request: GenerateRequest = {
           systemPrompt,
           userPrompt,
@@ -883,6 +885,26 @@ export function useTranslationWorkflowRunner() {
         const integrityError = validateCueIntegrity(cues);
         if (integrityError) warnings.push(`Chunk ${i + 1}: ${integrityError}`);
         aggregatedCues.push(...cues);
+
+        const stitchedChunk = serializeVtt(cues);
+        chunkStatuses.push({
+          idx: i,
+          status: integrityError ? "failed" : "ok",
+          tokens_estimate: Math.max(Math.floor(stitchedChunk.length / 4), 1),
+          warnings: integrityError ? [integrityError] : [],
+          vtt: stitchedChunk,
+          raw_model_output: stitchedChunk,
+          raw_vtt: stitchedChunk,
+          chunk_vtt: stitchedChunk,
+          context_vtt: "",
+          prompt: userPrompt,
+          system_prompt: systemPrompt,
+          started_at: startedAt,
+          finished_at: Date.now(),
+          model_name: resolvedProvider.modelForProvider,
+          temperature: DEFAULT_TEMPERATURE,
+          duration_ms: Date.now() - startedAt,
+        });
       }
 
       const stitchedVtt = serializeVtt(aggregatedCues);
@@ -911,7 +933,7 @@ export function useTranslationWorkflowRunner() {
       runnerActions.setResult({
         ok: warnings.length === 0,
         warnings,
-        chunks: [chunk],
+        chunks: chunkStatuses.length ? chunkStatuses : [chunk],
         vtt: stitchedVtt,
         srt,
         video_ref: videoRef,
