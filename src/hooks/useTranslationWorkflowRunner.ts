@@ -43,6 +43,7 @@ import { parseSrt, parseVtt, serializeVtt } from "../lib/vtt";
 import { deriveSrt } from "../lib/stitcher";
 import { useTranslationRunner } from "./useTranslationRunner";
 import { getMediaDuration } from "../lib/mediaDuration";
+import { extractAudioToOggMono } from "../lib/ffmpeg";
 import { transcribeOpenAiMedia } from "../lib/transcription/openai";
 
 import { clearPrefs, loadPrefs, savePrefs, type UserPrefs } from "../lib/prefs";
