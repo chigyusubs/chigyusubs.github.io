@@ -30,9 +30,14 @@ function App() {
       : state.mediaFile
         ? "Generate summary from media"
         : "Generate summary from subtitles";
+  const hasSummarySource = state.mediaFile
+    ? !!state.videoRef
+    : !!state.vttFile ||
+      (state.useTranscriptionForSummary &&
+        !!state.transcriptionText.trim());
   const canGenerateSummary =
     (state.selectedProvider === "ollama" || !!state.apiKey) &&
-    (state.mediaFile ? !!state.videoRef : !!state.vttFile) &&
+    hasSummarySource &&
     state.summaryStatus !== "loading" &&
     !locked;
 
@@ -106,6 +111,7 @@ function App() {
             apiKey={state.apiKey}
             locked={locked}
             mediaTooLargeWarning={state.mediaTooLargeWarning}
+            supportsMediaUpload={state.selectedProvider === "gemini"}
 
             // Transcription props
             showAudioUpload={state.selectedProvider === "openai" && state.providerConfigs.openai.transcriptionEnabled}
@@ -117,6 +123,8 @@ function App() {
             onTranscribe={actions.handleTranscribeAudio}
             useTranscription={state.useTranscription}
             setUseTranscription={actions.setUseTranscription}
+            useTranscriptionForSummary={state.useTranscriptionForSummary}
+            setUseTranscriptionForSummary={actions.setUseTranscriptionForSummary}
           />
 
           <SectionCard
@@ -561,9 +569,17 @@ function App() {
         <ResultView
           result={state.result}
           handleRetryChunk={actions.handleRetryChunk}
+          handleManualChunkEdit={actions.handleManualChunkEdit}
           retryingChunks={state.retryingChunks}
           retryQueueIds={state.retryQueueIds}
         />
+
+        {state.statusMessage && (
+          <div className={`p-4 rounded ${theme.well.info}`}>
+            <p className="font-bold">Status</p>
+            <p>{state.statusMessage}</p>
+          </div>
+        )}
 
         {state.error && (
           <div className={`p-4 rounded ${theme.well.error}`}>

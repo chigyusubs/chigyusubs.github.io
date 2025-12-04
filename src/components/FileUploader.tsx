@@ -29,6 +29,7 @@ type Props = {
   apiKey: string;
   locked: boolean;
   mediaTooLargeWarning: boolean;
+  supportsMediaUpload: boolean;
 
   // Audio Transcription Props
   showAudioUpload?: boolean;
@@ -40,6 +41,8 @@ type Props = {
   onTranscribe?: () => void;
   useTranscription?: boolean;
   setUseTranscription?: (use: boolean) => void;
+  useTranscriptionForSummary?: boolean;
+  setUseTranscriptionForSummary?: (use: boolean) => void;
 };
 
 function formatDuration(seconds: number | null): string {
@@ -74,6 +77,7 @@ export function FileUploader({
   apiKey,
   locked,
   mediaTooLargeWarning,
+  supportsMediaUpload,
 
   showAudioUpload = false,
   audioFile,
@@ -84,6 +88,8 @@ export function FileUploader({
   onTranscribe,
   useTranscription = false,
   setUseTranscription,
+  useTranscriptionForSummary = false,
+  setUseTranscriptionForSummary,
 }: Props) {
   const theme = useTheme();
 
@@ -93,6 +99,11 @@ export function FileUploader({
       videoDuration > 0
       ? { seconds: videoDuration }
       : null;
+  const showTranscriptionUpload = Boolean(showAudioUpload && setAudioFile);
+  const gridColsMd =
+    supportsMediaUpload || showTranscriptionUpload
+      ? "md:grid-cols-2"
+      : "md:grid-cols-1";
 
   const estimateTokens = (): string | null => {
     if (!durationInfo) return null;
@@ -125,7 +136,7 @@ export function FileUploader({
       title="Files"
       subtitle="Upload subtitles (required) and optional context media to improve summaries."
     >
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className={`grid grid-cols-1 gap-4 ${gridColsMd}`}>
         {/* Subtitle File Upload */}
         <FilePicker
           label="Subtitles (VTT or SRT, required)"
@@ -141,7 +152,7 @@ export function FileUploader({
         />
 
         {/* Audio File Upload (for Transcription) */}
-        {showAudioUpload && setAudioFile && (
+        {showTranscriptionUpload && setAudioFile && (
           <FilePicker
             label="Audio for Transcription (optional)"
             description="Upload audio to generate subtitles"
@@ -156,17 +167,19 @@ export function FileUploader({
         )}
 
         {/* Context Media Upload */}
-        <FilePicker
-          label="Context media (optional)"
-          description="Video or audio, used only for summary (keep small to reduce tokens)"
-          accept="video/mp4,video/*,audio/*"
-          onChange={(e) => void setMediaFile(e.target.files?.[0] || null)}
-          fileName={mediaFile?.name || null}
-          fileMeta={
-            mediaFile ? `${(mediaFile.size / 1024 / 1024).toFixed(2)} MB` : null
-          }
-          disabled={isLocked}
-        />
+        {supportsMediaUpload && (
+          <FilePicker
+            label="Context media (optional)"
+            description="Video or audio, used only for summary (keep small to reduce tokens)"
+            accept="video/mp4,video/*,audio/*"
+            onChange={(e) => void setMediaFile(e.target.files?.[0] || null)}
+            fileName={mediaFile?.name || null}
+            fileMeta={
+              mediaFile ? `${(mediaFile.size / 1024 / 1024).toFixed(2)} MB` : null
+            }
+            disabled={isLocked}
+          />
+        )}
       </div>
 
       {/* Transcription Controls */}
@@ -193,111 +206,126 @@ export function FileUploader({
           {(transcriptionText || transcriptionStatus === "success") && setTranscriptionText && setUseTranscription && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="inline-flex items-center gap-2 text-sm font-medium">
-                  <input
-                    type="checkbox"
-                    checked={useTranscription}
-                    onChange={(e) => setUseTranscription(e.target.checked)}
-                    disabled={isLocked}
-                  />
-                  <span>Use Transcription as Subtitles</span>
-                </label>
+                <div className="flex flex-wrap gap-4">
+                  <label className="inline-flex items-center gap-2 text-sm font-medium">
+                    <input
+                      type="checkbox"
+                      checked={useTranscription}
+                      onChange={(e) => setUseTranscription(e.target.checked)}
+                      disabled={isLocked}
+                    />
+                    <span>Use transcription as subtitles</span>
+                  </label>
+                  {setUseTranscriptionForSummary && (
+                    <label className="inline-flex items-center gap-2 text-sm font-medium">
+                      <input
+                        type="checkbox"
+                        checked={useTranscriptionForSummary}
+                        onChange={(e) => setUseTranscriptionForSummary(e.target.checked)}
+                        disabled={isLocked}
+                      />
+                      <span>Use transcription for summary</span>
+                    </label>
+                  )}
+                </div>
               </div>
 
-              {useTranscription && (
-                <TextArea
-                  value={transcriptionText}
-                  onChange={(e) => setTranscriptionText(e.target.value)}
-                  placeholder="Transcription output will appear here..."
-                  rows={6}
-                  variant="code"
-                  disabled={isLocked}
-                />
-              )}
+              <TextArea
+                value={transcriptionText}
+                onChange={(e) => setTranscriptionText(e.target.value)}
+                placeholder="Transcription output will appear here..."
+                rows={6}
+                variant="code"
+                disabled={isLocked}
+              />
             </div>
           )}
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
-        <label className="inline-flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={useAudioOnly}
-            onChange={(e) => setUseAudioOnly(e.target.checked)}
-            disabled={isLocked}
-            title="Extract mono audio from video before upload to reduce size and token cost."
-          />
-          <span>
-            Upload audio-only (smaller upload; recommended for free tier)
-          </span>
-        </label>
-        <p className={theme.helperText}>
-          Media is only used to generate the optional summary; translation uses
-          the text + summary.
-        </p>
-      </div>
-
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            tone="upload"
-            onClick={handleUploadVideo}
-            disabled={
-              !mediaFile ||
-              !apiKey ||
-              submitting ||
-              videoUploadState === "uploading"
-            }
-          >
-            {videoUploadState === "uploading"
-              ? LABELS.uploadMediaUploading
-              : LABELS.uploadMedia}
-          </Button>
-          {videoRef && videoUploadState === "ready" && (
-            <span className={`text-xs ${theme.successText}`}>Ready</span>
-          )}
-          {videoRef && (
-            <Button
-              type="button"
-              tone="danger"
-              onClick={handleDeleteVideo}
-              disabled={submitting || videoUploadState === "uploading"}
-            >
-              Delete uploaded media
-            </Button>
-          )}
-        </div>
-        <div className={`h-2 rounded overflow-hidden ${theme.progressTrack}`}>
-          <div
-            className={`h-2 ${videoUploadState === "error" ? theme.progressError : videoUploadState === "ready" ? theme.progressOk : theme.progressBar} ${videoUploadState === "uploading" ? "animate-pulse" : ""}`}
-            style={{ width: `${videoProgress}%` }}
-          />
-        </div>
-        <p className={theme.helperText}>
-          {videoUploadMessage || "Upload to verify Gemini processed the video."}
-        </p>
-        {mediaTooLargeWarning && (
-          <p className={`${theme.warningText} text-xs`}>
-            Selected media exceeds the 2&nbsp;GB Gemini/ffmpeg limit and cannot
-            be uploaded.
-          </p>
-        )}
-        {mediaFile && (
-          <div className={`${theme.helperText} space-y-1`}>
-            <p>
-              Size:{" "}
-              {videoSizeMb !== null ? `${videoSizeMb.toFixed(2)} MB` : "n/a"}
+      {supportsMediaUpload && (
+        <>
+          <div className="flex flex-col gap-2">
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={useAudioOnly}
+                onChange={(e) => setUseAudioOnly(e.target.checked)}
+                disabled={isLocked}
+                title="Extract mono audio from video before upload to reduce size and token cost."
+              />
+              <span>
+                Upload audio-only (smaller upload; recommended for free tier)
+              </span>
+            </label>
+            <p className={theme.helperText}>
+              Media is only used to generate the optional summary; translation uses
+              the text + summary.
             </p>
-            <p>
-              Duration:{" "}
-              {durationInfo ? formatDuration(durationInfo.seconds) : "n/a"}
-            </p>
-            <p>{estimateTokens() ?? "Est. tokens: n/a"}</p>
           </div>
-        )}
-      </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                tone="upload"
+                onClick={handleUploadVideo}
+                disabled={
+                  !mediaFile ||
+                  !apiKey ||
+                  submitting ||
+                  videoUploadState === "uploading"
+                }
+              >
+                {videoUploadState === "uploading"
+                  ? LABELS.uploadMediaUploading
+                  : LABELS.uploadMedia}
+              </Button>
+              {videoRef && videoUploadState === "ready" && (
+                <span className={`text-xs ${theme.successText}`}>Ready</span>
+              )}
+              {videoRef && (
+                <Button
+                  type="button"
+                  tone="danger"
+                  onClick={handleDeleteVideo}
+                  disabled={submitting || videoUploadState === "uploading"}
+                >
+                  Delete uploaded media
+                </Button>
+              )}
+            </div>
+            <div className={`h-2 rounded overflow-hidden ${theme.progressTrack}`}>
+              <div
+                className={`h-2 ${videoUploadState === "error" ? theme.progressError : videoUploadState === "ready" ? theme.progressOk : theme.progressBar} ${videoUploadState === "uploading" ? "animate-pulse" : ""}`}
+                style={{ width: `${videoProgress}%` }}
+              />
+            </div>
+            <p className={theme.helperText}>
+              {videoUploadMessage || "Upload to verify Gemini processed the video."}
+            </p>
+            {mediaTooLargeWarning && (
+              <p className={`${theme.warningText} text-xs`}>
+                Selected media exceeds the 2&nbsp;GB Gemini/ffmpeg limit and cannot
+                be uploaded.
+              </p>
+            )}
+            {mediaFile && (
+              <div className={`${theme.helperText} space-y-1`}>
+                <p>
+                  Size:{" "}
+                  {videoSizeMb !== null ? `${videoSizeMb.toFixed(2)} MB` : "n/a"}
+                </p>
+                <p>
+                  Duration:{" "}
+                  {durationInfo ? formatDuration(durationInfo.seconds) : "n/a"}
+                </p>
+                <p>{estimateTokens() ?? "Est. tokens: n/a"}</p>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </SectionCard>
   );
 }

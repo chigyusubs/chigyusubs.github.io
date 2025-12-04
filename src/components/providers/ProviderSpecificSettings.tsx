@@ -5,8 +5,10 @@ import { OpenAIAdvancedSettings } from "./OpenAIAdvancedSettings";
 type ProviderSpecificConfig = {
     openai?: {
         transcriptionEnabled: boolean;
-        transcriptionModel?: "whisper-1";
+        transcriptionModel?: "whisper-1" | "gpt-4o-transcribe" | "gpt-4o-mini-transcribe";
         transcriptionLanguage?: string;
+        transcriptionConcurrency?: number;
+        transcriptionChunkSeconds?: number;
     };
     // Add other providers as needed
 };
@@ -35,6 +37,8 @@ export function ProviderSpecificSettings({
                         transcriptionEnabled: false,
                         transcriptionModel: "whisper-1",
                         transcriptionLanguage: "",
+                        transcriptionConcurrency: 2,
+                        transcriptionChunkSeconds: 600,
                     }}
                     onChange={(openaiConfig) => onChange({ ...config, openai: openaiConfig })}
                     locked={locked}

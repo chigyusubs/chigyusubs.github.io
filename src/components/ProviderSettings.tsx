@@ -24,8 +24,10 @@ type Props = {
     providerConfigs: {
         openai: {
             transcriptionEnabled: boolean;
-            transcriptionModel?: "whisper-1";
+            transcriptionModel?: "whisper-1" | "gpt-4o-transcribe" | "gpt-4o-mini-transcribe";
             transcriptionLanguage?: string;
+            transcriptionConcurrency?: number;
+            transcriptionChunkSeconds?: number;
         };
     };
     onProviderConfigChange: (provider: "openai", config: any) => void;

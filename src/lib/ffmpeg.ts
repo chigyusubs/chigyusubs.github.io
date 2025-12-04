@@ -33,15 +33,76 @@ export async function extractAudioToOggMono(input: File): Promise<File> {
       outputName,
     ]);
   } catch (err) {
-    await ffmpeg.deleteFile(inputName).catch(() => {});
+    await ffmpeg.deleteFile(inputName).catch(() => { });
     throw err;
   }
   const data = await ffmpeg.readFile(outputName);
-  await ffmpeg.deleteFile(inputName).catch(() => {});
-  await ffmpeg.deleteFile(outputName).catch(() => {});
+  await ffmpeg.deleteFile(inputName).catch(() => { });
+  await ffmpeg.deleteFile(outputName).catch(() => { });
   const buffer =
     data instanceof Uint8Array ? data : new Uint8Array(data as ArrayBuffer);
   return new File([buffer], `${input.name.replace(/\.[^.]+$/, "")}-audio.ogg`, {
     type: "audio/ogg",
   });
+}
+
+export async function chunkMediaToOggSegments(
+  input: File,
+  maxSegmentSeconds: number,
+): Promise<File[]> {
+  const ffmpeg = await getFfmpeg();
+  const inputName = `input.${input.name.split(".").pop() || "mp4"}`;
+  const outputPattern = "segment_%03d.ogg";
+
+  await ffmpeg.writeFile(inputName, await fetchFile(input));
+
+  try {
+    await ffmpeg.exec([
+      "-i",
+      inputName,
+      "-vn",
+      "-ac",
+      "1",
+      "-ar",
+      "16000",
+      "-b:a",
+      "32k",
+      "-c:a",
+      "libvorbis",
+      "-f",
+      "segment",
+      "-segment_time",
+      String(maxSegmentSeconds),
+      "-reset_timestamps",
+      "1",
+      outputPattern,
+    ]);
+  } finally {
+    await ffmpeg.deleteFile(inputName).catch(() => {});
+  }
+
+  const segments: File[] = [];
+  for (let idx = 0; idx < 999; idx += 1) {
+    const name = `segment_${idx.toString().padStart(3, "0")}.ogg`;
+    try {
+      const data = await ffmpeg.readFile(name);
+      const buffer =
+        data instanceof Uint8Array ? data : new Uint8Array(data as ArrayBuffer);
+      const file = new File(
+        [buffer],
+        `${input.name.replace(/\.[^.]+$/, "")}-part-${idx + 1}.ogg`,
+        { type: "audio/ogg" },
+      );
+      segments.push(file);
+      await ffmpeg.deleteFile(name).catch(() => {});
+    } catch {
+      break;
+    }
+  }
+
+  if (segments.length === 0) {
+    throw new Error("Failed to create audio segments");
+  }
+
+  return segments;
 }

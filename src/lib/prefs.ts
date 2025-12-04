@@ -14,8 +14,10 @@ export type UserPrefs = {
   providerSpecificConfigs?: {
     openai?: {
       transcriptionEnabled?: boolean;
-      transcriptionModel?: "whisper-1";
+      transcriptionModel?: "whisper-1" | "gpt-4o-transcribe" | "gpt-4o-mini-transcribe";
       transcriptionLanguage?: string;
+      transcriptionConcurrency?: number;
+      transcriptionChunkSeconds?: number;
     };
   };
 
@@ -39,6 +41,7 @@ export type UserPrefs = {
   useSummary?: boolean;
   useGlossary?: boolean;
   useGlossaryInSummary?: boolean;
+  useTranscriptionForSummary?: boolean;
   safetyOff?: boolean;
 };
 

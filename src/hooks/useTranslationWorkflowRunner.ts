@@ -22,7 +22,7 @@ import {
 } from "../config/defaults";
 import { parseModelName, ProviderFactory } from "../lib/providers/ProviderFactory";
 import type { ProviderType, GenerateRequest } from "../lib/providers/types";
-import { extractAudioToOggMono } from "../lib/ffmpeg";
+import { chunkMediaToOggSegments, extractAudioToOggMono } from "../lib/ffmpeg";
 import { type ChunkStatus } from "../lib/translation";
 import {
   buildSummaryUserPrompt,
@@ -30,7 +30,7 @@ import {
   glossarySystemPrompt,
   summarySystemPrompt,
 } from "../lib/prompts";
-import { parseSrt, parseVtt } from "../lib/vtt";
+import { parseSrt, parseVtt, serializeVtt } from "../lib/vtt";
 import { useTranslationRunner } from "./useTranslationRunner";
 import { getMediaDuration } from "../lib/mediaDuration";
 
@@ -124,6 +124,7 @@ export function useTranslationWorkflowRunner() {
     saved?.temperature ?? DEFAULT_TEMPERATURE,
   );
   const [error, setError] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [summaryText, setSummaryText] = useState(saved?.summaryText ?? "");
   const [summaryStatus, setSummaryStatus] = useState<
@@ -168,15 +169,19 @@ export function useTranslationWorkflowRunner() {
   const [providerConfigs, setProviderConfigs] = useState<{
     openai: {
       transcriptionEnabled: boolean;
-      transcriptionModel?: "whisper-1";
+      transcriptionModel?: "whisper-1" | "gpt-4o-transcribe" | "gpt-4o-mini-transcribe";
       transcriptionLanguage?: string;
+      transcriptionConcurrency?: number;
+      transcriptionChunkSeconds?: number;
     };
   }>(() => {
     const defaultConfig = {
       openai: {
         transcriptionEnabled: false,
-        transcriptionModel: "whisper-1" as const,
+        transcriptionModel: "gpt-4o-mini-transcribe" as const,
         transcriptionLanguage: "",
+        transcriptionConcurrency: 2,
+        transcriptionChunkSeconds: 600,
       },
     };
     // Try to load from saved prefs
@@ -195,6 +200,9 @@ export function useTranslationWorkflowRunner() {
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [useTranscription, setUseTranscription] = useState(false);
+  const [useTranscriptionForSummary, setUseTranscriptionForSummary] = useState(
+    saved?.useTranscriptionForSummary ?? false,
+  );
 
   const providerLabels: Record<ProviderType, string> = {
     gemini: "Gemini",
@@ -276,6 +284,7 @@ export function useTranslationWorkflowRunner() {
       useGlossary,
       safetyOff,
       useGlossaryInSummary,
+      useTranscriptionForSummary,
     };
     savePrefs(prefs);
   }, [
@@ -301,6 +310,7 @@ export function useTranslationWorkflowRunner() {
     useGlossary,
     safetyOff,
     useGlossaryInSummary,
+    useTranscriptionForSummary,
   ]);
 
   const handleMediaChange = async (file: File | null) => {
@@ -580,13 +590,15 @@ export function useTranslationWorkflowRunner() {
       return;
     }
     const isMediaSummary = !!mediaFile;
+    const hasTextTranscript =
+      useTranscriptionForSummary && Boolean(transcriptionText.trim());
     if (isMediaSummary && !videoRef) {
       setSummaryError("Upload media first to generate a summary from media");
       return;
     }
-    if (!isMediaSummary && !vttFile) {
+    if (!isMediaSummary && !vttFile && !hasTextTranscript) {
       setSummaryError(
-        "Load subtitles first to generate a summary from subtitles",
+        "Load subtitles or generate a transcription first to summarize",
       );
       return;
     }
@@ -606,8 +618,7 @@ export function useTranslationWorkflowRunner() {
         ? DEFAULT_SUMMARY_USER_PROMPT.media
         : DEFAULT_SUMMARY_USER_PROMPT.subtitles;
       let transcriptText: string | undefined;
-      if (!isMediaSummary) {
-        if (!vttFile) throw new Error("Subtitle file is required for subtitle summary");
+      if (!isMediaSummary && vttFile) {
         const fileText = await vttFile.text();
         let cues: ReturnType<typeof parseVtt>;
         const lowerName = vttFile.name.toLowerCase();
@@ -626,6 +637,8 @@ export function useTranslationWorkflowRunner() {
         }
         const rawText = cues.map((cue) => cue.text).join("\n");
         transcriptText = rawText.slice(0, 8000);
+      } else if (!isMediaSummary && hasTextTranscript) {
+        transcriptText = transcriptionText.trim().slice(0, 8000);
       }
       const glossaryBlock =
         useGlossaryInSummary && glossary.trim()
@@ -685,9 +698,32 @@ export function useTranslationWorkflowRunner() {
   const handleTranscribeAudio = async () => {
     if (!audioFile) return;
 
+    const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB Whisper API limit
+    const clampChunkSeconds = (val: number | undefined) =>
+      Math.max(30, val ?? 600);
+    const MAX_SEGMENT_SECONDS = clampChunkSeconds(
+      providerConfigs.openai.transcriptionChunkSeconds,
+    ); // Keep well under GPT-4o-transcribe comfort zone while allowing Whisper flexibility
+
     try {
       setTranscriptionStatus("loading");
       setError("");
+      setStatusMessage("");
+
+      let fileToTranscribe = audioFile;
+      let duration: number | undefined;
+
+      // Detect audio duration
+      try {
+        const detectedDuration = await getMediaDuration(audioFile);
+        duration = detectedDuration ?? undefined; // Convert null to undefined
+        if (duration && Number.isFinite(duration) && duration > 0) {
+          setStatusMessage(`Preparing transcription (${duration.toFixed(0)}s media, ${(audioFile.size / (1024 * 1024)).toFixed(1)}MB)...`);
+        }
+      } catch (err) {
+        // Duration detection failed, continue without it  
+        duration = undefined;
+      }
 
       // Create provider instance
       const provider = ProviderFactory.create("openai", {
@@ -699,18 +735,124 @@ export function useTranslationWorkflowRunner() {
         throw new Error("Provider does not support transcription");
       }
 
-      const vttContent = await provider.transcribeAudio(
-        audioFile,
-        providerConfigs.openai.transcriptionLanguage || undefined
+      const filesToTranscribe: Array<{ file: File; offset: number }> = [];
+
+      const shouldChunk =
+        typeof duration === "number" &&
+        Number.isFinite(duration) &&
+        duration > MAX_SEGMENT_SECONDS;
+
+      if (shouldChunk) {
+        setStatusMessage(`Splitting media into ~${MAX_SEGMENT_SECONDS}s chunks for transcription...`);
+        const segments = await chunkMediaToOggSegments(fileToTranscribe, MAX_SEGMENT_SECONDS);
+        setStatusMessage(`Split into ${segments.length} chunk(s). Starting transcription...`);
+        segments.forEach((segment, idx) => {
+          filesToTranscribe.push({ file: segment, offset: idx * MAX_SEGMENT_SECONDS });
+        });
+      } else {
+        // Convert audio if file is too large
+        if (fileToTranscribe.size > MAX_FILE_SIZE) {
+          setStatusMessage(`File too large (${(fileToTranscribe.size / (1024 * 1024)).toFixed(1)}MB), converting to compressed audio...`);
+
+          fileToTranscribe = await extractAudioToOggMono(fileToTranscribe);
+
+          setStatusMessage(`Conversion complete (${(fileToTranscribe.size / (1024 * 1024)).toFixed(1)}MB). Starting transcription...`);
+
+          // Recheck duration after conversion
+          try {
+            const detectedDuration = await getMediaDuration(fileToTranscribe);
+            duration = detectedDuration ?? undefined; // Convert null to undefined
+          } catch {
+            duration = undefined;
+          }
+        }
+
+        filesToTranscribe.push({ file: fileToTranscribe, offset: 0 });
+      }
+
+      const model = providerConfigs.openai.transcriptionModel || "gpt-4o-mini-transcribe";
+
+      const combinedVttCues: Array<{ start: number; end: number; text: string }> = [];
+      const combinedText: Array<{ offset: number; text: string; index: number }> = [];
+
+      const transcriptionConcurrency = Math.min(
+        4,
+        Math.max(1, providerConfigs.openai.transcriptionConcurrency ?? 2),
+      );
+      const totalChunks = filesToTranscribe.length;
+      const workerCount = Math.min(transcriptionConcurrency, totalChunks);
+      let nextChunk = 0;
+
+      const runWorker = async () => {
+        // Loop through chunks until none remain
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const current = nextChunk;
+          nextChunk += 1;
+          if (current >= totalChunks) return;
+
+          const { file, offset } = filesToTranscribe[current];
+          setStatusMessage(
+            `Transcribing chunk ${current + 1}/${totalChunks}${
+              workerCount > 1 ? ` (up to ${workerCount} at once)` : ""
+            }...`,
+          );
+
+          const chunkDuration =
+            typeof duration === "number"
+              ? Math.min(MAX_SEGMENT_SECONDS, Math.max(0, duration - offset))
+              : undefined;
+
+          const content = await provider.transcribeAudio(
+            file,
+            providerConfigs.openai.transcriptionLanguage || undefined,
+            chunkDuration,
+            model
+          );
+
+          if (model.includes("gpt-4o")) {
+            combinedText.push({ offset, text: content.trim(), index: current });
+          } else {
+            const cues = parseVtt(content);
+            cues.forEach((cue) => {
+              combinedVttCues.push({
+                start: cue.start + offset,
+                end: cue.end + offset,
+                text: cue.text,
+              });
+            });
+          }
+        }
+      };
+
+      await Promise.all(
+        Array.from({ length: workerCount }).map(() => runWorker()),
       );
 
-      setTranscriptionText(vttContent);
+      if (model.includes("gpt-4o")) {
+        const orderedText = combinedText
+          .filter((entry) => entry.text)
+          .sort((a, b) => a.offset - b.offset || a.index - b.index)
+          .map((entry) => entry.text);
+        setTranscriptionText(orderedText.join("\n\n"));
+        setUseTranscription(false); // Text-only result
+        setUseTranscriptionForSummary(true);
+      } else {
+        const orderedCues = combinedVttCues.sort(
+          (a, b) => a.start - b.start || a.end - b.end,
+        );
+        setTranscriptionText(serializeVtt(orderedCues));
+        setUseTranscription(true);
+      }
+
+      setError(""); // Clear progress messages on success
+      setStatusMessage("");
       setTranscriptionStatus("success");
-      setUseTranscription(true);
     } catch (err) {
       setTranscriptionStatus("error");
       const errorMsg =
         err instanceof Error ? err.message : "Transcription failed";
+      setStatusMessage("");
       setError(`Transcription failed: ${errorMsg}`);
     }
   };
@@ -718,6 +860,7 @@ export function useTranslationWorkflowRunner() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
+    setStatusMessage("");
     runnerActions.setResult(null);
     runnerActions.setProgress("");
 
@@ -861,6 +1004,18 @@ export function useTranslationWorkflowRunner() {
       .catch((err) =>
         setError(err instanceof Error ? err.message : "Retry error"),
       );
+  };
+
+  const handleManualChunkEdit = (chunkIdx: number, vttContent: string) => {
+    // Validate the VTT content before setting it
+    try {
+      // Attempt to parse the VTT to ensure it's valid
+      parseVtt(vttContent);
+      // If successful, set the manual override
+      runnerActions.setManualChunkStatus(chunkIdx, vttContent, ["Manually corrected by user"]);
+    } catch (err) {
+      setError(`Invalid VTT format: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
   };
 
   const resetWorkflow = () => {
@@ -1037,6 +1192,7 @@ export function useTranslationWorkflowRunner() {
       paused: runnerState.paused,
       isRunning: runnerState.isRunning,
       error,
+      statusMessage,
       submitting,
       retryingChunks: runnerState.retryingChunks,
       retryQueueIds: runnerState.retryQueueIds,
@@ -1061,6 +1217,7 @@ export function useTranslationWorkflowRunner() {
       transcriptionText,
       transcriptionStatus,
       useTranscription,
+      useTranscriptionForSummary,
     },
     actions: {
       // Provider actions
@@ -1074,6 +1231,9 @@ export function useTranslationWorkflowRunner() {
       setAudioFile, // New action
       setTranscriptionText, // New action
       setUseTranscription, // New action
+      setUseTranscriptionForSummary,
+      handleTranscribeAudio, // New action
+      handleManualChunkEdit,
       setUseAudioOnly,
       setTargetLang,
       setConcurrency: setConcurrencyClamped,
@@ -1088,7 +1248,6 @@ export function useTranslationWorkflowRunner() {
       handleLoadModels,
       handleGenerateGlossary,
       handleGenerateSummary,
-      handleTranscribeAudio, // New action
       handleRetryChunk,
       handleUploadVideo,
       handleDeleteVideo,

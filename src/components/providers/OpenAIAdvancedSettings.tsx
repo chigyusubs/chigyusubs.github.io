@@ -4,8 +4,10 @@ import { useTheme } from "../../lib/themeContext";
 
 type OpenAIConfig = {
     transcriptionEnabled: boolean;
-    transcriptionModel?: "whisper-1";
+    transcriptionModel?: "whisper-1" | "gpt-4o-transcribe" | "gpt-4o-mini-transcribe";
     transcriptionLanguage?: string;
+    transcriptionConcurrency?: number;
+    transcriptionChunkSeconds?: number;
 };
 
 type Props = {
@@ -47,20 +49,21 @@ export function OpenAIAdvancedSettings({ config, onChange, locked = false }: Pro
                         <FieldLabel>Transcription Model</FieldLabel>
                         <select
                             className={theme.input}
-                            value={config.transcriptionModel || "whisper-1"}
+                            value={config.transcriptionModel || "gpt-4o-mini-transcribe"}
                             onChange={(e) =>
                                 onChange({
                                     ...config,
-                                    transcriptionModel: e.target.value as "whisper-1",
+                                    transcriptionModel: e.target.value as "whisper-1" | "gpt-4o-transcribe" | "gpt-4o-mini-transcribe",
                                 })
                             }
                             disabled={locked}
                         >
-                            <option value="whisper-1">whisper-1 (VTT output)</option>
-                            {/* Future: GPT-4o models when VTT conversion is implemented */}
+                            <option value="gpt-4o-mini-transcribe">gpt-4o-mini-transcribe (Fast Text Context - No Subtitles)</option>
+                            <option value="gpt-4o-transcribe">gpt-4o-transcribe (High Quality Text - No Subtitles)</option>
+                            <option value="whisper-1">whisper-1 (VTT Subtitles - Slow)</option>
                         </select>
                         <p className={theme.helperText}>
-                            whisper-1 is currently the only model that outputs VTT format directly.
+                            Use <strong>whisper-1</strong> for subtitles (VTT). Use <strong>gpt-4o</strong> models for fast text context/summary.
                         </p>
                     </div>
 
@@ -81,6 +84,47 @@ export function OpenAIAdvancedSettings({ config, onChange, locked = false }: Pro
                         />
                         <p className={theme.helperText}>
                             ISO-639-1 code. Leave empty for auto-detection.
+                        </p>
+                    </div>
+
+                    {/* Concurrency */}
+                    <div className="space-y-2">
+                        <FieldLabel>Chunk Concurrency</FieldLabel>
+                        <TextInput
+                            type="number"
+                            min={1}
+                            max={4}
+                            value={config.transcriptionConcurrency ?? 2}
+                            onChange={(e) =>
+                                onChange({
+                                    ...config,
+                                    transcriptionConcurrency: Math.min(4, Math.max(1, Number(e.target.value) || 1)),
+                                })
+                            }
+                            disabled={locked}
+                        />
+                        <p className={theme.helperText}>
+                            Max parallel OpenAI transcription requests when media is chunked (keep low to avoid rate limits).
+                        </p>
+                    </div>
+
+                    {/* Chunk length */}
+                    <div className="space-y-2">
+                        <FieldLabel>Chunk Length (seconds)</FieldLabel>
+                        <TextInput
+                            type="number"
+                            min={30}
+                            value={config.transcriptionChunkSeconds ?? 600}
+                            onChange={(e) =>
+                                onChange({
+                                    ...config,
+                                    transcriptionChunkSeconds: Math.max(30, Number(e.target.value) || 600),
+                                })
+                            }
+                            disabled={locked}
+                        />
+                        <p className={theme.helperText}>
+                            Split long media for OpenAI transcription. 4o models work best under ~1200s; Whisper-1 has no strict limit.
                         </p>
                     </div>
                 </div>
