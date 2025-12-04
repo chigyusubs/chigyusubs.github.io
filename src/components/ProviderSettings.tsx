@@ -12,6 +12,7 @@ type Props = {
     // Provider selection
     selectedProvider: ProviderType;
     setSelectedProvider: (provider: ProviderType) => void;
+    workflowMode?: "translation" | "transcription";
 
     // API keys per provider
     apiKeys: Record<ProviderType, string>;
@@ -73,6 +74,7 @@ export function ProviderSettings({
     setSafetyOff,
     mediaResolution,
     setMediaResolution,
+    workflowMode = "translation",
     locked = false,
 }: Props) {
     const theme = useTheme();
@@ -82,6 +84,7 @@ export function ProviderSettings({
     const requiresApiKey = capability.requiresApiKey;
     const supportsMediaUpload = capability.supportsMediaUpload;
     const supportsSafetySettings = capability.supportsSafetySettings;
+    const transcriptionMode = workflowMode === "transcription";
 
     const providerLabels: Record<ProviderType, string> = {
         gemini: getProviderCapability("gemini").label,
@@ -113,8 +116,13 @@ export function ProviderSettings({
                         disabled={locked}
                     >
                         {(Object.keys(providerLabels) as ProviderType[]).map((provider) => (
-                            <option key={provider} value={provider}>
+                            <option
+                                key={provider}
+                                value={provider}
+                                disabled={transcriptionMode && provider !== "gemini"}
+                            >
                                 {providerLabels[provider]}
+                                {transcriptionMode && provider !== "gemini" ? " (not available for transcription)" : ""}
                             </option>
                         ))}
                     </select>

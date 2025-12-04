@@ -791,6 +791,18 @@ export function useTranslationWorkflowRunner() {
     // Validate input: Need either VTT file OR enabled transcription
     const hasVttFile = Boolean(vttFile);
     const hasTranscription = Boolean(useTranscription && transcriptionText);
+    if (workflowMode === "transcription" && selectedProvider !== "gemini") {
+      setError("Transcription mode requires the Gemini provider");
+      return;
+    }
+    if (workflowMode === "transcription" && !mediaFile) {
+      setError("Upload media to transcribe");
+      return;
+    }
+    if (workflowMode === "transcription" && !apiKey) {
+      setError("Gemini API key is required for transcription");
+      return;
+    }
 
     if (!hasVttFile && !hasTranscription) {
       setError("Please provide either a subtitle file or generate a transcription");

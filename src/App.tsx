@@ -70,6 +70,39 @@ function App() {
       </header>
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-6 pb-20">
         <form className="space-y-6" onSubmit={actions.handleSubmit}>
+          <SectionCard
+            title="Mode"
+            subtitle="Switch between translation and transcription."
+          >
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  value="translation"
+                  checked={state.workflowMode === "translation"}
+                  onChange={() => actions.setWorkflowMode("translation")}
+                  disabled={locked}
+                />
+                <span>Translation</span>
+              </label>
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  value="transcription"
+                  checked={state.workflowMode === "transcription"}
+                  onChange={() => actions.setWorkflowMode("transcription")}
+                  disabled={locked}
+                />
+                <span>Transcription (Gemini)</span>
+              </label>
+              {state.workflowMode === "transcription" && state.selectedProvider !== "gemini" && (
+                <span className={`text-xs ${theme.dangerText}`}>
+                  Transcription mode requires Gemini; switch provider to continue.
+                </span>
+              )}
+            </div>
+          </SectionCard>
+
           <ProviderSettings
             selectedProvider={state.selectedProvider}
             setSelectedProvider={actions.setSelectedProvider}
@@ -92,6 +125,7 @@ function App() {
             locked={locked}
             mediaResolution={state.mediaResolution}
             setMediaResolution={actions.setMediaResolution}
+            workflowMode={state.workflowMode}
           />
 
           <FileUploader
