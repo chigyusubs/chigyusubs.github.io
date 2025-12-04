@@ -17,6 +17,7 @@ import {
   PROMPT_PRESETS,
 } from "./config/defaults";
 import { RestoreButton } from "./components/RestoreButton";
+import { getProviderCapability } from "./lib/providers/capabilities";
 
 function App() {
   const { state, actions } = useTranslationWorkflowRunner();
@@ -24,6 +25,7 @@ function App() {
   const { name: themeName, toggleTheme } = useThemeControl();
   const running = state.isRunning;
   const locked = state.submitting || running;
+  const providerCapability = getProviderCapability(state.selectedProvider);
   const summaryButtonLabel =
     state.summaryStatus === "loading"
       ? "Generating..."
@@ -36,7 +38,7 @@ function App() {
       (state.useTranscriptionForSummary &&
         !!state.transcriptionText.trim());
   const canGenerateSummary =
-    (state.selectedProvider === "ollama" || !!state.apiKey) &&
+    (!providerCapability.requiresApiKey || !!state.apiKey) &&
     hasSummarySource &&
     state.summaryStatus !== "loading" &&
     !locked;
@@ -99,6 +101,7 @@ function App() {
             setMediaFile={actions.setMediaFile}
             useAudioOnly={state.useAudioOnly}
             setUseAudioOnly={actions.setUseAudioOnly}
+            supportsMediaUpload={providerCapability.supportsMediaUpload}
             videoRef={state.videoRef}
             videoUploadState={state.videoUploadState}
             videoUploadMessage={state.videoUploadMessage}
@@ -111,7 +114,6 @@ function App() {
             apiKey={state.apiKey}
             locked={locked}
             mediaTooLargeWarning={state.mediaTooLargeWarning}
-            supportsMediaUpload={state.selectedProvider === "gemini"}
 
             // Transcription props
             showAudioUpload={state.selectedProvider === "openai" && state.providerConfigs.openai.transcriptionEnabled}
