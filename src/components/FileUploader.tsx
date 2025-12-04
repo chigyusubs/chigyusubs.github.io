@@ -43,6 +43,7 @@ type Props = {
   setUseTranscription?: (use: boolean) => void;
   useTranscriptionForSummary?: boolean;
   setUseTranscriptionForSummary?: (use: boolean) => void;
+  mode: "translation" | "transcription";
 };
 
 function formatDuration(seconds: number | null): string {
@@ -90,6 +91,7 @@ export function FileUploader({
   setUseTranscription,
   useTranscriptionForSummary = false,
   setUseTranscriptionForSummary,
+  mode,
 }: Props) {
   const theme = useTheme();
 
@@ -104,6 +106,7 @@ export function FileUploader({
     supportsMediaUpload || showTranscriptionUpload
       ? "md:grid-cols-2"
       : "md:grid-cols-1";
+  const isTranscriptionMode = mode === "transcription";
 
   const estimateTokens = (): string | null => {
     if (!durationInfo) return null;
@@ -138,18 +141,20 @@ export function FileUploader({
     >
       <div className={`grid grid-cols-1 gap-4 ${gridColsMd}`}>
         {/* Subtitle File Upload */}
-        <FilePicker
-          label="Subtitles (VTT or SRT, required)"
-          description="Click or drop your subtitle file"
-          accept=".vtt,.srt,text/vtt,text/srt"
-          onChange={(e) => setVttFile(e.target.files?.[0] || null)}
-          required={!useTranscription} // Not required if using transcription
-          fileName={vttFile?.name || null}
-          fileMeta={
-            vttFile ? `${(vttFile.size / 1024 / 1024).toFixed(2)} MB` : null
-          }
-          disabled={isLocked || useTranscription}
-        />
+        {!isTranscriptionMode && (
+          <FilePicker
+            label="Subtitles (VTT or SRT, required)"
+            description="Click or drop your subtitle file"
+            accept=".vtt,.srt,text/vtt,text/srt"
+            onChange={(e) => setVttFile(e.target.files?.[0] || null)}
+            required={!useTranscription} // Not required if using transcription
+            fileName={vttFile?.name || null}
+            fileMeta={
+              vttFile ? `${(vttFile.size / 1024 / 1024).toFixed(2)} MB` : null
+            }
+            disabled={isLocked || useTranscription}
+          />
+        )}
 
         {/* Audio File Upload (for Transcription) */}
         {showTranscriptionUpload && setAudioFile && (
@@ -245,24 +250,26 @@ export function FileUploader({
 
       {supportsMediaUpload && (
         <>
-          <div className="flex flex-col gap-2">
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={useAudioOnly}
-                onChange={(e) => setUseAudioOnly(e.target.checked)}
-                disabled={isLocked}
-                title="Extract mono audio from video before upload to reduce size and token cost."
-              />
-              <span>
-                Upload audio-only (smaller upload; recommended for free tier)
-              </span>
-            </label>
-            <p className={theme.helperText}>
-              Media is only used to generate the optional summary; translation uses
-              the text + summary.
-            </p>
-          </div>
+          {!isTranscriptionMode && (
+            <div className="flex flex-col gap-2">
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={useAudioOnly}
+                  onChange={(e) => setUseAudioOnly(e.target.checked)}
+                  disabled={isLocked}
+                  title="Extract mono audio from video before upload to reduce size and token cost."
+                />
+                <span>
+                  Upload audio-only (smaller upload; recommended for free tier)
+                </span>
+              </label>
+              <p className={theme.helperText}>
+                Media is only used to generate the optional summary; translation uses
+                the text + summary.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-3">
             <div className="flex items-center gap-2">

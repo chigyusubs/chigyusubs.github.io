@@ -148,6 +148,7 @@ function App() {
             apiKey={state.apiKey}
             locked={locked}
             mediaTooLargeWarning={state.mediaTooLargeWarning}
+            mode={state.workflowMode}
 
             // Transcription props
             showAudioUpload={state.selectedProvider === "openai" && state.providerConfigs.openai.transcriptionEnabled}
