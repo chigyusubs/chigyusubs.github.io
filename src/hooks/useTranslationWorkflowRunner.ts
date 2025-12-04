@@ -282,6 +282,23 @@ export function useTranslationWorkflowRunner() {
     }
   };
 
+  const tryParseVttFlexible = (text: string): {
+    cues: ReturnType<typeof parseVtt> | null;
+    warnings: string[];
+  } => {
+    const warnings: string[] = [];
+    try {
+      const { cues, normalized } = normalizeVttForParse(text);
+      if (normalized) warnings.push("Normalized timecodes");
+      return { cues, warnings };
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Unable to parse VTT from transcription";
+      warnings.push(msg);
+      return { cues: null, warnings };
+    }
+  };
+
   const resolveProviderConfig = () => {
     const parsed = parseModelName(modelName);
     const providerType = parsed.provider;
@@ -915,41 +932,64 @@ export function useTranslationWorkflowRunner() {
         });
         const text = response.text.trim();
         const repair = autoRepairVtt(text);
-        const { cues, normalized } = normalizeVttForParse(repair.repaired);
-        const shifted = cues.map((cue) => ({
-          ...cue,
-          start: cue.start + start,
-          end: cue.end + start,
-        }));
-        const integrityError = validateCueIntegrity(shifted);
-        if (integrityError) warnings.push(`Chunk ${i + 1}: ${integrityError}`);
-        if (normalized) warnings.push(`Chunk ${i + 1}: normalized timecodes`);
-        if (repair.warnings.length) {
-          repair.warnings.forEach((w) =>
+        const parsed = tryParseVttFlexible(repair.repaired);
+        if (parsed.warnings.length) {
+          parsed.warnings.forEach((w) =>
             warnings.push(`Chunk ${i + 1}: ${w}`),
           );
         }
-        aggregatedCues.push(...shifted);
 
-        const stitchedChunk = serializeVtt(cues);
-        chunkStatuses.push({
-          idx: i,
-          status: integrityError ? "failed" : "ok",
-          tokens_estimate: Math.max(Math.floor(stitchedChunk.length / 4), 1),
-          warnings: integrityError ? [integrityError] : [],
-          vtt: stitchedChunk,
-          raw_model_output: stitchedChunk,
-          raw_vtt: stitchedChunk,
-          chunk_vtt: stitchedChunk,
-          context_vtt: "",
-          prompt: userPrompt,
-          system_prompt: systemPrompt,
-          started_at: startedAt,
-          finished_at: Date.now(),
-          model_name: resolvedProvider.modelForProvider,
-          temperature: DEFAULT_TEMPERATURE,
-          duration_ms: Date.now() - startedAt,
-        });
+        let chunkStatus: ChunkStatus;
+        if (parsed.cues) {
+          const shifted = parsed.cues.map((cue) => ({
+            ...cue,
+            start: cue.start + start,
+            end: cue.end + start,
+          }));
+          const integrityError = validateCueIntegrity(shifted);
+          if (integrityError) warnings.push(`Chunk ${i + 1}: ${integrityError}`);
+          aggregatedCues.push(...shifted);
+          const stitchedChunk = serializeVtt(parsed.cues);
+          chunkStatus = {
+            idx: i,
+            status: integrityError ? "failed" : "ok",
+            tokens_estimate: Math.max(Math.floor(stitchedChunk.length / 4), 1),
+            warnings: integrityError ? [integrityError] : [],
+            vtt: stitchedChunk,
+            raw_model_output: text,
+            raw_vtt: stitchedChunk,
+            chunk_vtt: stitchedChunk,
+            context_vtt: "",
+            prompt: userPrompt,
+            system_prompt: systemPrompt,
+            started_at: startedAt,
+            finished_at: Date.now(),
+            model_name: resolvedProvider.modelForProvider,
+            temperature: DEFAULT_TEMPERATURE,
+            duration_ms: Date.now() - startedAt,
+          };
+        } else {
+          chunkStatus = {
+            idx: i,
+            status: "failed",
+            tokens_estimate: Math.max(Math.floor(text.length / 4), 1),
+            warnings: parsed.warnings,
+            vtt: "",
+            raw_model_output: text,
+            raw_vtt: text,
+            chunk_vtt: "",
+            context_vtt: "",
+            prompt: userPrompt,
+            system_prompt: systemPrompt,
+            started_at: startedAt,
+            finished_at: Date.now(),
+            model_name: resolvedProvider.modelForProvider,
+            temperature: DEFAULT_TEMPERATURE,
+            duration_ms: Date.now() - startedAt,
+          };
+        }
+
+        chunkStatuses.push(chunkStatus);
       }
 
       const stitchedVtt = serializeVtt(aggregatedCues);
