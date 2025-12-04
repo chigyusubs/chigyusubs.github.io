@@ -386,7 +386,7 @@ function App() {
                 {state.promptPreview}
               </pre>
             </details>
-          </SectionCard>
+            </SectionCard>
           )}
 
           {state.workflowMode === "transcription" && (
@@ -511,76 +511,78 @@ function App() {
             </label>
           </SectionCard>
 
-          <SectionCard
-            title="Translation settings"
-            subtitle="Set chunking and model controls."
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <FieldLabel>Chunk Size</FieldLabel>
-                <select
-                  className={theme.input}
-                  value={state.chunkSeconds}
-                  onChange={(e) =>
-                    actions.setChunkSeconds(Number(e.target.value))
-                  }
-                  disabled={locked}
-                >
-                  {[1, 2, 3, 5, 10, 12, 15, 20, 25, 30, 40].map((min) => {
-                    const seconds = min * 60;
-                    return (
-                      <option key={seconds} value={seconds}>
-                        {min} minute{min === 1 ? "" : "s"}
+          {state.workflowMode === "translation" && (
+            <SectionCard
+              title="Translation settings"
+              subtitle="Set chunking and model controls."
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <FieldLabel>Chunk Size</FieldLabel>
+                  <select
+                    className={theme.input}
+                    value={state.chunkSeconds}
+                    onChange={(e) =>
+                      actions.setChunkSeconds(Number(e.target.value))
+                    }
+                    disabled={locked}
+                  >
+                    {[1, 2, 3, 5, 10, 12, 15, 20, 25, 30, 40].map((min) => {
+                      const seconds = min * 60;
+                      return (
+                        <option key={seconds} value={seconds}>
+                          {min} minute{min === 1 ? "" : "s"}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                <div>
+                  <FieldLabel>Overlap</FieldLabel>
+                  <select
+                    className={theme.input}
+                    value={state.chunkOverlap}
+                    onChange={(e) =>
+                      actions.setChunkOverlap(Number(e.target.value))
+                    }
+                    disabled={locked}
+                  >
+                    {[0, 1, 2, 3, 4, 5, 6, 8, 10].map((ov) => (
+                      <option key={ov} value={ov}>
+                        {ov} cue{ov === 1 ? "" : "s"}
                       </option>
-                    );
-                  })}
-                </select>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <FieldLabel>Concurrency</FieldLabel>
+                  <select
+                    className={theme.input}
+                    value={state.concurrency}
+                    onChange={(e) =>
+                      actions.setConcurrency(Number(e.target.value))
+                    }
+                    disabled={locked}
+                  >
+                    {Array.from(
+                      { length: MAX_CONCURRENCY },
+                      (_, idx) => idx + 1,
+                    ).map((c) => {
+                      const label = c === 1 ? "Single task" : `${c} parallel`;
+                      return (
+                        <option key={c} value={c}>
+                          {label}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <p className={theme.helperText}>
+                    Capped at {MAX_CONCURRENCY} to respect free-tier RPM.
+                  </p>
+                </div>
               </div>
-              <div>
-                <FieldLabel>Overlap</FieldLabel>
-                <select
-                  className={theme.input}
-                  value={state.chunkOverlap}
-                  onChange={(e) =>
-                    actions.setChunkOverlap(Number(e.target.value))
-                  }
-                  disabled={locked}
-                >
-                  {[0, 1, 2, 3, 4, 5, 6, 8, 10].map((ov) => (
-                    <option key={ov} value={ov}>
-                      {ov} cue{ov === 1 ? "" : "s"}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <FieldLabel>Concurrency</FieldLabel>
-                <select
-                  className={theme.input}
-                  value={state.concurrency}
-                  onChange={(e) =>
-                    actions.setConcurrency(Number(e.target.value))
-                  }
-                  disabled={locked}
-                >
-                  {Array.from(
-                    { length: MAX_CONCURRENCY },
-                    (_, idx) => idx + 1,
-                  ).map((c) => {
-                    const label = c === 1 ? "Single task" : `${c} parallel`;
-                    return (
-                      <option key={c} value={c}>
-                        {label}
-                      </option>
-                    );
-                  })}
-                </select>
-                <p className={theme.helperText}>
-                  Capped at {MAX_CONCURRENCY} to respect free-tier RPM.
-                </p>
-              </div>
-            </div>
-          </SectionCard>
+            </SectionCard>
+          )}
 
           <div className="flex justify-end items-center mt-8 mb-12 gap-3">
             <Button
