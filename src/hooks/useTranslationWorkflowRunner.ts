@@ -46,6 +46,7 @@ import { useTranslationRunner } from "./useTranslationRunner";
 import { getMediaDuration } from "../lib/mediaDuration";
 import { extractAudioToOggMono } from "../lib/ffmpeg";
 import { transcribeOpenAiMedia } from "../lib/transcription/openai";
+import { useTranscriptionRunner } from "./useTranscriptionRunner";
 
 import { clearPrefs, loadPrefs, savePrefs, type UserPrefs } from "../lib/prefs";
 import {
@@ -320,6 +321,7 @@ export function useTranslationWorkflowRunner() {
   };
 
   const { state: runnerState, actions: runnerActions } = useTranslationRunner();
+  const { state: transcriptionRunnerState, actions: transcriptionRunnerActions } = useTranscriptionRunner();
 
   // Save custom presets to localStorage whenever they change
   useEffect(() => {
@@ -367,9 +369,9 @@ export function useTranslationWorkflowRunner() {
     setTranscriptionRunning(false);
     setTranscriptionPaused(false);
     transcriptionPausedRef.current = false;
-    runnerActions.reset();
-    runnerActions.setProgress("");
-    runnerActions.setResult(null);
+    transcriptionRunnerActions.reset();
+    transcriptionRunnerActions.setProgress("");
+    transcriptionRunnerActions.setResult(null);
     setTranscriptionStatus("idle");
     setSubmitting(false);
     setError("");
@@ -922,7 +924,8 @@ export function useTranslationWorkflowRunner() {
     runnerActions.setResult(null);
 
     const startedAt = Date.now();
-    runnerActions.setProgress("Transcribing media with Gemini…");
+    transcriptionRunnerActions.startRun();
+    transcriptionRunnerActions.setProgress("Transcribing media with Gemini…");
     setTranscriptionRunning(true);
     transcriptionCancelRef.current = false;
     transcriptionPausedRef.current = false;
@@ -996,7 +999,7 @@ export function useTranslationWorkflowRunner() {
 
       for (let i = 0; i < ranges.length; i += 1) {
         const { start, end } = ranges[i];
-        runnerActions.setProgress(`Transcribing chunk ${i + 1}/${ranges.length}…`);
+        transcriptionRunnerActions.setProgress(`Transcribing chunk ${i + 1}/${ranges.length}…`);
         const request: GenerateRequest = {
           systemPrompt,
           userPrompt,
@@ -1076,7 +1079,7 @@ export function useTranslationWorkflowRunner() {
         chunkStatuses.push(chunkStatus);
 
         // Update result incrementally
-        runnerActions.setResult((prev) => {
+        transcriptionRunnerActions.setResult((prev) => {
           const chunks = (prev?.chunks || []).filter((c) => c.idx !== chunkStatus.idx);
           chunks.push(chunkStatus);
           return {
@@ -1126,7 +1129,7 @@ export function useTranslationWorkflowRunner() {
         chunkStatuses.push(finalChunk);
       }
 
-      runnerActions.setResult({
+      transcriptionRunnerActions.setResult({
         ok: warnings.length === 0 && chunkStatuses.every((c) => c.status === "ok"),
         warnings,
         chunks: chunkStatuses.sort((a, b) => a.idx - b.idx),
@@ -1139,10 +1142,11 @@ export function useTranslationWorkflowRunner() {
       setError(err instanceof Error ? err.message : "Transcription failed");
     } finally {
       setSubmitting(false);
-      runnerActions.setProgress("");
+      transcriptionRunnerActions.setProgress("");
       setTranscriptionRunning(false);
       setTranscriptionPaused(false);
       transcriptionPausedRef.current = false;
+      transcriptionRunnerActions.finishRun();
     }
   };
 
@@ -1498,10 +1502,22 @@ export function useTranslationWorkflowRunner() {
       videoSizeMb,
       videoDuration,
       temperature,
-      progress: runnerState.progress,
-      result: runnerState.result,
-      paused: runnerState.paused,
-      isRunning: runnerState.isRunning,
+      progress:
+        workflowMode === "translation"
+          ? runnerState.progress
+          : transcriptionRunnerState.progress,
+      result:
+        workflowMode === "translation"
+          ? runnerState.result
+          : transcriptionRunnerState.result,
+      paused:
+        workflowMode === "translation"
+          ? runnerState.paused
+          : transcriptionRunnerState.paused,
+      isRunning:
+        workflowMode === "translation"
+          ? runnerState.isRunning
+          : transcriptionRunnerState.isRunning,
       error,
       statusMessage,
       submitting,
@@ -1583,6 +1599,9 @@ export function useTranslationWorkflowRunner() {
       setWorkflowMode,
       pause: runnerActions.pause,
       resume: runnerActions.resume,
+      pauseTranscription,
+      resumeTranscription,
+      cancelTranscription,
       applyPreset,
       applyCustomPreset,
       exportCurrentAsPreset,
