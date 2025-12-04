@@ -208,9 +208,9 @@ OpenAI Platform (one API key)
 | `gpt-4o-transcribe-diarize` | ❌ No (json/diarized_json/text) | ❌ No | ✅ Yes | ❌ No | Speaker identification |
 
 **Critical for Subtitle Workflows:**
-- Only **`whisper-1`** supports `vtt` and `srt` response formats
-- GPT-4o models produce `json` or `text`, requiring manual conversion to VTT
-- For this application, **`whisper-1` is the only viable transcription model** (for now)
+- Only **`whisper-1`** supports `vtt` and `srt` response formats and its timestamps are quantized to 1s resolution
+- GPT-4o models produce `json` or `text`, requiring manual conversion to VTT (we use them as text-only context for summaries)
+- We chunk long media client-side (configurable length, default 600s) and can run chunks in parallel (bounded pool) to fit GPT-4o limits; Whisper can use larger chunks but still benefits from chunking for responsiveness
 
 #### Workflow Integration
 
