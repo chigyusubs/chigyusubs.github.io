@@ -38,6 +38,7 @@ import {
   summarySystemPrompt,
 } from "../lib/prompts";
 import { parseSrt, parseVtt, serializeVtt } from "../lib/vtt";
+import { deriveSrt } from "../lib/stitcher";
 import { useTranslationRunner } from "./useTranslationRunner";
 import { getMediaDuration } from "../lib/mediaDuration";
 import { transcribeOpenAiMedia } from "../lib/transcription/openai";
@@ -220,6 +221,19 @@ export function useTranslationWorkflowRunner() {
     openai: getProviderCapability("openai").label,
     anthropic: getProviderCapability("anthropic").label,
     ollama: getProviderCapability("ollama").label,
+  };
+
+  const validateCueIntegrity = (cues: ReturnType<typeof parseVtt>): string | null => {
+    for (let i = 0; i < cues.length; i += 1) {
+      const cue = cues[i];
+      if (cue.end <= cue.start) {
+        return `Cue ${i + 1} ends before it starts`;
+      }
+      if (i > 0 && cue.start < cues[i - 1].end) {
+        return `Cue ${i + 1} overlaps the previous cue`;
+      }
+    }
+    return null;
   };
 
   const resolveProviderConfig = () => {
@@ -781,6 +795,92 @@ export function useTranslationWorkflowRunner() {
     }
   };
 
+  const handleGeminiTranscription = async () => {
+    const resolvedProvider = resolveProviderConfig();
+    if (resolvedProvider.providerType !== "gemini") {
+      setError("Transcription mode requires the Gemini provider");
+      return;
+    }
+    if (!videoRef) {
+      setError("Upload media to transcribe");
+      return;
+    }
+    if (!apiKey) {
+      setError("Gemini API key is required for transcription");
+      return;
+    }
+
+    const startedAt = Date.now();
+    runnerActions.setProgress("Transcribing media with Gemini…");
+    setSubmitting(true);
+    try {
+      const config = {
+        apiKey: resolvedProvider.apiKeyForProvider,
+        modelName: resolvedProvider.modelForProvider,
+        baseUrl: resolvedProvider.baseUrlForProvider,
+      };
+      const provider = ProviderFactory.create("gemini", config);
+      const systemPrompt =
+        "You are a professional transcriber. Output MUST be valid WebVTT with accurate timestamps.";
+      const userPrompt =
+        "Transcribe the attached media to WebVTT. Preserve timing, do not translate, and return ONLY WebVTT text.";
+
+      const request: GenerateRequest = {
+        systemPrompt,
+        userPrompt,
+        temperature: DEFAULT_TEMPERATURE,
+        safetyOff,
+        mediaUri: videoRef,
+      };
+
+      const response = await provider.generateContent(request, {
+        purpose: "transcription",
+      });
+      const text = response.text.trim();
+      const cues = parseVtt(text);
+      const integrityError = validateCueIntegrity(cues);
+      const stitchedVtt = serializeVtt(cues);
+      const srt = deriveSrt(stitchedVtt);
+      const warnings: string[] = [];
+      if (integrityError) warnings.push(integrityError);
+
+      const finishedAt = Date.now();
+      const chunk: ChunkStatus = {
+        idx: 0,
+        status: "ok",
+        tokens_estimate: Math.max(Math.floor(text.length / 4), 1),
+        warnings,
+        vtt: stitchedVtt,
+        raw_model_output: text,
+        raw_vtt: stitchedVtt,
+        chunk_vtt: stitchedVtt,
+        context_vtt: "",
+        prompt: userPrompt,
+        system_prompt: systemPrompt,
+        started_at: startedAt,
+        finished_at: finishedAt,
+        model_name: resolvedProvider.modelForProvider,
+        temperature: DEFAULT_TEMPERATURE,
+        duration_ms: finishedAt - startedAt,
+      };
+
+      runnerActions.setResult({
+        ok: warnings.length === 0,
+        warnings,
+        chunks: [chunk],
+        vtt: stitchedVtt,
+        srt,
+        video_ref: videoRef,
+      });
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Transcription failed");
+    } finally {
+      setSubmitting(false);
+      runnerActions.setProgress("");
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
@@ -801,6 +901,10 @@ export function useTranslationWorkflowRunner() {
     }
     if (workflowMode === "transcription" && !apiKey) {
       setError("Gemini API key is required for transcription");
+      return;
+    }
+    if (workflowMode === "transcription") {
+      await handleGeminiTranscription();
       return;
     }
 
@@ -943,19 +1047,6 @@ export function useTranslationWorkflowRunner() {
   };
 
   const handleManualChunkEdit = (chunkIdx: number, vttContent: string) => {
-    const validateCueIntegrity = (cues: ReturnType<typeof parseVtt>): string | null => {
-      for (let i = 0; i < cues.length; i += 1) {
-        const cue = cues[i];
-        if (cue.end <= cue.start) {
-          return `Cue ${i + 1} ends before it starts`;
-        }
-        if (i > 0 && cue.start < cues[i - 1].end) {
-          return `Cue ${i + 1} overlaps the previous cue`;
-        }
-      }
-      return null;
-    };
-
     // Validate the VTT content before setting it
     try {
       // Attempt to parse the VTT to ensure it's valid

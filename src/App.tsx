@@ -589,7 +589,13 @@ function App() {
               type="submit"
               tone="upload"
               disabled={
-                state.submitting || !state.vttFile || (state.selectedProvider !== "ollama" && !state.apiKey) || locked
+                state.submitting ||
+                locked ||
+                (state.workflowMode === "translation"
+                  ? (!state.vttFile || (state.selectedProvider !== "ollama" && !state.apiKey))
+                  : (state.selectedProvider !== "gemini" ||
+                    !state.apiKey ||
+                    !state.videoRef))
               }
             >
               {state.submitting ? (
