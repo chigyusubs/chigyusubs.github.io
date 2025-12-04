@@ -42,6 +42,14 @@ function App() {
     hasSummarySource &&
     state.summaryStatus !== "loading" &&
     !locked;
+  const startButtonLabel =
+    state.workflowMode === "transcription"
+      ? state.submitting
+        ? "Transcribing..."
+        : "Start Transcription"
+      : state.submitting
+        ? "Translating..."
+        : "Start Translation";
 
   return (
     <div className={theme.page}>
@@ -656,24 +664,28 @@ function App() {
           )}
 
           <div className="flex justify-end items-center mt-8 mb-12 gap-3">
-            <Button
-              type="button"
-              tone="secondary"
-              onClick={state.paused ? actions.resume : actions.pause}
-              disabled={!running}
-              title="Pause stops starting new chunks/retries; in-flight calls continue."
-            >
-              {state.paused ? "Resume" : "Pause"}
-            </Button>
-            <Button
-              type="button"
-              tone="secondary"
-              onClick={actions.resetWorkflow}
-              disabled={!running && !state.paused && !state.result}
-              title="Reset clears progress, drops queued work, and keeps uploaded media. Enabled when running, paused, or after results."
-            >
-              Reset
-            </Button>
+            {state.workflowMode === "translation" && (
+              <>
+                <Button
+                  type="button"
+                  tone="secondary"
+                  onClick={state.paused ? actions.resume : actions.pause}
+                  disabled={!running}
+                  title="Pause stops starting new chunks/retries; in-flight calls continue."
+                >
+                  {state.paused ? "Resume" : "Pause"}
+                </Button>
+                <Button
+                  type="button"
+                  tone="secondary"
+                  onClick={actions.resetWorkflow}
+                  disabled={!running && !state.paused && !state.result}
+                  title="Reset clears progress, drops queued work, and keeps uploaded media. Enabled when running, paused, or after results."
+                >
+                  Reset
+                </Button>
+              </>
+            )}
             <Button
               type="submit"
               tone="upload"
@@ -688,9 +700,9 @@ function App() {
               }
             >
               {state.submitting ? (
-                <span className="animate-pulse">Translating...</span>
+                <span className="animate-pulse">{startButtonLabel}</span>
               ) : (
-                "Start Translation"
+                startButtonLabel
               )}
             </Button>
           </div>
