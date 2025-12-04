@@ -664,7 +664,7 @@ function App() {
           )}
 
           <div className="flex justify-end items-center mt-8 mb-12 gap-3">
-            {state.workflowMode === "translation" && (
+            {state.workflowMode === "translation" ? (
               <>
                 <Button
                   type="button"
@@ -681,6 +681,27 @@ function App() {
                   onClick={actions.resetWorkflow}
                   disabled={!running && !state.paused && !state.result}
                   title="Reset clears progress, drops queued work, and keeps uploaded media. Enabled when running, paused, or after results."
+                >
+                  Reset
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  tone="secondary"
+                  onClick={state.transcriptionPaused ? actions.resumeTranscription : actions.pauseTranscription}
+                  disabled={!state.transcriptionRunning}
+                  title="Pause stops starting new transcription chunks."
+                >
+                  {state.transcriptionPaused ? "Resume" : "Pause"}
+                </Button>
+                <Button
+                  type="button"
+                  tone="secondary"
+                  onClick={actions.cancelTranscription}
+                  disabled={!state.transcriptionRunning}
+                  title="Cancel current transcription run."
                 >
                   Reset
                 </Button>

@@ -225,6 +225,8 @@ export function useTranslationWorkflowRunner() {
   const [useTranscriptionForSummary, setUseTranscriptionForSummary] = useState(
     saved?.useTranscriptionForSummary ?? false,
   );
+  const [transcriptionRunning, setTranscriptionRunning] = useState(false);
+  const [transcriptionPaused, setTranscriptionPaused] = useState(false);
 
   const providerLabels: Record<ProviderType, string> = {
     gemini: getProviderCapability("gemini").label,
@@ -232,6 +234,9 @@ export function useTranslationWorkflowRunner() {
     anthropic: getProviderCapability("anthropic").label,
     ollama: getProviderCapability("ollama").label,
   };
+  const transcriptionPausedRef = useRef(false);
+  const transcriptionCancelRef = useRef(false);
+  const pauseResolversRef = useRef<Array<() => void>>([]);
 
   const validateCueIntegrity = (cues: ReturnType<typeof parseVtt>): string | null => {
     for (let i = 0; i < cues.length; i += 1) {
@@ -341,6 +346,35 @@ export function useTranslationWorkflowRunner() {
     return trimmed && trimmed === DEFAULT_SYSTEM_PROMPT_TEXT.trim()
       ? ""
       : trimmed;
+  };
+
+  const resumeTranscription = () => {
+    transcriptionPausedRef.current = false;
+    setTranscriptionPaused(false);
+    pauseResolversRef.current.forEach((resolve) => resolve());
+    pauseResolversRef.current = [];
+  };
+
+  const pauseTranscription = () => {
+    transcriptionPausedRef.current = true;
+    setTranscriptionPaused(true);
+  };
+
+  const cancelTranscription = () => {
+    transcriptionCancelRef.current = true;
+    pauseResolversRef.current.forEach((resolve) => resolve());
+    pauseResolversRef.current = [];
+    setTranscriptionRunning(false);
+    setTranscriptionPaused(false);
+    transcriptionPausedRef.current = false;
+    runnerActions.setProgress("");
+  };
+
+  const waitIfPaused = async () => {
+    if (!transcriptionPausedRef.current) return;
+    await new Promise<void>((resolve) => {
+      pauseResolversRef.current.push(resolve);
+    });
   };
 
   useEffect(() => {
@@ -877,8 +911,16 @@ export function useTranslationWorkflowRunner() {
       return;
     }
 
+    // Reset translation runner state for UI progress display
+    runnerActions.reset();
+    runnerActions.setProgress("");
+    runnerActions.setResult(null);
+
     const startedAt = Date.now();
     runnerActions.setProgress("Transcribing media with Gemini…");
+    setTranscriptionRunning(true);
+    transcriptionCancelRef.current = false;
+    transcriptionPausedRef.current = false;
     setSubmitting(true);
     try {
       const config = {
@@ -913,6 +955,40 @@ export function useTranslationWorkflowRunner() {
       const warnings: string[] = [];
       const chunkStatuses: ChunkStatus[] = [];
 
+      // Create synthetic pending chunks for UI
+      ranges.forEach((_, idx) => {
+        runnerActions.setResult((prev) => {
+          const pending: ChunkStatus = {
+            idx,
+            status: "processing",
+            tokens_estimate: 0,
+            warnings: [],
+            vtt: "",
+            raw_model_output: "",
+            raw_vtt: "",
+            chunk_vtt: "",
+            context_vtt: "",
+            prompt: userPrompt,
+            system_prompt: systemPrompt,
+            started_at: Date.now(),
+            finished_at: 0,
+            model_name: resolvedProvider.modelForProvider,
+            temperature: DEFAULT_TEMPERATURE,
+            duration_ms: 0,
+          };
+          return {
+            ok: false,
+            warnings: [],
+            chunks: prev?.chunks?.some((c) => c.idx === idx)
+              ? prev.chunks
+              : [...(prev?.chunks ?? []), pending],
+            vtt: "",
+            srt: "",
+            video_ref: videoRef,
+          };
+        });
+      });
+
       for (let i = 0; i < ranges.length; i += 1) {
         const { start, end } = ranges[i];
         runnerActions.setProgress(`Transcribing chunk ${i + 1}/${ranges.length}…`);
@@ -925,6 +1001,9 @@ export function useTranslationWorkflowRunner() {
           mediaStartSeconds: start,
           mediaEndSeconds: end,
         };
+
+        if (transcriptionCancelRef.current) break;
+        await waitIfPaused();
 
         const response = await provider.generateContent(request, {
           purpose: "transcription",
@@ -990,35 +1069,52 @@ export function useTranslationWorkflowRunner() {
         }
 
         chunkStatuses.push(chunkStatus);
+
+        // Update result incrementally
+        runnerActions.setResult((prev) => {
+          const chunks = (prev?.chunks || []).filter((c) => c.idx !== chunkStatus.idx);
+          chunks.push(chunkStatus);
+          return {
+            ok: false,
+            warnings: prev?.warnings || [],
+            chunks: chunks.sort((a, b) => a.idx - b.idx),
+            vtt: prev?.vtt || "",
+            srt: prev?.srt || "",
+            video_ref: videoRef,
+          };
+        });
       }
 
-      const stitchedVtt = serializeVtt(aggregatedCues);
-      const srt = deriveSrt(stitchedVtt);
+      const stitchedVtt = aggregatedCues.length ? serializeVtt(aggregatedCues) : "";
+      const srt = stitchedVtt ? deriveSrt(stitchedVtt) : "";
 
       const finishedAt = Date.now();
-      const chunk: ChunkStatus = {
-        idx: 0,
-        status: warnings.length === 0 ? "ok" : "failed",
-        tokens_estimate: Math.max(Math.floor(stitchedVtt.length / 4), 1),
-        warnings,
-        vtt: stitchedVtt,
-        raw_model_output: stitchedVtt,
-        raw_vtt: stitchedVtt,
-        chunk_vtt: stitchedVtt,
-        context_vtt: "",
-        prompt: userPrompt,
-        system_prompt: systemPrompt,
-        started_at: startedAt,
-        finished_at: finishedAt,
-        model_name: resolvedProvider.modelForProvider,
-        temperature: DEFAULT_TEMPERATURE,
-        duration_ms: finishedAt - startedAt,
-      };
+      if (stitchedVtt) {
+        const finalChunk: ChunkStatus = {
+          idx: chunkStatuses.length,
+          status: warnings.length === 0 ? "ok" : "failed",
+          tokens_estimate: Math.max(Math.floor(stitchedVtt.length / 4), 1),
+          warnings,
+          vtt: stitchedVtt,
+          raw_model_output: stitchedVtt,
+          raw_vtt: stitchedVtt,
+          chunk_vtt: stitchedVtt,
+          context_vtt: "",
+          prompt: userPrompt,
+          system_prompt: systemPrompt,
+          started_at: startedAt,
+          finished_at: finishedAt,
+          model_name: resolvedProvider.modelForProvider,
+          temperature: DEFAULT_TEMPERATURE,
+          duration_ms: finishedAt - startedAt,
+        };
+        chunkStatuses.push(finalChunk);
+      }
 
       runnerActions.setResult({
-        ok: warnings.length === 0,
+        ok: warnings.length === 0 && chunkStatuses.every((c) => c.status === "ok"),
         warnings,
-        chunks: chunkStatuses.length ? chunkStatuses : [chunk],
+        chunks: chunkStatuses.sort((a, b) => a.idx - b.idx),
         vtt: stitchedVtt,
         srt,
         video_ref: videoRef,
@@ -1029,6 +1125,9 @@ export function useTranslationWorkflowRunner() {
     } finally {
       setSubmitting(false);
       runnerActions.setProgress("");
+      setTranscriptionRunning(false);
+      setTranscriptionPaused(false);
+      transcriptionPausedRef.current = false;
     }
   };
 
@@ -1409,6 +1508,8 @@ export function useTranslationWorkflowRunner() {
       allPresets,
       useGlossaryInSummary,
       workflowMode,
+      transcriptionRunning,
+      transcriptionPaused,
       // Transcription state
       providerConfigs,
       audioFile,
@@ -1434,6 +1535,9 @@ export function useTranslationWorkflowRunner() {
       setUseTranscriptionForSummary,
       setTranscriptionPrompt,
       setTranscriptionOverlapSeconds,
+      pauseTranscription,
+      resumeTranscription,
+      cancelTranscription,
       handleTranscribeAudio, // New action
       handleManualChunkEdit,
       setUseAudioOnly,
