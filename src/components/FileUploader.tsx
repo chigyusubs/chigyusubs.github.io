@@ -172,7 +172,7 @@ export function FileUploader({
         )}
 
         {/* Context Media Upload */}
-        {supportsMediaUpload && (
+        {supportsMediaUpload && !isTranscriptionMode && (
           <FilePicker
             label="Context media (optional)"
             description="Video or audio, used only for summary (keep small to reduce tokens)"
