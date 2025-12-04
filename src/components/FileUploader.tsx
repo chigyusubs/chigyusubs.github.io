@@ -141,20 +141,22 @@ export function FileUploader({
     >
       <div className={`grid grid-cols-1 gap-4 ${gridColsMd}`}>
         {/* Subtitle File Upload */}
-        {!isTranscriptionMode && (
-          <FilePicker
-            label="Subtitles (VTT or SRT, required)"
-            description="Click or drop your subtitle file"
-            accept=".vtt,.srt,text/vtt,text/srt"
-            onChange={(e) => setVttFile(e.target.files?.[0] || null)}
-            required={!useTranscription} // Not required if using transcription
-            fileName={vttFile?.name || null}
-            fileMeta={
-              vttFile ? `${(vttFile.size / 1024 / 1024).toFixed(2)} MB` : null
-            }
-            disabled={isLocked || useTranscription}
-          />
-        )}
+        <FilePicker
+          label={isTranscriptionMode ? "Subtitles (optional)" : "Subtitles (VTT or SRT, required)"}
+          description={
+            isTranscriptionMode
+              ? "Optional: provide subtitles to compare against transcription"
+              : "Click or drop your subtitle file"
+          }
+          accept=".vtt,.srt,text/vtt,text/srt"
+          onChange={(e) => setVttFile(e.target.files?.[0] || null)}
+          required={!isTranscriptionMode && !useTranscription} // Not required if using transcription
+          fileName={vttFile?.name || null}
+          fileMeta={
+            vttFile ? `${(vttFile.size / 1024 / 1024).toFixed(2)} MB` : null
+          }
+          disabled={isLocked || useTranscription}
+        />
 
         {/* Audio File Upload (for Transcription) */}
         {showTranscriptionUpload && setAudioFile && (
