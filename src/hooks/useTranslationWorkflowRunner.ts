@@ -367,7 +367,12 @@ export function useTranslationWorkflowRunner() {
     setTranscriptionRunning(false);
     setTranscriptionPaused(false);
     transcriptionPausedRef.current = false;
+    runnerActions.reset();
     runnerActions.setProgress("");
+    runnerActions.setResult(null);
+    setTranscriptionStatus("idle");
+    setSubmitting(false);
+    setError("");
   };
 
   const waitIfPaused = async () => {
@@ -1083,6 +1088,16 @@ export function useTranslationWorkflowRunner() {
             video_ref: videoRef,
           };
         });
+      }
+
+      if (transcriptionCancelRef.current) {
+        runnerActions.reset();
+        runnerActions.setProgress("");
+        setSubmitting(false);
+        setTranscriptionRunning(false);
+        setTranscriptionPaused(false);
+        transcriptionPausedRef.current = false;
+        return;
       }
 
       const stitchedVtt = aggregatedCues.length ? serializeVtt(aggregatedCues) : "";
