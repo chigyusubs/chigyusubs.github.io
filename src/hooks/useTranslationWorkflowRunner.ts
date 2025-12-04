@@ -919,10 +919,28 @@ export function useTranslationWorkflowRunner() {
   };
 
   const handleManualChunkEdit = (chunkIdx: number, vttContent: string) => {
+    const validateCueIntegrity = (cues: ReturnType<typeof parseVtt>): string | null => {
+      for (let i = 0; i < cues.length; i += 1) {
+        const cue = cues[i];
+        if (cue.end <= cue.start) {
+          return `Cue ${i + 1} ends before it starts`;
+        }
+        if (i > 0 && cue.start < cues[i - 1].end) {
+          return `Cue ${i + 1} overlaps the previous cue`;
+        }
+      }
+      return null;
+    };
+
     // Validate the VTT content before setting it
     try {
       // Attempt to parse the VTT to ensure it's valid
-      parseVtt(vttContent);
+      const cues = parseVtt(vttContent);
+      const integrityError = validateCueIntegrity(cues);
+      if (integrityError) {
+        setError(`Invalid VTT format: ${integrityError}`);
+        return;
+      }
       // If successful, set the manual override
       runnerActions.setManualChunkStatus(chunkIdx, vttContent, ["Manually corrected by user"]);
     } catch (err) {

@@ -28,9 +28,27 @@ export function VttEditModal({
     }, [initialContent, isOpen]);
 
     const handleSave = () => {
-        // Validate VTT format
+        const validateCueIntegrity = (cues: ReturnType<typeof parseVtt>): string | null => {
+            for (let i = 0; i < cues.length; i += 1) {
+                const cue = cues[i];
+                if (cue.end <= cue.start) {
+                    return `Cue ${i + 1} ends before it starts`;
+                }
+                if (i > 0 && cue.start < cues[i - 1].end) {
+                    return `Cue ${i + 1} overlaps the previous cue`;
+                }
+            }
+            return null;
+        };
+
+        // Validate VTT format and basic time integrity
         try {
-            parseVtt(content);
+            const cues = parseVtt(content);
+            const integrityError = validateCueIntegrity(cues);
+            if (integrityError) {
+                setValidationError(integrityError);
+                return;
+            }
             setValidationError("");
             onSave(content);
             onClose();
