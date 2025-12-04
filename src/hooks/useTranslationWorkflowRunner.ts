@@ -18,6 +18,11 @@ import {
   DEFAULT_USER_PROMPT_STRUCTURE,
   MAX_CONCURRENCY,
   PROMPT_PRESETS,
+  TRANSCRIPTION_DEFAULT_CHUNK_SECONDS,
+  TRANSCRIPTION_DEFAULT_CONCURRENCY,
+  TRANSCRIPTION_MAX_CONCURRENCY,
+  TRANSCRIPTION_MIN_CHUNK_SECONDS,
+  TRANSCRIPTION_MIN_CONCURRENCY,
   type PromptPresetId,
 } from "../config/defaults";
 import { parseModelName, ProviderFactory } from "../lib/providers/ProviderFactory";
@@ -180,8 +185,8 @@ export function useTranslationWorkflowRunner() {
         transcriptionEnabled: false,
         transcriptionModel: "gpt-4o-mini-transcribe" as const,
         transcriptionLanguage: "",
-        transcriptionConcurrency: 2,
-        transcriptionChunkSeconds: 600,
+        transcriptionConcurrency: TRANSCRIPTION_DEFAULT_CONCURRENCY,
+        transcriptionChunkSeconds: TRANSCRIPTION_DEFAULT_CHUNK_SECONDS,
       },
     };
     // Try to load from saved prefs
@@ -700,7 +705,7 @@ export function useTranslationWorkflowRunner() {
 
     const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB Whisper API limit
     const clampChunkSeconds = (val: number | undefined) =>
-      Math.max(30, val ?? 600);
+      Math.max(TRANSCRIPTION_MIN_CHUNK_SECONDS, val ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS);
     const MAX_SEGMENT_SECONDS = clampChunkSeconds(
       providerConfigs.openai.transcriptionChunkSeconds,
     ); // Keep well under GPT-4o-transcribe comfort zone while allowing Whisper flexibility
@@ -776,8 +781,11 @@ export function useTranslationWorkflowRunner() {
       const combinedText: Array<{ offset: number; text: string; index: number }> = [];
 
       const transcriptionConcurrency = Math.min(
-        4,
-        Math.max(1, providerConfigs.openai.transcriptionConcurrency ?? 2),
+        TRANSCRIPTION_MAX_CONCURRENCY,
+        Math.max(
+          TRANSCRIPTION_MIN_CONCURRENCY,
+          providerConfigs.openai.transcriptionConcurrency ?? TRANSCRIPTION_DEFAULT_CONCURRENCY,
+        ),
       );
       const totalChunks = filesToTranscribe.length;
       const workerCount = Math.min(transcriptionConcurrency, totalChunks);

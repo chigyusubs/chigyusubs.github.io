@@ -14,6 +14,12 @@ export const DEFAULT_CHUNK_SECONDS = 600;
 export const DEFAULT_OVERLAP_CUES = 2;
 export const DEFAULT_TEMPERATURE = 0.2;
 export const MAX_CONCURRENCY = 10;
+// OpenAI transcription defaults (client-side chunking)
+export const TRANSCRIPTION_DEFAULT_CHUNK_SECONDS = 600;
+export const TRANSCRIPTION_MIN_CHUNK_SECONDS = 30;
+export const TRANSCRIPTION_DEFAULT_CONCURRENCY = 2;
+export const TRANSCRIPTION_MIN_CONCURRENCY = 1;
+export const TRANSCRIPTION_MAX_CONCURRENCY = 4;
 
 // Token estimation helpers (approximate)
 export const VIDEO_TOKENS_PER_SEC_DEFAULT = 300; // ~258 visual + ~32 audio

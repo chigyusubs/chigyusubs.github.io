@@ -1,5 +1,12 @@
 import React from "react";
 import { FieldLabel, TextInput } from "../ui/Field";
+import {
+    TRANSCRIPTION_DEFAULT_CHUNK_SECONDS,
+    TRANSCRIPTION_DEFAULT_CONCURRENCY,
+    TRANSCRIPTION_MAX_CONCURRENCY,
+    TRANSCRIPTION_MIN_CHUNK_SECONDS,
+    TRANSCRIPTION_MIN_CONCURRENCY,
+} from "../../config/defaults";
 import { useTheme } from "../../lib/themeContext";
 
 type OpenAIConfig = {
@@ -92,13 +99,19 @@ export function OpenAIAdvancedSettings({ config, onChange, locked = false }: Pro
                         <FieldLabel>Chunk Concurrency</FieldLabel>
                         <TextInput
                             type="number"
-                            min={1}
-                            max={4}
-                            value={config.transcriptionConcurrency ?? 2}
+                            min={TRANSCRIPTION_MIN_CONCURRENCY}
+                            max={TRANSCRIPTION_MAX_CONCURRENCY}
+                            value={config.transcriptionConcurrency ?? TRANSCRIPTION_DEFAULT_CONCURRENCY}
                             onChange={(e) =>
                                 onChange({
                                     ...config,
-                                    transcriptionConcurrency: Math.min(4, Math.max(1, Number(e.target.value) || 1)),
+                                    transcriptionConcurrency: Math.min(
+                                        TRANSCRIPTION_MAX_CONCURRENCY,
+                                        Math.max(
+                                            TRANSCRIPTION_MIN_CONCURRENCY,
+                                            Number(e.target.value) || TRANSCRIPTION_DEFAULT_CONCURRENCY,
+                                        ),
+                                    ),
                                 })
                             }
                             disabled={locked}
@@ -113,12 +126,15 @@ export function OpenAIAdvancedSettings({ config, onChange, locked = false }: Pro
                         <FieldLabel>Chunk Length (seconds)</FieldLabel>
                         <TextInput
                             type="number"
-                            min={30}
-                            value={config.transcriptionChunkSeconds ?? 600}
+                            min={TRANSCRIPTION_MIN_CHUNK_SECONDS}
+                            value={config.transcriptionChunkSeconds ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS}
                             onChange={(e) =>
                                 onChange({
                                     ...config,
-                                    transcriptionChunkSeconds: Math.max(30, Number(e.target.value) || 600),
+                                    transcriptionChunkSeconds: Math.max(
+                                        TRANSCRIPTION_MIN_CHUNK_SECONDS,
+                                        Number(e.target.value) || TRANSCRIPTION_DEFAULT_CHUNK_SECONDS,
+                                    ),
                                 })
                             }
                             disabled={locked}
