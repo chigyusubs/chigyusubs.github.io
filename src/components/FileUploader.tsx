@@ -158,18 +158,23 @@ export function FileUploader({
           disabled={isLocked || useTranscription}
         />
 
-        {/* Audio File Upload (for Transcription) */}
-        {showTranscriptionUpload && setAudioFile && (
+        {/* Audio/Media File Upload (for Transcription) */}
+        {supportsMediaUpload && (
           <FilePicker
-            label="Audio for Transcription (optional)"
-            description="Upload audio to generate subtitles"
-            accept="audio/*,video/*"
-            onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
-            fileName={audioFile?.name || null}
-            fileMeta={
-              audioFile ? `${(audioFile.size / 1024 / 1024).toFixed(2)} MB` : null
+            label={isTranscriptionMode ? "Media to Transcribe (required)" : "Context media (optional)"}
+            description={
+              isTranscriptionMode
+                ? "Upload video or audio for Gemini transcription"
+                : "Video or audio, used only for summary (keep small to reduce tokens)"
             }
-            disabled={isLocked || transcriptionStatus === "loading"}
+            accept="video/mp4,video/*,audio/*"
+            onChange={(e) => void setMediaFile(e.target.files?.[0] || null)}
+            fileName={mediaFile?.name || null}
+            fileMeta={
+              mediaFile ? `${(mediaFile.size / 1024 / 1024).toFixed(2)} MB` : null
+            }
+            required={isTranscriptionMode}
+            disabled={isLocked}
           />
         )}
 
