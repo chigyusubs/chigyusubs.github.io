@@ -23,6 +23,7 @@ import {
   TRANSCRIPTION_MAX_CONCURRENCY,
   TRANSCRIPTION_MIN_CHUNK_SECONDS,
   TRANSCRIPTION_MIN_CONCURRENCY,
+  DEFAULT_TRANSCRIPTION_PROMPT,
   DEFAULT_WORKFLOW_MODE,
   type WorkflowMode,
   type PromptPresetId,
@@ -106,6 +107,9 @@ export function useTranslationWorkflowRunner() {
   );
   const [customPrompt, setCustomPrompt] = useState(
     saved?.customPrompt ?? DEFAULT_SYSTEM_PROMPT_TEXT,
+  );
+  const [transcriptionPrompt, setTranscriptionPrompt] = useState(
+    saved?.transcriptionPrompt ?? DEFAULT_TRANSCRIPTION_PROMPT,
   );
   const [glossary, setGlossary] = useState(saved?.glossary ?? "");
   const [useGlossary, setUseGlossary] = useState(
@@ -311,6 +315,7 @@ export function useTranslationWorkflowRunner() {
       safetyOff,
       useGlossaryInSummary,
       useTranscriptionForSummary,
+      transcriptionPrompt,
     };
     savePrefs(prefs);
   }, [
@@ -339,6 +344,7 @@ export function useTranslationWorkflowRunner() {
     safetyOff,
     useGlossaryInSummary,
     useTranscriptionForSummary,
+    transcriptionPrompt,
   ]);
 
   const handleMediaChange = async (file: File | null) => {
@@ -822,8 +828,7 @@ export function useTranslationWorkflowRunner() {
       const provider = ProviderFactory.create("gemini", config);
       const systemPrompt =
         "You are a professional transcriber. Output MUST be valid WebVTT with accurate timestamps.";
-      const userPrompt =
-        "Transcribe the attached media to WebVTT. Preserve timing, do not translate, and return ONLY WebVTT text.";
+      const userPrompt = transcriptionPrompt || DEFAULT_TRANSCRIPTION_PROMPT;
 
       const request: GenerateRequest = {
         systemPrompt,
@@ -1265,6 +1270,7 @@ export function useTranslationWorkflowRunner() {
       transcriptionStatus,
       useTranscription,
       useTranscriptionForSummary,
+      transcriptionPrompt,
     },
     actions: {
       // Provider actions
@@ -1279,6 +1285,7 @@ export function useTranslationWorkflowRunner() {
       setTranscriptionText, // New action
       setUseTranscription, // New action
       setUseTranscriptionForSummary,
+      setTranscriptionPrompt,
       handleTranscribeAudio, // New action
       handleManualChunkEdit,
       setUseAudioOnly,

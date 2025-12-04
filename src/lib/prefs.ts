@@ -37,6 +37,7 @@ export type UserPrefs = {
   temperature?: number;
   customPrompt?: string;
   glossary?: string;
+  transcriptionPrompt?: string;
   summaryText?: string;
   summaryPrompt?: string;
   glossaryPrompt?: string;

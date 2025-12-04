@@ -164,10 +164,11 @@ function App() {
             setUseTranscriptionForSummary={actions.setUseTranscriptionForSummary}
           />
 
-          <SectionCard
-            title="Prompts"
-            subtitle="Configure translation prompts and load presets."
-          >
+          {state.workflowMode === "translation" && (
+            <SectionCard
+              title="Prompts"
+              subtitle="Configure translation prompts and load presets."
+            >
             <div className="mb-3">
               <FieldLabel>Target Language</FieldLabel>
               <TextInput
@@ -344,7 +345,6 @@ function App() {
                 disabled={locked}
               />
             </details>
-
             <details className="mt-4">
               <summary className={`cursor-pointer text-sm ${theme.subtext}`}>
                 Translation System Prompt
@@ -387,6 +387,22 @@ function App() {
               </pre>
             </details>
           </SectionCard>
+          )}
+
+          {state.workflowMode === "transcription" && (
+            <SectionCard
+              title="Transcription Prompt"
+              subtitle="Optional prompt to steer Gemini transcription."
+            >
+              <TextArea
+                variant="code"
+                className="h-32"
+                value={state.transcriptionPrompt}
+                onChange={(e) => actions.setTranscriptionPrompt(e.target.value)}
+                disabled={locked}
+              />
+            </SectionCard>
+          )}
 
           <SectionCard
             title="Context (optional)"
