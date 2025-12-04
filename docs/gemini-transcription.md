@@ -33,3 +33,15 @@ Add a Gemini-driven transcription mode that converts uploaded media to VTT with 
 - Prefs include the new mode; toggle persists.
 - Transcription mode enforces Gemini provider and media presence.
 - Request builder for Gemini transcription includes `mediaUri` and transcription prompts.
+
+## Current Implementation Notes
+- Mode gating:
+  - Translation: subtitles + glossary/summary + translation prompts/settings; context media hidden in transcription.
+  - Transcription: required media picker, optional subtitles, transcription prompt, and transcription settings (chunk length, overlap seconds, concurrency).
+- Gemini transcription flow:
+  - Uses `mediaStartSeconds`/`mediaEndSeconds` to chunk; offsets cues and stitches VTT/SRT.
+  - Runs on a dedicated transcription runner with pause/resume/cancel; progress/chunks update incrementally.
+  - Auto-repairs VTT and normalizes loose timecodes; warnings recorded instead of failing runs.
+  - Media upload supports audio-only conversion; subtitles optional in transcription mode.
+- State/persistence: mode, transcription prompt, chunk length/overlap/concurrency, and overlap seconds stored in prefs.
+- Known limitations: overlap cues are stitched without deduping; Gemini model reused for transcription (no separate picker yet).
