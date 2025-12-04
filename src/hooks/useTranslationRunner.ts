@@ -10,6 +10,7 @@ import {
 import { serializeVtt, type Cue } from "../lib/vtt";
 import { logDebugEvent } from "../lib/debugState";
 import { isDebugEnabled } from "../lib/debugToggle";
+import type { ProviderType } from "../lib/providers/types";
 
 export type RunnerProgress = {
   progress: string;
@@ -85,7 +86,7 @@ export function useTranslationRunner() {
   const [isRunning, setIsRunning] = useState(false);
 
   const reset = () => {
-    runTokenRef.current += 1;
+    // Don't increment runToken here - runTranslation will do it
     pausedRef.current = false;
     setPaused(false);
     setIsRunning(false);
@@ -293,11 +294,11 @@ export function useTranslationRunner() {
         const updatedChunks = prev.chunks.map((c) =>
           c.idx === chunk.idx
             ? {
-                ...c,
-                status: "processing" as const,
-                started_at: now,
-                finished_at: 0,
-              }
+              ...c,
+              status: "processing" as const,
+              started_at: now,
+              finished_at: 0,
+            }
             : c,
         );
         chunkStatusRef.current.set(chunk.idx, "processing");
@@ -430,6 +431,46 @@ export function useTranslationRunner() {
     void processNextRetry();
   };
 
+  const setManualChunkStatus = (chunkIdx: number, vttContent: string, warnings: string[] = []) => {
+    setResult((prev) => {
+      if (!prev) return prev;
+
+      const updatedChunks = prev.chunks.map((chunk) =>
+        chunk.idx === chunkIdx
+          ? {
+            ...chunk,
+            status: "ok" as const,
+            vtt: vttContent,
+            warnings: [...chunk.warnings, ...warnings],
+            finished_at: chunk.finished_at || Date.now(),
+          }
+          : chunk
+      );
+
+      // Recalculate the stitched VTT with the manually corrected chunk
+      const stitchedVtt = stitchVtt(
+        updatedChunks
+          .filter((c) => c.status === "ok")
+          .map((c) => c.vtt || ""),
+      );
+
+      const newWarnings = updatedChunks.flatMap((c) => c.warnings || []);
+      const overallOk = updatedChunks.every((c) => c.status === "ok");
+
+      const nextResult: TranslateResult = {
+        ...prev,
+        chunks: updatedChunks,
+        vtt: stitchedVtt,
+        srt: stitchedVtt ? deriveSrt(stitchedVtt) : "",
+        warnings: newWarnings,
+        ok: overallOk,
+      };
+
+      resultRef.current = nextResult;
+      return nextResult;
+    });
+  };
+
   return {
     state: {
       progress,
@@ -453,6 +494,7 @@ export function useTranslationRunner() {
         pausedRef.current = false;
         setPaused(false);
       },
+      setManualChunkStatus,
     },
   };
 }

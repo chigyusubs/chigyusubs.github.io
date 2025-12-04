@@ -41,24 +41,47 @@ export function buildUserPrompt(
   useGlossary?: boolean,
 ): string {
   const structure = DEFAULT_USER_PROMPT_STRUCTURE;
-  const parts: string[] = [];
+  const sections: string[] = [];
   const expand = (text: string) => applyTargetPlaceholders(text, targetLang);
 
   if (useGlossary !== false && glossary?.trim()) {
-    parts.push(`${expand(structure.glossaryHeader)}\n${glossary.trim()}`);
+    sections.push(`${expand(structure.glossaryHeader)}\n${glossary.trim()}`);
   }
 
   if (summaryText?.trim()) {
-    parts.push(`${expand(structure.summaryHeader)}\n${summaryText.trim()}`);
+    sections.push(`${expand(structure.summaryHeader)}\n${summaryText.trim()}`);
   }
 
   if (context.trim()) {
-    parts.push(`${expand(structure.contextHeader)}\n${context.trim()}`);
+    sections.push(`${expand(structure.contextHeader)}\n${context.trim()}`);
   }
 
-  parts.push(`${expand(structure.chunkHeader)}\n${chunk.trim()}`);
+  if (chunk) {
+    // Count cues to help with the "missing last cue" issue
+    const cues = chunk.trim();
+    const cueCount = cues.split(/\n\s*\n/).filter(cue =>
+      cue.includes(" --> ") && cue.includes("\n")
+    ).length;
 
-  return parts.join("\n\n");
+    // Extract the last cue timecode to emphasize it must be included
+    const allCues = cues.split(/\n\s*\n/).filter(cue =>
+      cue.includes(" --> ") && cue.includes("\n")
+    );
+    const lastCue = allCues.length > 0 ? allCues[allCues.length - 1] : "";
+    const lastTimecodeMatch = lastCue.match(/^(\d{2}:\d{2}:\d{2}\.\d{3}) --> (\d{2}:\d{2}:\d{2}\.\d{3})\s*\n/);
+    const lastEndTimestamp = lastTimecodeMatch ? lastTimecodeMatch[2] : "unknown";
+
+    sections.push(
+      `${expand(structure.chunkHeader)}`,
+      cues,
+      `---`,
+      `IMPORTANT: Translate ALL cues above. Output exactly ${cueCount} cues in WebVTT format.`,
+      `CRITICAL: Your response must end with a cue that ends at timecode ${lastEndTimestamp}.`,
+      `Do NOT truncate or omit the final cue in the input.`
+    );
+  }
+
+  return sections.join("\n\n");
 }
 
 function applyTargetPlaceholders(template: string, targetLang: string): string {

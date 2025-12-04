@@ -3,6 +3,7 @@ import { TranslateResult, ChunkStatus } from "../lib/translation";
 import { Button } from "./ui/Button";
 import { SectionCard } from "./ui/SectionCard";
 import { useTheme } from "../lib/themeContext";
+import { VttEditModal } from "./VttEditModal";
 
 function formatTimestamp(ts?: number): string {
   if (!ts) return "";
@@ -13,6 +14,7 @@ function formatTimestamp(ts?: number): string {
 type Props = {
   result: TranslateResult | null;
   handleRetryChunk: (chunk: ChunkStatus) => void;
+  handleManualChunkEdit: (chunkIdx: number, vttContent: string) => void;
   retryingChunks: number[];
   retryQueueIds?: number[];
 };
@@ -30,11 +32,14 @@ function downloadText(filename: string, content: string, type = "text/plain") {
 export function ResultView({
   result,
   handleRetryChunk,
+  handleManualChunkEdit,
   retryingChunks,
   retryQueueIds = [],
 }: Props) {
   const theme = useTheme();
   const [showPreview, setShowPreview] = useState(false);
+  const [editingChunk, setEditingChunk] = useState<ChunkStatus | null>(null);
+
   if (!result) return null;
 
   return (
@@ -95,13 +100,12 @@ export function ResultView({
         {result.chunks.map((chunk) => (
           <div
             key={chunk.idx}
-            className={`p-2 rounded border text-sm ${
-              chunk.status === "ok"
-                ? theme.statusCard.ok
-                : chunk.status === "failed"
-                  ? theme.statusCard.failed
-                  : theme.statusCard.neutral
-            }`}
+            className={`p-2 rounded border text-sm ${chunk.status === "ok"
+              ? theme.statusCard.ok
+              : chunk.status === "failed"
+                ? theme.statusCard.failed
+                : theme.statusCard.neutral
+              }`}
           >
             <div className="flex justify-between items-center">
               <span className="font-medium">Chunk {chunk.idx}</span>
@@ -112,31 +116,30 @@ export function ResultView({
                   </span>
                 ) : null}
                 <span
-                  className={`px-2 py-0.5 rounded text-xs ${
-                    chunk.status === "ok"
-                      ? theme.badge.ok
-                      : chunk.status === "failed"
-                        ? theme.badge.error
-                        : theme.badge.neutral
-                  }`}
+                  className={`px-2 py-0.5 rounded text-xs ${chunk.status === "ok"
+                    ? theme.badge.ok
+                    : chunk.status === "failed"
+                      ? theme.badge.error
+                      : theme.badge.neutral
+                    }`}
                 >
                   {chunk.status}
                 </span>
                 {(chunk.model_name ||
                   chunk.temperature !== undefined ||
                   chunk.duration_ms !== undefined) && (
-                  <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-300">
-                    {chunk.model_name && <span>{chunk.model_name}</span>}
-                    {chunk.temperature !== undefined && (
-                      <span>· temp {chunk.temperature}</span>
-                    )}
-                    {chunk.duration_ms !== undefined && (
-                      <span>
-                        · {Math.max(chunk.duration_ms / 1000, 0).toFixed(1)}s
-                      </span>
-                    )}
-                  </div>
-                )}
+                    <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-300">
+                      {chunk.model_name && <span>{chunk.model_name}</span>}
+                      {chunk.temperature !== undefined && (
+                        <span>· temp {chunk.temperature}</span>
+                      )}
+                      {chunk.duration_ms !== undefined && (
+                        <span>
+                          · {Math.max(chunk.duration_ms / 1000, 0).toFixed(1)}s
+                        </span>
+                      )}
+                    </div>
+                  )}
                 {chunk.status === "failed" && (
                   // Allow queuing multiple retries; disable only if this chunk is already queued or running.
                   <Button
@@ -194,15 +197,27 @@ export function ResultView({
                   </pre>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold">Parsed VTT:</p>
+                  <div className="flex justify-between items-center mb-1">
+                    <p className="text-sm font-semibold">Parsed VTT:</p>
+                    {chunk.status === "failed" && (
+                      <Button
+                        className="text-xs px-2 py-1"
+                        tone="secondary"
+                        onClick={() => setEditingChunk(chunk)}
+                      >
+                        Edit & Set OK
+                      </Button>
+                    )}
+                  </div>
                   <pre
                     className="p-2 rounded border text-base whitespace-pre-wrap max-h-40 overflow-y-auto"
                     style={{
                       backgroundColor: theme.codeBackground,
                       borderColor: theme.borderColor,
+                      color: theme.text,
                     }}
                   >
-                    {chunk.vtt || "(no valid vtt)"}
+                    {chunk.vtt || chunk.raw_model_output || "(no output)"}
                   </pre>
                 </div>
                 {chunk.status === "ok" && (
@@ -233,6 +248,19 @@ export function ResultView({
           </div>
         ))}
       </div>
+
+      <VttEditModal
+        isOpen={editingChunk !== null}
+        onClose={() => setEditingChunk(null)}
+        onSave={(content) => {
+          if (editingChunk) {
+            handleManualChunkEdit(editingChunk.idx, content);
+            setEditingChunk(null);
+          }
+        }}
+        initialContent={editingChunk?.raw_model_output || editingChunk?.vtt || ""}
+        chunkIdx={editingChunk?.idx ?? 0}
+      />
     </SectionCard>
   );
 }

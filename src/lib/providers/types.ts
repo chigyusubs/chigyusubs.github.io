@@ -112,10 +112,16 @@ export interface TranslationProvider {
     deleteMedia?(fileNameOrUri: string): Promise<void>;
 
     /**
-     * Transcribe audio to VTT format (optional, for providers with audio API)
+     * Transcribe audio file to text
+     * @param file Audio file to transcribe
+     * @param language Optional language code
+     * @param audioDuration Optional duration in seconds for timeout calculation
+     * @param model Optional transcription model (defaults to gpt-4o-mini-transcribe)
      */
     transcribeAudio?(
         file: File,
         language?: string,
+        audioDuration?: number,
+        model?: string
     ): Promise<string>;  // Returns VTT content as string
 }

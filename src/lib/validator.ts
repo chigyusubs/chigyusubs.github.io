@@ -1,6 +1,25 @@
 import type { Cue } from "./vtt";
 import { parseVtt } from "./vtt";
 
+export function stripCodeBlockWrappers(text: string): {
+  cleaned: string;
+  warnings: string[];
+} {
+  const warnings: string[] = [];
+  let cleaned = text;
+
+  // Match markdown code block syntax with optional language qualifier
+  const codeBlockRegex = /^```(?:\w+)?\s*\n([\s\S]*?)\n?```$/s;
+  const match = codeBlockRegex.exec(cleaned);
+
+  if (match) {
+    cleaned = match[1];
+    warnings.push("Removed code block wrapper from output");
+  }
+
+  return { cleaned, warnings };
+}
+
 export function normalizeNewlines(text: string): string {
   return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
@@ -84,12 +103,13 @@ export function autoRepairVtt(vttText: string): {
   repaired: string;
   warnings: string[];
 } {
-  const headerResult = stripDuplicateHeaders(vttText);
+  const codeBlockResult = stripCodeBlockWrappers(vttText);
+  const headerResult = stripDuplicateHeaders(codeBlockResult.cleaned);
   const blankResult = ensureBlankLines(headerResult.cleaned);
   const repaired = normalizeNewlines(blankResult.cleaned);
   return {
     repaired,
-    warnings: [...headerResult.warnings, ...blankResult.warnings],
+    warnings: [...codeBlockResult.warnings, ...headerResult.warnings, ...blankResult.warnings],
   };
 }
 
