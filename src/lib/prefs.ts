@@ -1,4 +1,5 @@
 import type { ProviderType } from "./providers/types";
+import type { WorkflowMode } from "../config/defaults";
 
 export type ProviderConfig = {
   apiKey?: string;
@@ -24,6 +25,7 @@ export type UserPrefs = {
   // Legacy fields (for backward compatibility)
   modelName?: string;
   models?: string[];
+  workflowMode?: WorkflowMode;
 
   // Current settings
   mediaResolution?: "low" | "standard";

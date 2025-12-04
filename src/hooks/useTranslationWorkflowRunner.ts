@@ -23,6 +23,8 @@ import {
   TRANSCRIPTION_MAX_CONCURRENCY,
   TRANSCRIPTION_MIN_CHUNK_SECONDS,
   TRANSCRIPTION_MIN_CONCURRENCY,
+  DEFAULT_WORKFLOW_MODE,
+  type WorkflowMode,
   type PromptPresetId,
 } from "../config/defaults";
 import { parseModelName, ProviderFactory } from "../lib/providers/ProviderFactory";
@@ -98,6 +100,9 @@ export function useTranslationWorkflowRunner() {
     saved?.models && saved.models.length ? saved.models : DEFAULT_MODELS,
   );
   const [modelName, setModelName] = useState(saved?.modelName ?? DEFAULT_MODEL);
+  const [workflowMode, setWorkflowMode] = useState<WorkflowMode>(
+    saved?.workflowMode ?? DEFAULT_WORKFLOW_MODE,
+  );
   const [customPrompt, setCustomPrompt] = useState(
     saved?.customPrompt ?? DEFAULT_SYSTEM_PROMPT_TEXT,
   );
@@ -274,6 +279,7 @@ export function useTranslationWorkflowRunner() {
       providerSpecificConfigs: providerConfigs as any, // Cast to match UserPrefs type
       modelName,
       models,
+      workflowMode,
       mediaResolution,
       useAudioOnly,
       targetLang,
@@ -299,7 +305,9 @@ export function useTranslationWorkflowRunner() {
     ollamaBaseUrl,
     providerConfigs, // Added dependency
     modelName,
+    workflowMode,
     models,
+    workflowMode,
     mediaResolution,
     useAudioOnly,
     targetLang,
@@ -584,6 +592,10 @@ export function useTranslationWorkflowRunner() {
   };
 
   const handleGenerateSummary = async () => {
+    if (workflowMode === "transcription") {
+      setSummaryError("Switch to translation mode to generate summaries");
+      return;
+    }
     const resolvedProvider = resolveProviderConfig();
     if (resolvedProvider.mismatch) {
       setSummaryError(
@@ -1105,6 +1117,7 @@ export function useTranslationWorkflowRunner() {
       chunkOverlap,
       models,
       modelName,
+      workflowMode,
       customPrompt,
       glossary,
       useGlossary,
@@ -1141,6 +1154,7 @@ export function useTranslationWorkflowRunner() {
       customPresets,
       allPresets,
       useGlossaryInSummary,
+      workflowMode,
       // Transcription state
       providerConfigs,
       audioFile,
@@ -1189,6 +1203,7 @@ export function useTranslationWorkflowRunner() {
       setSummaryPrompt,
       setSafetyOff,
       setMediaResolution,
+      setWorkflowMode,
       pause: runnerActions.pause,
       resume: runnerActions.resume,
       applyPreset,

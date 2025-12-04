@@ -20,6 +20,10 @@ export const TRANSCRIPTION_MIN_CHUNK_SECONDS = 30;
 export const TRANSCRIPTION_DEFAULT_CONCURRENCY = 2;
 export const TRANSCRIPTION_MIN_CONCURRENCY = 1;
 export const TRANSCRIPTION_MAX_CONCURRENCY = 4;
+// Workflow modes
+export const WORKFLOW_MODES = ["translation", "transcription"] as const;
+export type WorkflowMode = (typeof WORKFLOW_MODES)[number];
+export const DEFAULT_WORKFLOW_MODE: WorkflowMode = "translation";
 
 // Token estimation helpers (approximate)
 export const VIDEO_TOKENS_PER_SEC_DEFAULT = 300; // ~258 visual + ~32 audio
