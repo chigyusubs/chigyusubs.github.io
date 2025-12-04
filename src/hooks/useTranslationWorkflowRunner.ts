@@ -24,6 +24,7 @@ import {
   TRANSCRIPTION_MIN_CHUNK_SECONDS,
   TRANSCRIPTION_MIN_CONCURRENCY,
   DEFAULT_TRANSCRIPTION_PROMPT,
+  TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS,
   DEFAULT_WORKFLOW_MODE,
   type WorkflowMode,
   type PromptPresetId,
@@ -110,6 +111,9 @@ export function useTranslationWorkflowRunner() {
   );
   const [transcriptionPrompt, setTranscriptionPrompt] = useState(
     saved?.transcriptionPrompt ?? DEFAULT_TRANSCRIPTION_PROMPT,
+  );
+  const [transcriptionOverlapSeconds, setTranscriptionOverlapSeconds] = useState(
+    saved?.transcriptionOverlapSeconds ?? TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS,
   );
   const [glossary, setGlossary] = useState(saved?.glossary ?? "");
   const [useGlossary, setUseGlossary] = useState(
@@ -316,6 +320,7 @@ export function useTranslationWorkflowRunner() {
       useGlossaryInSummary,
       useTranscriptionForSummary,
       transcriptionPrompt,
+      transcriptionOverlapSeconds,
     };
     savePrefs(prefs);
   }, [
@@ -345,6 +350,7 @@ export function useTranslationWorkflowRunner() {
     useGlossaryInSummary,
     useTranscriptionForSummary,
     transcriptionPrompt,
+    transcriptionOverlapSeconds,
   ]);
 
   const handleMediaChange = async (file: File | null) => {
@@ -830,33 +836,65 @@ export function useTranslationWorkflowRunner() {
         "You are a professional transcriber. Output MUST be valid WebVTT with accurate timestamps.";
       const userPrompt = transcriptionPrompt || DEFAULT_TRANSCRIPTION_PROMPT;
 
-      const request: GenerateRequest = {
-        systemPrompt,
-        userPrompt,
-        temperature: DEFAULT_TEMPERATURE,
-        safetyOff,
-        mediaUri: videoRef,
-      };
+      const chunkLength = providerConfigs.openai.transcriptionChunkSeconds ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS;
+      const overlapSeconds = Math.max(0, transcriptionOverlapSeconds ?? 0);
+      const totalDuration = videoDuration && Number.isFinite(videoDuration) ? videoDuration : null;
 
-      const response = await provider.generateContent(request, {
-        purpose: "transcription",
-      });
-      const text = response.text.trim();
-      const cues = parseVtt(text);
-      const integrityError = validateCueIntegrity(cues);
-      const stitchedVtt = serializeVtt(cues);
-      const srt = deriveSrt(stitchedVtt);
+      const ranges: Array<{ start: number; end?: number }> = [];
+      if (totalDuration && totalDuration > 0) {
+        let start = 0;
+        while (start < totalDuration) {
+          const end = Math.min(totalDuration, start + chunkLength);
+          ranges.push({ start, end });
+          if (end >= totalDuration) break;
+          start = Math.max(0, end - overlapSeconds);
+          if (start >= totalDuration) break;
+        }
+      } else {
+        ranges.push({ start: 0, end: undefined });
+      }
+
+      const aggregatedCues: Array<ReturnType<typeof parseVtt>[number]> = [];
       const warnings: string[] = [];
-      if (integrityError) warnings.push(integrityError);
+
+      for (let i = 0; i < ranges.length; i += 1) {
+        const { start, end } = ranges[i];
+        const request: GenerateRequest = {
+          systemPrompt,
+          userPrompt,
+          temperature: DEFAULT_TEMPERATURE,
+          safetyOff,
+          mediaUri: videoRef,
+          mediaStartSeconds: start,
+          mediaEndSeconds: end,
+        };
+
+        const response = await provider.generateContent(request, {
+          purpose: "transcription",
+          chunkIdx: i,
+        });
+        const text = response.text.trim();
+        const cues = parseVtt(text).map((cue) => ({
+          ...cue,
+          start: cue.start + start,
+          end: cue.end + start,
+        }));
+        const integrityError = validateCueIntegrity(cues);
+        if (integrityError) warnings.push(`Chunk ${i + 1}: ${integrityError}`);
+        aggregatedCues.push(...cues);
+      }
+
+      const stitchedVtt = serializeVtt(aggregatedCues);
+      const srt = deriveSrt(stitchedVtt);
 
       const finishedAt = Date.now();
       const chunk: ChunkStatus = {
         idx: 0,
-        status: "ok",
-        tokens_estimate: Math.max(Math.floor(text.length / 4), 1),
+        status: warnings.length === 0 ? "ok" : "failed",
+        tokens_estimate: Math.max(Math.floor(stitchedVtt.length / 4), 1),
         warnings,
         vtt: stitchedVtt,
-        raw_model_output: text,
+        raw_model_output: stitchedVtt,
         raw_vtt: stitchedVtt,
         chunk_vtt: stitchedVtt,
         context_vtt: "",
@@ -1271,6 +1309,7 @@ export function useTranslationWorkflowRunner() {
       useTranscription,
       useTranscriptionForSummary,
       transcriptionPrompt,
+      transcriptionOverlapSeconds,
     },
     actions: {
       // Provider actions
@@ -1286,6 +1325,7 @@ export function useTranslationWorkflowRunner() {
       setUseTranscription, // New action
       setUseTranscriptionForSummary,
       setTranscriptionPrompt,
+      setTranscriptionOverlapSeconds,
       handleTranscribeAudio, // New action
       handleManualChunkEdit,
       setUseAudioOnly,

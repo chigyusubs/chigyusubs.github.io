@@ -38,6 +38,7 @@ export type UserPrefs = {
   customPrompt?: string;
   glossary?: string;
   transcriptionPrompt?: string;
+  transcriptionOverlapSeconds?: number;
   summaryText?: string;
   summaryPrompt?: string;
   glossaryPrompt?: string;

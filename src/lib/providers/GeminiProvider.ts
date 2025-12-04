@@ -91,7 +91,19 @@ export class GeminiProvider extends BaseProvider {
 
         const parts: unknown[] = [];
         if (mediaUri) {
-            parts.push({ fileData: { fileUri: mediaUri } });
+            const videoMetadata = typeof request.mediaStartSeconds === "number" || typeof request.mediaEndSeconds === "number"
+                ? {
+                    startOffset: request.mediaStartSeconds !== undefined ? `${request.mediaStartSeconds}s` : undefined,
+                    endOffset: request.mediaEndSeconds !== undefined ? `${request.mediaEndSeconds}s` : undefined,
+                }
+                : undefined;
+            parts.push({
+                fileData: {
+                    fileUri: mediaUri,
+                    // @ts-expect-error: videoMetadata is supported in Gemini fileData but not typed in our interface
+                    videoMetadata,
+                },
+            });
         }
         parts.push({ text: userPrompt });
 

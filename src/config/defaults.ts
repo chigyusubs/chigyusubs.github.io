@@ -20,6 +20,7 @@ export const TRANSCRIPTION_MIN_CHUNK_SECONDS = 30;
 export const TRANSCRIPTION_DEFAULT_CONCURRENCY = 2;
 export const TRANSCRIPTION_MIN_CONCURRENCY = 1;
 export const TRANSCRIPTION_MAX_CONCURRENCY = 4;
+export const TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS = 2;
 export const DEFAULT_TRANSCRIPTION_PROMPT =
   "Transcribe the attached media to WebVTT. Preserve original language and timing with accurate timestamps. Return ONLY WebVTT text.";
 // Workflow modes

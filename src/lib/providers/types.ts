@@ -41,6 +41,8 @@ export type GenerateRequest = {
     userPrompt: string;
     temperature?: number;
     mediaUri?: string;
+    mediaStartSeconds?: number;
+    mediaEndSeconds?: number;
     safetyOff?: boolean;
     // Provider-specific options can be added here
     providerOptions?: Record<string, unknown>;
