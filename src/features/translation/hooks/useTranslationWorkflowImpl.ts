@@ -364,6 +364,58 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
     return parsed.warnings;
   };
 
+  const scheduleRetry = async ({
+    chunk,
+    resolvedProvider,
+    safetyOff,
+    concurrency: retryConcurrency,
+  }: {
+    chunk: ChunkStatus;
+    resolvedProvider: {
+      mismatch: boolean;
+      selectedLabel: string;
+      providerLabel: string;
+      providerType: ProviderType;
+      apiKeyForProvider?: string;
+      modelForProvider: string;
+      baseUrlForProvider?: string;
+    };
+    safetyOff: boolean;
+    concurrency: number;
+  }) => {
+    if (!runnerState.result) {
+      throw new Error("No translation run found to retry");
+    }
+    if (resolvedProvider.mismatch) {
+      throw new Error(
+        `Selected provider (${resolvedProvider.selectedLabel}) does not match the model's provider (${resolvedProvider.providerLabel}). Refresh and choose a ${resolvedProvider.selectedLabel} model before retrying.`,
+      );
+    }
+    if (resolvedProvider.providerType !== "ollama" && !resolvedProvider.apiKeyForProvider) {
+      throw new Error(`${resolvedProvider.providerLabel} API key required to retry`);
+    }
+    if (!chunk.chunk_vtt) {
+      throw new Error("No chunk payload available to retry");
+    }
+
+    await retryTranslationChunk({
+      chunk,
+      provider: resolvedProvider.providerType,
+      apiKey: resolvedProvider.apiKeyForProvider ?? "",
+      modelName: resolvedProvider.modelForProvider,
+      targetLang,
+      glossary,
+      useGlossary,
+      customPrompt: normalizeCustomPrompt(customPrompt) || "",
+      temperature,
+      useSummary,
+      summaryText,
+      safetyOff,
+      concurrency: retryConcurrency,
+      baseUrl: resolvedProvider.baseUrlForProvider,
+    });
+  };
+
   const retryTranslationChunk = async (opts: {
     chunk: ChunkStatus;
     provider: ProviderType;
@@ -712,6 +764,7 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
       parseSubtitleText,
       runTranslation,
       submitTranslationRun,
+      scheduleRetry,
       retryTranslationChunk,
       runnerActions,
       generateGlossary,

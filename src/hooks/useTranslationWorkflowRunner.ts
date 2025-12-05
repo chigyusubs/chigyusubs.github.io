@@ -1016,46 +1016,17 @@ export function useTranslationWorkflowRunner() {
   };
 
   const handleRetryChunk = async (chunk: ChunkStatus) => {
-    const resolvedProvider = resolveProviderConfig();
-
-    if (!runnerState.result) {
-      setError("No translation run found to retry");
-      return;
-    }
-    if (resolvedProvider.mismatch) {
-      setError(
-        `Selected provider (${resolvedProvider.selectedLabel}) does not match the model's provider (${resolvedProvider.providerLabel}). Refresh and choose a ${resolvedProvider.selectedLabel} model before retrying.`,
-      );
-      return;
-    }
-    if (resolvedProvider.providerType !== "ollama" && !resolvedProvider.apiKeyForProvider) {
-      setError(`${resolvedProvider.providerLabel} API key required to retry`);
-      return;
-    }
-    if (!chunk.chunk_vtt) {
-      setError("No chunk payload available to retry");
-      return;
-    }
-    tActions
-      .retryTranslationChunk({
+    try {
+      const resolvedProvider = resolveProviderConfig();
+      await tActions.scheduleRetry({
         chunk,
-        provider: resolvedProvider.providerType,
-        apiKey: resolvedProvider.apiKeyForProvider ?? "",
-        modelName: resolvedProvider.modelForProvider,
-        targetLang: tState.targetLang,
-        glossary: tState.glossary,
-        useGlossary: tState.useGlossary,
-        customPrompt: normalizeCustomPrompt(tState.customPrompt) || "",
-        temperature: tState.temperature,
-        useSummary: tState.useSummary,
-        summaryText: tState.summaryText,
+        resolvedProvider,
         safetyOff,
         concurrency: tState.concurrency,
-        baseUrl: resolvedProvider.baseUrlForProvider,
-      })
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Retry error"),
-      );
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Retry error");
+    }
   };
 
   const handleManualChunkEdit = (chunkIdx: number, vttContent: string) => {
