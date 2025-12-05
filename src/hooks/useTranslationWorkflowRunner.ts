@@ -32,6 +32,11 @@ import { parseVtt, serializeVtt } from "../lib/vtt";
 import { useTranslationRunner } from "./useTranslationRunner";
 import { getMediaDuration } from "../lib/mediaDuration";
 import { extractAudioToOggMono } from "../lib/ffmpeg";
+import {
+  MAX_UPLOAD_BYTES,
+  prepareMediaFile,
+  uploadMediaToProvider,
+} from "../lib/mediaUpload";
 import { transcribeOpenAiMedia } from "../lib/transcription/openai";
 import { useTranscription } from "../features/transcription/hooks/useTranscription";
 import type { TranscriptionChunk } from "../features/transcription/types";
@@ -268,8 +273,7 @@ export function useTranslationWorkflowRunner() {
 
   const handleMediaChange = async (file: File | null) => {
     const probeId = ++mediaProbeIdRef.current;
-    const maxUploadBytes = 2 * 1024 * 1024 * 1024; // 2GB limit for Gemini File API and ffmpeg wasm practicality
-    if (file && file.size > maxUploadBytes) {
+    if (file && file.size > MAX_UPLOAD_BYTES) {
       setMediaFile(null);
       setVideoUploadState("error");
       setVideoUploadMessage(
@@ -300,20 +304,20 @@ export function useTranslationWorkflowRunner() {
     setSummaryText("");
     setSummaryStatus("idle");
     setSummaryError("");
-    if (file) {
-      setVideoSizeMb(file.size / (1024 * 1024));
-      try {
-        const duration = await getMediaDuration(file);
-        if (mediaProbeIdRef.current === probeId) {
-          setVideoDuration(
-            duration && Number.isFinite(duration) ? duration : null,
-          );
-        }
-      } catch (err) {
-        setVideoUploadMessage(
-          err instanceof Error ? err.message : "Unable to read video duration",
+    if (!file) return;
+
+    try {
+      const duration = await getMediaDuration(file);
+      if (mediaProbeIdRef.current === probeId) {
+        setVideoDuration(
+          duration && Number.isFinite(duration) ? duration : null,
         );
+        setVideoSizeMb(file.size / (1024 * 1024));
       }
+    } catch (err) {
+      setVideoUploadMessage(
+        err instanceof Error ? err.message : "Unable to read video duration",
+      );
     }
   };
 
@@ -334,42 +338,24 @@ export function useTranslationWorkflowRunner() {
     setVideoUploadState("uploading");
     setVideoUploadMessage(`Uploading media to ${selectedProvider}…`);
     try {
-      let mediaToUpload: File = mediaFile;
-      const isAudio = mediaToUpload.type.startsWith("audio/");
-      if (useAudioOnly && !isAudio) {
-        const audio = await extractAudioToOggMono(mediaFile);
-        mediaToUpload = audio;
-        setVideoName(audio.name);
-        setVideoSizeMb(audio.size / (1024 * 1024));
-        const probeId = ++mediaProbeIdRef.current;
-        const duration = await getMediaDuration(audio);
-        if (mediaProbeIdRef.current === probeId) {
-          setVideoDuration(
-            duration && Number.isFinite(duration) ? duration : null,
-          );
-        }
-      }
-      // Create provider instance for media upload
-      const config = {
+      const prepared = await prepareMediaFile(mediaFile, {
+        useAudioOnly,
+        getMediaDuration,
+        extractAudioToOggMono,
+      });
+
+      const data = await uploadMediaToProvider(selectedProvider, {
         apiKey: selectedProvider !== "ollama" ? apiKey : undefined,
-        modelName: modelName,
+        modelName,
         baseUrl: selectedProvider === "ollama" ? ollamaBaseUrl : undefined,
-      };
-
-      const provider = ProviderFactory.create(selectedProvider, config);
-
-      // Check if provider supports media upload
-      if (!provider.uploadMedia) {
-        throw new Error(`${selectedProvider} does not support media upload`);
-      }
-
-      const data = await provider.uploadMedia(mediaToUpload);
+        file: prepared.file,
+      });
       setVideoRef(data.fileUri);
       setVideoName(
-        (prev) => prev || data.fileName || mediaToUpload.name || null,
+        (prev) => prev || data.fileName || prepared.name,
       );
       setVideoFileId(data.fileName || null);
-      setContextMediaKind(useAudioOnly || isAudio ? "audio" : "video");
+      setContextMediaKind(prepared.isAudio ? "audio" : "video");
       setVideoUploadState("ready");
       setVideoUploadMessage("Media is uploaded, processed, and ready.");
       runnerActions.setProgress("");
@@ -377,6 +363,8 @@ export function useTranslationWorkflowRunner() {
       setSummaryText("");
       setSummaryStatus("idle");
       setSummaryError("");
+      setVideoSizeMb(prepared.sizeMb);
+      setVideoDuration(prepared.duration);
     } catch (err) {
       setVideoUploadState("error");
       setVideoUploadMessage(
