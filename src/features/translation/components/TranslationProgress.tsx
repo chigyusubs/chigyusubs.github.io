@@ -1,8 +1,8 @@
 import React from "react";
-import { TranslateResult } from "../lib/translation";
-import { SectionCard } from "./ui/SectionCard";
-import { useTheme } from "../lib/themeContext";
-import { useRateLimitWait } from "../lib/rateLimit";
+import { TranslateResult } from "../../../lib/translation";
+import { SectionCard } from "../../../components/ui/SectionCard";
+import { useTheme } from "../../../lib/themeContext";
+import { useRateLimitWait } from "../../../lib/rateLimit";
 
 type Props = {
   progress: string;

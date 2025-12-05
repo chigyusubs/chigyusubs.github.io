@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { TranslateResult, ChunkStatus } from "../lib/translation";
-import { Button } from "./ui/Button";
-import { SectionCard } from "./ui/SectionCard";
-import { useTheme } from "../lib/themeContext";
+import { TranslateResult, ChunkStatus } from "../../../lib/translation";
+import { Button } from "../../../components/ui/Button";
+import { SectionCard } from "../../../components/ui/SectionCard";
+import { useTheme } from "../../../lib/themeContext";
 import { VttEditModal } from "./VttEditModal";
 
 function formatTimestamp(ts?: number): string {

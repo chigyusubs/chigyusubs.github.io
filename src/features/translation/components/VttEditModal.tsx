@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Button } from "./ui/Button";
-import { useTheme } from "../lib/themeContext";
-import { parseVtt } from "../lib/vtt";
+import { Button } from "../../../components/ui/Button";
+import { useTheme } from "../../../lib/themeContext";
+import { parseVtt } from "../../../lib/vtt";
 
 type Props = {
     isOpen: boolean;
