@@ -22,13 +22,41 @@ import { RestoreButton } from "./components/RestoreButton";
 import { getProviderCapability } from "./lib/providers/capabilities";
 import { TranscriptionSettings } from "./features/transcription/components/TranscriptionSettings";
 import { isDebugEnabled } from "./lib/debugToggle";
-import { copyDebugBuffer } from "./lib/debugState";
+import {
+  copyDebugBuffer,
+  disableDebugEvents,
+  enableDebugEvents,
+  setDebugWriter,
+} from "./lib/debugState";
 
 function App() {
   const { state, actions } = useTranslationWorkflowRunner();
   const theme = useTheme();
   const { name: themeName, toggleTheme } = useThemeControl();
   const debugOn = isDebugEnabled();
+  React.useEffect(() => {
+    if (debugOn) {
+      enableDebugEvents();
+      setDebugWriter((event) => {
+        // Log to console for live visibility when debug is enabled
+        // Avoid serializing large payloads unnecessarily.
+        // eslint-disable-next-line no-console
+        console.debug("[debug-event]", event.kind, {
+          runId: event.runId,
+          chunkIdx: event.chunkIdx,
+          message: event.message,
+          data: event.data,
+        });
+      });
+      return () => {
+        setDebugWriter(null);
+        disableDebugEvents();
+      };
+    }
+    setDebugWriter(null);
+    disableDebugEvents();
+    return undefined;
+  }, [debugOn]);
   const running = state.isRunning;
   const locked = state.submitting || running;
   const providerCapability = getProviderCapability(state.selectedProvider);
