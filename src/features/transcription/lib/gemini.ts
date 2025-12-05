@@ -6,7 +6,7 @@ import type { TranscriptionChunk, GeminiTranscriptionConfig, TranscriptionResult
 import { logDebugEvent } from "../../../lib/debugState";
 import { isDebugEnabled } from "../../../lib/debugToggle";
 import { extractAudioChunk } from "../../../lib/ffmpeg";
-import { validateCueIntegrity, mergeVttChunks } from "./shared";
+import { validateCueIntegrity, mergeVttChunks, calculateTimeRanges } from "./shared";
 
 const DEFAULT_SYSTEM_PROMPT =
   "You are a professional transcriber. Output MUST be valid WebVTT with accurate timestamps.";

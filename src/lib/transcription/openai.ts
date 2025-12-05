@@ -94,7 +94,6 @@ export async function transcribeOpenAiMedia({
   let nextChunk = 0;
 
   const runWorker = async () => {
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       const current = nextChunk;
       nextChunk += 1;

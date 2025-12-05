@@ -60,10 +60,14 @@ export async function uploadMediaToProvider(
     file: File;
   },
 ): Promise<{ fileUri: string; fileName?: string }> {
+  if (provider !== "gemini") {
+    throw new Error(`${provider} does not support persisted media upload`);
+  }
+
   const providerInstance = ProviderFactory.create(provider, {
     apiKey,
     modelName,
-    baseUrl: provider === "ollama" ? baseUrl : undefined,
+    baseUrl,
   });
 
   if (!providerInstance.uploadMedia) {

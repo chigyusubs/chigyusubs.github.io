@@ -108,9 +108,6 @@ type ChunkRetryOptions = {
   targetLang: string;
   glossary?: string;
   customPrompt?: string;
-  videoUri?: string | null;
-  videoLabel?: string | null;
-  mediaKind?: "audio" | "video";
   temperature?: number;
   summaryText?: string;
   useGlossary?: boolean;
@@ -225,8 +222,6 @@ export async function translateChunkFromText(
     targetLang,
     glossary,
     customPrompt,
-    videoUri,
-    mediaKind,
     temperature,
     summaryText,
     useGlossary,
@@ -466,9 +461,6 @@ export async function translateCues(
     targetLang,
     glossary,
     customPrompt,
-    videoUri,
-    videoLabel,
-    mediaKind,
     summaryText,
     useGlossary,
     targetSeconds = 600,

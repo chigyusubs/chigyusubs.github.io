@@ -4,6 +4,7 @@ import type {
     ProviderType,
     TranslationProvider,
 } from "./types";
+type RequestInit = globalThis.RequestInit;
 
 /**
  * Base error class for provider errors

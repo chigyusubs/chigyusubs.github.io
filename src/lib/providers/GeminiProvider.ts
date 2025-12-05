@@ -9,7 +9,6 @@ import type {
     UsageInfo,
 } from "./types";
 import { addProviderLog } from "../providerLog";
-import { clearRateLimitWait, setRateLimitWait } from "../rateLimit";
 
 const API_ROOT = "https://generativelanguage.googleapis.com/v1beta";
 const UPLOAD_ROOT = "https://generativelanguage.googleapis.com/upload/v1beta";

@@ -177,7 +177,7 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
   };
 
   const stitchResult = (
-    chunkStatuses: any[],
+    chunkStatuses: ChunkStatus[],
     warnings: string[],
     videoRef: string | null,
   ) => {

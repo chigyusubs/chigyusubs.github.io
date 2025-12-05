@@ -1,4 +1,3 @@
-import React from "react";
 import type { ProviderType } from "../../lib/providers/types";
 
 type ProviderSpecificConfig = {
@@ -23,9 +22,6 @@ type Props = {
  */
 export function ProviderSpecificSettings({
     provider,
-    config,
-    onChange,
-    locked = false,
 }: Props) {
     switch (provider) {
         case "openai":

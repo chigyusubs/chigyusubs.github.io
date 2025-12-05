@@ -189,7 +189,6 @@ export async function transcribeOpenAI(
     let nextChunk = 0;
 
     const runWorker = async () => {
-      // eslint-disable-next-line no-constant-condition
       while (true) {
         if (shouldCancel?.()) break;
         if (shouldPause) await shouldPause();

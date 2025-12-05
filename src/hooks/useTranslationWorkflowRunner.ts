@@ -25,10 +25,10 @@ import {
   type WorkflowMode,
 } from "../config/defaults";
 import { parseModelName, ProviderFactory } from "../lib/providers/ProviderFactory";
-import type { ProviderType, GenerateRequest } from "../lib/providers/types";
+import type { ProviderType } from "../lib/providers/types";
 import { getProviderCapability } from "../lib/providers/capabilities";
 import { type ChunkStatus } from "../lib/translation";
-import { parseVtt, serializeVtt } from "../lib/vtt";
+import { parseVtt } from "../lib/vtt";
 import { useTranslationRunner } from "./useTranslationRunner";
 import { getMediaDuration } from "../lib/mediaDuration";
 import { extractAudioToOggMono } from "../lib/ffmpeg";
@@ -90,10 +90,6 @@ export function useTranslationWorkflowRunner() {
   // Video/media state
   const [videoName, setVideoName] = useState<string | null>(null);
   const [videoRef, setVideoRef] = useState<string | null>(null);
-  const [videoFileId, setVideoFileId] = useState<string | null>(null);
-  const [contextMediaKind, setContextMediaKind] = useState<
-    "audio" | "video" | null
-  >(null);
   const [videoDuration, setVideoDuration] = useState<number | null>(null);
   const [videoSizeMb, setVideoSizeMb] = useState<number | null>(null);
   const [videoUploadState, setVideoUploadState] = useState<
@@ -141,26 +137,6 @@ export function useTranslationWorkflowRunner() {
     return null;
   };
 
-  const normalizeVttTimecode = (code: string): string => {
-    const cleaned = code.replace(",", ".");
-    const parts = cleaned.split(":");
-    let h = "00";
-    let m = "00";
-    let s = "00.000";
-    if (parts.length === 2) {
-      // mm:ss(.ms)
-      [m, s] = parts;
-    } else {
-      // take last 3 parts as h:m:s
-      const tail = parts.slice(-3);
-      [h, m, s] = tail;
-    }
-    const [sec, msRaw = "000"] = s.split(".");
-    const ms = `${msRaw}000`.slice(0, 3);
-    return `${h.padStart(2, "0")}:${m.padStart(2, "0")}:${sec.padStart(2, "0")}.${ms}`;
-  };
-
-
   const resolveProviderConfig = () => {
     const parsed = parseModelName(modelName);
     const providerType = parsed.provider;
@@ -183,7 +159,6 @@ export function useTranslationWorkflowRunner() {
 
   const setConcurrencyClamped = (value: number) =>
     tActions.setConcurrency(Math.min(MAX_CONCURRENCY, Math.max(1, value)));
-  const normalizeCustomPrompt = tActions.normalizeCustomPrompt;
 
   const resumeTranscription = () => {
     transcriptionFeature.actions.resume();
@@ -205,7 +180,7 @@ export function useTranslationWorkflowRunner() {
   };
 
   useEffect(() => {
-    const providerConfigs: Record<ProviderType, import("../lib/prefs").ProviderConfig> = {
+    const providerKeyConfigs: Record<ProviderType, import("../lib/prefs").ProviderConfig> = {
       gemini: { apiKey: apiKeys.gemini },
       openai: { apiKey: apiKeys.openai },
       anthropic: { apiKey: apiKeys.anthropic },
@@ -213,8 +188,15 @@ export function useTranslationWorkflowRunner() {
     };
     const prefs: UserPrefs = {
       selectedProvider,
-      providerConfigs,
-      providerSpecificConfigs: providerConfigs as any, // Cast to match UserPrefs type
+      providerConfigs: providerKeyConfigs,
+      providerSpecificConfigs: {
+        openai: {
+          transcriptionModel: providerConfigs.openai.transcriptionModel,
+          transcriptionLanguage: providerConfigs.openai.transcriptionLanguage,
+          transcriptionConcurrency: providerConfigs.openai.transcriptionConcurrency,
+          transcriptionChunkSeconds: providerConfigs.openai.transcriptionChunkSeconds,
+        },
+      },
       modelName,
       models,
       workflowMode,
@@ -248,7 +230,6 @@ export function useTranslationWorkflowRunner() {
     modelName,
     workflowMode,
     models,
-    workflowMode,
     mediaResolution,
     useAudioOnly,
     tState.targetLang,
@@ -280,14 +261,13 @@ export function useTranslationWorkflowRunner() {
         "File exceeds 2GB limit (Gemini File API + in-browser processing). Please trim or compress.",
       );
       setVideoName(null);
-      setVideoFileId(null);
       setVideoDuration(null);
       setVideoSizeMb(null);
       setMediaTooLargeWarning(true);
-      setUseSummary(false);
-      setSummaryText("");
-      setSummaryStatus("idle");
-      setSummaryError("");
+      tActions.setUseSummary(false);
+      tActions.setSummaryText("");
+      tActions.setSummaryStatus("idle");
+      tActions.setSummaryError("");
       return;
     }
 
@@ -297,13 +277,12 @@ export function useTranslationWorkflowRunner() {
     setVideoUploadMessage("");
     setMediaTooLargeWarning(false);
     setVideoName(null);
-    setVideoFileId(null);
     setVideoDuration(null);
     setVideoSizeMb(null);
-    setUseSummary(false);
-    setSummaryText("");
-    setSummaryStatus("idle");
-    setSummaryError("");
+    tActions.setUseSummary(false);
+    tActions.setSummaryText("");
+    tActions.setSummaryStatus("idle");
+    tActions.setSummaryError("");
     if (!file) return;
 
     try {
@@ -354,15 +333,13 @@ export function useTranslationWorkflowRunner() {
       setVideoName(
         (prev) => prev || data.fileName || prepared.name,
       );
-      setVideoFileId(data.fileName || null);
-      setContextMediaKind(prepared.isAudio ? "audio" : "video");
       setVideoUploadState("ready");
       setVideoUploadMessage("Media is uploaded, processed, and ready.");
       runnerActions.setProgress("");
-      setUseSummary(false);
-      setSummaryText("");
-      setSummaryStatus("idle");
-      setSummaryError("");
+      tActions.setUseSummary(false);
+      tActions.setSummaryText("");
+      tActions.setSummaryStatus("idle");
+      tActions.setSummaryError("");
       setVideoSizeMb(prepared.sizeMb);
       setVideoDuration(prepared.duration);
     } catch (err) {
@@ -379,8 +356,7 @@ export function useTranslationWorkflowRunner() {
       return;
     }
     const target =
-      videoFileId ||
-      (videoRef.includes("/files/") ? videoRef.split("/files/").pop() : null);
+      videoRef.includes("/files/") ? videoRef.split("/files/").pop() : null;
     if (!target) {
       setError("Could not determine uploaded media name to delete");
       return;
@@ -405,8 +381,6 @@ export function useTranslationWorkflowRunner() {
       await provider.deleteMedia(target);
       setVideoRef(null);
       setVideoName(null);
-      setVideoFileId(null);
-      setContextMediaKind(null);
       setVideoUploadState("idle");
       setVideoUploadMessage("Deleted from provider");
       runnerActions.setProgress("");
@@ -550,9 +524,9 @@ export function useTranslationWorkflowRunner() {
 
       setTranscriptionText(result.text);
       if (result.isVtt) {
-        setUseTranscription(true);
+        setUseTranscriptionEnabled(true);
       } else {
-        setUseTranscription(false); // Text-only result
+        setUseTranscriptionEnabled(false); // Text-only result
         setUseTranscriptionForSummary(true);
       }
 
@@ -569,7 +543,7 @@ export function useTranslationWorkflowRunner() {
   };
 
   const handleTranscription = async () => {
-    let resolvedProvider = resolveProviderConfig();
+    const resolvedProvider = resolveProviderConfig();
     const isTranscriptionCapable = resolvedProvider.providerType === "gemini" || resolvedProvider.providerType === "openai";
 
     if (!isTranscriptionCapable) {

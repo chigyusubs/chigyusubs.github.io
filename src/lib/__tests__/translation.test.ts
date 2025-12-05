@@ -4,14 +4,13 @@ const callState = vi.hoisted(() => ({ active: 0, maxActive: 0 }));
 
 vi.mock("../providers/ProviderFactory", async (importOriginal) => {
   const original = await importOriginal();
-  const ProviderFactoryOriginal = (original as any).ProviderFactory;
+  const ProviderFactoryOriginal = (original as { ProviderFactory: { create: (...args: unknown[]) => unknown } }).ProviderFactory;
 
-  // Create a mock provider that behaves like the original mock
   class MockProvider {
-    constructor(config: any) {
+    constructor(config: Record<string, unknown>) {
       this.config = config;
     }
-    config: any;
+    config: Record<string, unknown>;
     readonly type = "gemini";
     readonly capabilities = {
       supportsMediaUpload: true,
@@ -33,7 +32,7 @@ vi.mock("../providers/ProviderFactory", async (importOriginal) => {
       return { text: chunk };
     }
 
-    validateConfig(_config: any) {
+    validateConfig() {
       return true;
     }
 
@@ -45,7 +44,7 @@ vi.mock("../providers/ProviderFactory", async (importOriginal) => {
   // Mock the ProviderFactory to return our mock provider
   const mockProviderFactory = {
     ...ProviderFactoryOriginal,
-    create: vi.fn((type, config) => new MockProvider(config)),
+    create: vi.fn((_type, config) => new MockProvider(config as Record<string, unknown>)),
   };
 
   return { ...original, ProviderFactory: mockProviderFactory };
@@ -53,7 +52,6 @@ vi.mock("../providers/ProviderFactory", async (importOriginal) => {
 
 import { translateCues } from "../translation";
 import type { Cue } from "../vtt";
-import { serializeVtt } from "../vtt";
 
 const mkCue = (start: number): Cue => ({
   start,

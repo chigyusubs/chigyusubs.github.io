@@ -18,6 +18,7 @@ import {
   DEFAULT_SYSTEM_PROMPT_TEXT,
   MAX_CONCURRENCY,
   PROMPT_PRESETS,
+  TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS,
 } from "./config/defaults";
 import { RestoreButton } from "./components/RestoreButton";
 import { getProviderCapability } from "./lib/providers/capabilities";
@@ -41,7 +42,6 @@ function App() {
       setDebugWriter((event) => {
         // Log to console for live visibility when debug is enabled
         // Avoid serializing large payloads unnecessarily.
-        // eslint-disable-next-line no-console
         console.debug("[debug-event]", event.kind, {
           runId: event.runId,
           chunkIdx: event.chunkIdx,

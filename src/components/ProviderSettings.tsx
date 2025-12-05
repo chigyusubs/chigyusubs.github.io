@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import type { ProviderType } from "../lib/providers/types";
-import { LABELS } from "../config/ui";
 import { useTheme } from "../lib/themeContext";
 import { getProviderCapability } from "../lib/providers/capabilities";
 import { Button } from "./ui/Button";
@@ -31,7 +30,12 @@ type Props = {
             transcriptionChunkSeconds?: number;
         };
     };
-    onProviderConfigChange: (provider: "openai", config: any) => void;
+    onProviderConfigChange: (provider: "openai", config: {
+        transcriptionModel?: "whisper-1" | "gpt-4o-transcribe" | "gpt-4o-mini-transcribe";
+        transcriptionLanguage?: string;
+        transcriptionConcurrency?: number;
+        transcriptionChunkSeconds?: number;
+    }) => void;
 
     // Model selection
     modelName: string;
