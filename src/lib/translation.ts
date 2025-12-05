@@ -136,10 +136,24 @@ async function translateChunk(
   opts: Omit<
     TranslateOptions,
     "cues" | "targetSeconds" | "concurrency" | "onChunkUpdate"
-  >,
+  > & {
+    shouldPause?: () => boolean;
+    shouldCancel?: () => boolean;
+  },
   onChunkUpdate?: (chunk: ChunkStatus) => void,
 ): Promise<ChunkStatus> {
   if (opts.shouldCancel?.()) return cancelledChunk(chunk);
+
+  // Honor pause before kicking off provider work to avoid starting new calls while paused.
+  while (opts.shouldPause?.()) {
+    onChunkUpdate?.(pausedChunk(chunk));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    if (opts.shouldCancel?.()) return cancelledChunk(chunk);
+  }
+
+  // Early exit if a reset/cancel happened while we waited.
+  if (opts.shouldCancel?.()) return cancelledChunk(chunk);
+
   const chunkVtt = serializeVtt(chunk.cues);
   const contextVtt =
     chunk.prevContext.length > 0 ? serializeVtt(chunk.prevContext) : "";
@@ -260,7 +274,6 @@ export async function translateChunkFromText(
 
   let translated = "";
   try {
-    // Use the provider from the options
     const providerType = provider;
 
     // Create provider instance
@@ -428,11 +441,24 @@ async function concurrentMap<T, R>(
   worker: (item: T, idx: number) => Promise<R>,
   onItemDone?: (result: R) => void,
   onItemStart?: (idx: number) => void,
+  shouldPause?: () => boolean,
+  shouldCancel?: () => boolean,
 ): Promise<R[]> {
   const results: R[] = new Array(items.length);
   let cursor = 0;
+
+  const waitIfPaused = async () => {
+    while (shouldPause?.()) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      if (shouldCancel?.()) return true;
+    }
+    return false;
+  };
+
   const runWorker = async () => {
     while (cursor < items.length) {
+      if (shouldCancel?.()) return;
+      if (await waitIfPaused()) return;
       const current = cursor;
       cursor += 1;
       onItemStart?.(current);
@@ -508,6 +534,8 @@ export async function translateCues(
         summaryText,
         useGlossary,
         safetyOff,
+        shouldPause: opts.shouldPause,
+        shouldCancel: opts.shouldCancel,
       });
       results.push(res);
       onChunkUpdate?.(res);
@@ -552,6 +580,8 @@ export async function translateCues(
           summaryText,
           useGlossary,
           safetyOff,
+          shouldPause: opts.shouldPause,
+          shouldCancel: opts.shouldCancel,
           runId: opts.runId,
         });
       },
@@ -573,6 +603,8 @@ export async function translateCues(
           started_at: Date.now(),
           finished_at: 0,
         }),
+      opts.shouldPause,
+      opts.shouldCancel,
     );
   }
 

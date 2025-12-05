@@ -198,20 +198,6 @@ export function FileUploader({
           />
         )}
 
-        {/* Context Media Upload */}
-        {supportsMediaUpload && !isTranscriptionMode && (
-          <FilePicker
-            label="Context media (optional)"
-            description="Video or audio, used only for summary (keep small to reduce tokens)"
-            accept="video/mp4,video/*,audio/*"
-            onChange={(e) => void setMediaFile(e.target.files?.[0] || null)}
-            fileName={mediaFile?.name || null}
-            fileMeta={
-              mediaFile ? `${(mediaFile.size / 1024 / 1024).toFixed(2)} MB` : null
-            }
-            disabled={isLocked}
-          />
-        )}
       </div>
 
       {/* Transcription Controls */}

@@ -13,10 +13,12 @@
 - Debugging and stability:
   - Runtime error boundary added to surface errors with a copyable internal debug buffer.
   - Debug mode streams internal events to `console.debug`; debug toggle tests added.
+  - Pause/reset wiring fixed for translation runner (shared instance); reset now cancels the run token cleanly. Clarified reset messaging so translation reset no longer logs transcription reset text.
 
 - Media handling:
   - Shared helper `src/lib/mediaUpload.ts` provides media prep (audio-only conversion, duration/size) and Gemini-only upload.
   - Translation runner uses the helper; persisted uploads are restricted to Gemini File API. Inline uploads remain provider-specific.
+  - Transcription now reuses the helper for OpenAI + Gemini inline runs to enforce the 2GB guardrail, optional audio-only conversion, and consistent duration/size metadata before chunking/retries.
 
 - Hygiene:
   - Ignored local dev configs (`.vscode/`, `.claude/`).

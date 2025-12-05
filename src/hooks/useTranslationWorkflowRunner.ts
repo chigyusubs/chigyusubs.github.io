@@ -29,7 +29,6 @@ import type { ProviderType } from "../lib/providers/types";
 import { getProviderCapability } from "../lib/providers/capabilities";
 import { type ChunkStatus } from "../lib/translation";
 import { parseVtt } from "../lib/vtt";
-import { useTranslationRunner } from "./useTranslationRunner";
 import { getMediaDuration } from "../lib/mediaDuration";
 import { extractAudioToOggMono } from "../lib/ffmpeg";
 import {
@@ -152,10 +151,11 @@ export function useTranslationWorkflowRunner() {
     };
   };
 
-  const { state: runnerState, actions: runnerActions } = useTranslationRunner();
   const transcriptionFeature = useTranscription();
   const transcriptionState = transcriptionFeature.state;
   const transcriptionActions = transcriptionFeature.actions;
+  const runnerState = translationWorkflow.state.runnerState;
+  const runnerActions = translationWorkflow.actions.runnerActions;
 
   const setConcurrencyClamped = (value: number) =>
     tActions.setConcurrency(Math.min(MAX_CONCURRENCY, Math.max(1, value)));
@@ -309,7 +309,7 @@ export function useTranslationWorkflowRunner() {
       setError(`${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key is required to upload video`);
       return;
     }
-    if (selectedProvider === "gemini" && useInlineChunks) {
+    if (workflowMode === "transcription" && selectedProvider === "gemini" && useInlineChunks) {
       setError("Inline mode selected; no upload needed.");
       return;
     }
@@ -570,7 +570,32 @@ export function useTranslationWorkflowRunner() {
     // Use new transcription feature
     const chunkLength = providerConfigs.openai.transcriptionChunkSeconds ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS;
     const overlapSeconds = Math.max(0, transcriptionOverlapSeconds ?? 0);
-    const totalDuration = videoDuration && Number.isFinite(videoDuration) ? videoDuration : null;
+
+    const shouldPrepareInline =
+      mediaFile &&
+      (resolvedProvider.providerType === "openai" ||
+        (resolvedProvider.providerType === "gemini" && useInlineChunks));
+    let preparedMedia: Awaited<ReturnType<typeof prepareMediaFile>> | null = null;
+
+    if (shouldPrepareInline && mediaFile) {
+      try {
+        preparedMedia = await prepareMediaFile(mediaFile, {
+          useAudioOnly,
+          getMediaDuration,
+          extractAudioToOggMono,
+        });
+        setVideoDuration(preparedMedia.duration);
+        setVideoSizeMb(preparedMedia.sizeMb);
+        setVideoName((prev) => prev || preparedMedia?.name || null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to prepare media for transcription");
+        return;
+      }
+    }
+
+    const totalDuration =
+      preparedMedia?.duration ??
+      (videoDuration && Number.isFinite(videoDuration) ? videoDuration : null);
 
     setSubmitting(true);
     transcriptionPausedRef.current = false;
@@ -578,7 +603,7 @@ export function useTranslationWorkflowRunner() {
     try {
       const baseConfig = {
         videoRef: videoRef ?? "",
-        videoFile: mediaFile ?? undefined,
+        videoFile: preparedMedia?.file ?? mediaFile ?? undefined,
         apiKey: resolvedProvider.apiKeyForProvider,
         chunkLength,
         overlapSeconds,
@@ -745,15 +770,34 @@ export function useTranslationWorkflowRunner() {
       return;
     }
 
+    let preparedMedia: Awaited<ReturnType<typeof prepareMediaFile>> | null = null;
+    if (useInlineChunks && mediaFile) {
+      try {
+        preparedMedia = await prepareMediaFile(mediaFile, {
+          useAudioOnly,
+          getMediaDuration,
+          extractAudioToOggMono,
+        });
+        setVideoDuration(preparedMedia.duration);
+        setVideoSizeMb(preparedMedia.sizeMb);
+        setVideoName((prev) => prev || preparedMedia?.name || null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to prepare media for retry");
+        return;
+      }
+    }
+
     const chunkLength = providerConfigs.openai.transcriptionChunkSeconds ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS;
     const overlapSeconds = Math.max(0, transcriptionOverlapSeconds ?? 0);
-    const totalDuration = videoDuration && Number.isFinite(videoDuration) ? videoDuration : null;
+    const totalDuration =
+      preparedMedia?.duration ??
+      (videoDuration && Number.isFinite(videoDuration) ? videoDuration : null);
 
     try {
       await transcriptionActions.retryChunk(chunk, {
         provider: "gemini",
         videoRef: videoRef ?? "",
-        videoFile: mediaFile ?? undefined,
+        videoFile: preparedMedia?.file ?? mediaFile ?? undefined,
         useInlineChunks,
         apiKey: resolvedProvider.apiKeyForProvider,
         modelName: resolvedProvider.modelForProvider,
@@ -770,12 +814,44 @@ export function useTranslationWorkflowRunner() {
     }
   };
 
-  const resetWorkflow = () => {
-    // Reset run state only; keep user-configured options and text fields.
+  const resetTranslation = () => {
     setError("");
     setSubmitting(false);
     runnerActions.reset();
+    setStatusMessage("");
+  };
+
+  const resetTranscription = () => {
+    setError("");
+    setSubmitting(false);
     transcriptionActions.reset();
+    transcriptionPausedRef.current = false;
+    setTranscriptionStatus("idle");
+    setStatusMessage("");
+  };
+
+  const resetWorkflow = () => {
+    if (workflowMode === "transcription") {
+      resetTranscription();
+    } else {
+      resetTranslation();
+    }
+  };
+
+  const pauseWorkflow = () => {
+    if (workflowMode === "translation") {
+      runnerActions.pause();
+    } else {
+      pauseTranscription();
+    }
+  };
+
+  const resumeWorkflow = () => {
+    if (workflowMode === "translation") {
+      runnerActions.resume();
+    } else {
+      resumeTranscription();
+    }
   };
 
   const clearPreferences = () => {
@@ -924,10 +1000,10 @@ export function useTranslationWorkflowRunner() {
       setSafetyOff,
       setMediaResolution,
       setWorkflowMode,
-      pause: runnerActions.pause,
-      resume: runnerActions.resume,
-      pauseTranscription,
-      resumeTranscription,
+      pause: pauseWorkflow,
+      resume: resumeWorkflow,
+      pauseTranscription: pauseWorkflow,
+      resumeTranscription: resumeWorkflow,
       cancelTranscription,
       applyPreset: tActions.applyPreset,
       applyCustomPreset: tActions.applyCustomPreset,

@@ -703,7 +703,16 @@ function App() {
             </SectionCard>
           )}
 
-          <div className="flex justify-end items-center mt-8 mb-12 gap-3">
+          <div className="flex justify-end items-center mt-8 mb-12 gap-3 flex-wrap">
+            {state.statusMessage && (
+              <div
+                className={`px-3 py-2 rounded text-sm ${theme.well.info}`}
+                style={{ minWidth: "240px" }}
+              >
+                <p className="font-bold">Status</p>
+                <p>{state.statusMessage}</p>
+              </div>
+            )}
             {state.workflowMode === "translation" ? (
               <>
                 <Button
@@ -801,13 +810,6 @@ function App() {
             result={state.transcriptionResult}
             onRetryChunk={actions.handleRetryTranscriptionChunk}
           />
-        )}
-
-        {state.statusMessage && (
-          <div className={`p-4 rounded ${theme.well.info}`}>
-            <p className="font-bold">Status</p>
-            <p>{state.statusMessage}</p>
-          </div>
         )}
 
         {state.error && (

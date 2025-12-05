@@ -56,7 +56,8 @@ type RetryOptions = {
   summaryText: string;
   safetyOff: boolean;
   concurrency: number;
-  runToken?: number;
+  runId?: number;
+  cancelVersion?: number;
 };
 
 export function useTranslationRunner() {
@@ -80,21 +81,25 @@ export function useTranslationRunner() {
   };
   const autoPauseRef = useRef(false);
   const resultRef = useRef<TranslateResult | null>(null);
-  const runTokenRef = useRef<number>(0);
+  const runIdRef = useRef<number>(0);
+  const cancelVersionRef = useRef<number>(0);
+  const activeRunIdRef = useRef<number>(0);
   const pausedRef = useRef(false);
   const [paused, setPaused] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
 
   const reset = () => {
-    // Don't increment runToken here - runTranslation will do it
+    // Cancel any in-flight translation by bumping the cancel version.
+    cancelVersionRef.current += 1;
+    activeRunIdRef.current = 0;
     pausedRef.current = false;
+    autoPauseRef.current = false;
     setPaused(false);
     setIsRunning(false);
     concurrencyRef.current = 1;
     activeRetriesRef.current = 0;
     chunkStatusRef.current = new Map();
     resultRef.current = null;
-    autoPauseRef.current = false;
     setProgress("");
     setResult(null);
     setRetryingChunks([]);
@@ -102,12 +107,13 @@ export function useTranslationRunner() {
     retryQueueRef.current = [];
     retryingRef.current = false;
     enqueuedRetryIds.current = new Set();
-    activeRetriesRef.current = 0;
     retryingSetRef.current = new Set();
   };
 
   const runTranslation = async (opts: RunOptions) => {
-    const runToken = ++runTokenRef.current;
+    const runId = ++runIdRef.current;
+    const cancelVersion = cancelVersionRef.current;
+    activeRunIdRef.current = runId;
     pausedRef.current = false;
     setPaused(false);
     concurrencyRef.current = Math.max(1, opts.concurrency || 1);
@@ -128,7 +134,7 @@ export function useTranslationRunner() {
     if (isDebugEnabled()) {
       logDebugEvent({
         kind: "run-start",
-        runId: runToken,
+        runId,
         data: { totalChunks, concurrency: concurrencyRef.current },
       });
     }
@@ -153,7 +159,7 @@ export function useTranslationRunner() {
       finished_at: 0,
     }));
 
-    if (runToken === runTokenRef.current) {
+    if (cancelVersionRef.current === cancelVersion) {
       setResult({
         ok: false,
         warnings: [],
@@ -187,11 +193,11 @@ export function useTranslationRunner() {
           ? opts.summaryText.trim()
           : undefined,
       safetyOff: opts.safetyOff,
-      shouldCancel: () => runToken !== runTokenRef.current,
+      shouldCancel: () => cancelVersionRef.current !== cancelVersion,
       shouldPause: () => pausedRef.current || autoPauseRef.current,
-      runId: runToken,
+      runId,
       onChunkUpdate: (chunkResult) => {
-        if (runToken !== runTokenRef.current) return;
+        if (cancelVersionRef.current !== cancelVersion) return;
         const prevStatus = chunkStatusRef.current.get(chunkResult.idx);
         if (
           chunkResult.status === "processing" &&
@@ -208,7 +214,7 @@ export function useTranslationRunner() {
         if (isDebugEnabled()) {
           logDebugEvent({
             kind: "chunk-status",
-            runId: runToken,
+            runId,
             chunkIdx: chunkResult.idx,
             data: {
               status: chunkResult.status,
@@ -256,24 +262,25 @@ export function useTranslationRunner() {
       },
     });
 
-    if (runToken === runTokenRef.current) {
-      setResult(() => {
-        resultRef.current = data;
-        return data;
-      });
+    if (cancelVersionRef.current === cancelVersion) {
+        setResult(() => {
+          resultRef.current = data;
+          return data;
+        });
       setProgress(
         `Completed chunk ${data.chunks.filter((c) => c.status === "ok" || c.status === "failed").length}/${data.chunks.length || 0}`,
       );
       setIsRunning(false);
       if (isDebugEnabled()) {
-        logDebugEvent({ kind: "run-finish", runId: runToken });
+        logDebugEvent({ kind: "run-finish", runId });
       }
     }
-    return runToken === runTokenRef.current ? data : null;
+    return cancelVersionRef.current === cancelVersion ? data : null;
   };
 
   const retryChunkInternal = async (opts: RetryOptions) => {
-    const runToken = runTokenRef.current;
+    const runId = activeRunIdRef.current;
+    const cancelVersion = opts.cancelVersion ?? cancelVersionRef.current;
     const { chunk } = opts;
     if (!chunk.chunk_vtt)
       throw new Error("No chunk payload available to retry");
@@ -281,7 +288,7 @@ export function useTranslationRunner() {
     if (isDebugEnabled()) {
       logDebugEvent({
         kind: "retry-enqueue",
-        runId: runToken,
+        runId,
         chunkIdx: chunk.idx,
       });
     }
@@ -327,9 +334,9 @@ export function useTranslationRunner() {
             ? opts.summaryText.trim()
             : undefined,
         safetyOff: opts.safetyOff,
-        runId: runToken,
+        runId,
       });
-      if (runToken === runTokenRef.current) {
+      if (cancelVersionRef.current === cancelVersion) {
         setResult((prev) => {
           if (!prev) return prev;
           const newChunks = prev.chunks.map((c) =>
@@ -371,7 +378,7 @@ export function useTranslationRunner() {
       if (isDebugEnabled()) {
         logDebugEvent({
           kind: "retry-finish",
-          runId: runTokenRef.current,
+          runId,
           chunkIdx: chunk.idx,
         });
       }
@@ -392,7 +399,7 @@ export function useTranslationRunner() {
       }
       const next = retryQueueRef.current.shift();
       if (!next) break;
-      if (next.runToken !== runTokenRef.current) {
+      if (next.cancelVersion !== undefined && next.cancelVersion !== cancelVersionRef.current) {
         // Drop retries from old runs.
         enqueuedRetryIds.current.delete(next.chunk.idx);
         setRetryQueueIds((prev) => prev.filter((id) => id !== next.chunk.idx));
@@ -403,7 +410,7 @@ export function useTranslationRunner() {
       if (isDebugEnabled()) {
         logDebugEvent({
           kind: "retry-start",
-          runId: next.runToken,
+          runId: next.runId ?? activeRunIdRef.current,
           chunkIdx: next.chunk.idx,
         });
       }
@@ -419,10 +426,11 @@ export function useTranslationRunner() {
   };
 
   const retryChunk = async (opts: RetryOptions) => {
-    const runToken = runTokenRef.current;
+    const runId = activeRunIdRef.current;
+    const cancelVersion = cancelVersionRef.current;
     if (enqueuedRetryIds.current.has(opts.chunk.idx)) return;
     enqueuedRetryIds.current.add(opts.chunk.idx);
-    retryQueueRef.current.push({ ...opts, runToken });
+    retryQueueRef.current.push({ ...opts, runId, cancelVersion });
     concurrencyRef.current = Math.max(1, opts.concurrency || 1);
     setRetryQueueIds((prev) =>
       prev.includes(opts.chunk.idx) ? prev : [...prev, opts.chunk.idx],
@@ -488,11 +496,21 @@ export function useTranslationRunner() {
       reset,
       pause: () => {
         pausedRef.current = true;
+        autoPauseRef.current = true;
         setPaused(true);
+        setProgress((prev) =>
+          prev && prev.toLowerCase().includes("paused")
+            ? prev
+            : "Paused (letting in-flight requests finish)…",
+        );
       },
       resume: () => {
         pausedRef.current = false;
+        autoPauseRef.current = false;
         setPaused(false);
+        setProgress((prev) =>
+          prev && prev.toLowerCase().includes("paused") ? "Resumed" : prev,
+        );
       },
       setManualChunkStatus,
     },
