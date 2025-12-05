@@ -122,8 +122,6 @@ export function useTranslationWorkflowRunner() {
     ollama: getProviderCapability("ollama").label,
   };
   const transcriptionPausedRef = useRef(false);
-  const transcriptionCancelRef = useRef(false);
-  const pauseResolversRef = useRef<Array<() => void>>([]);
 
   const validateCueIntegrity = (cues: ReturnType<typeof parseVtt>): string | null => {
     for (let i = 0; i < cues.length; i += 1) {
@@ -194,19 +192,11 @@ export function useTranslationWorkflowRunner() {
 
   const cancelTranscription = () => {
     transcriptionFeature.actions.cancel();
-    transcriptionCancelRef.current = true;
     transcriptionPausedRef.current = false;
     transcriptionFeature.actions.reset();
     setTranscriptionStatus("idle");
     setSubmitting(false);
     setError("");
-  };
-
-  const waitIfPaused = async () => {
-    if (!transcriptionPausedRef.current) return;
-    await new Promise<void>((resolve) => {
-      pauseResolversRef.current.push(resolve);
-    });
   };
 
   useEffect(() => {
@@ -621,7 +611,6 @@ export function useTranslationWorkflowRunner() {
     const totalDuration = videoDuration && Number.isFinite(videoDuration) ? videoDuration : null;
 
     setSubmitting(true);
-    transcriptionCancelRef.current = false;
     transcriptionPausedRef.current = false;
 
     try {
