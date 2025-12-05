@@ -85,6 +85,9 @@ function App() {
       : state.submitting
         ? "Translating..."
         : "Start Translation";
+  const statusText = state.statusMessage || (state.workflowMode === "translation"
+    ? state.translationProgress
+    : state.transcriptionProgress);
 
   return (
     <div className={theme.page}>
@@ -704,14 +707,14 @@ function App() {
           )}
 
           <div className="flex justify-end items-center mt-8 mb-12 gap-3 flex-wrap">
-            {state.statusMessage && (
-              <div
-                className={`px-3 py-2 rounded text-sm ${theme.well.info}`}
-                style={{ minWidth: "240px" }}
+            {statusText && (
+              <span
+                className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-xs font-semibold ${theme.well.info}`}
+                title="Current workflow phase"
               >
-                <p className="font-bold">Status</p>
-                <p>{state.statusMessage}</p>
-              </div>
+                <span className="text-[11px] uppercase tracking-wide">Status</span>
+                <span className="text-sm">{statusText}</span>
+              </span>
             )}
             {state.workflowMode === "translation" ? (
               <>

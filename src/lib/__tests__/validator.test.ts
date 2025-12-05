@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { validateTimecodeConsistency, validateVtt } from "../validator";
+import {
+  autoRepairVtt,
+  validateTimecodeConsistency,
+  validateVtt,
+} from "../validator";
 import type { Cue } from "../vtt";
 
 const mkCue = (start: number, end: number, text: string): Cue => ({
@@ -55,5 +59,23 @@ describe("validateVtt", () => {
     expect(result.warnings.some((w) => w.includes("Inserted blank line"))).toBe(
       true,
     );
+  });
+
+  it("sanitizes malformed timecodes with stray characters", () => {
+    const input = [
+      "WEBVTT",
+      "",
+      "00:01:28.580 --> 0 করি0:01:32.060",
+      "Hello",
+    ].join("\n");
+    const repaired = autoRepairVtt(input);
+    expect(repaired.repaired).toContain("00:01:28.580 --> 00:01:32.060");
+    expect(
+      repaired.warnings.some((w) =>
+        w.toLowerCase().includes("sanitized malformed timecode"),
+      ),
+    ).toBe(true);
+    const validation = validateVtt(repaired.repaired);
+    expect(validation.errors.length).toBe(0);
   });
 });

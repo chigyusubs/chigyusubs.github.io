@@ -123,7 +123,6 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
     currentPreset,
     customPrompt,
     customPresets,
-    setPromptPreview,
   });
 
   useEffect(() => {
@@ -165,16 +164,41 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
       targetLang,
       useGloss && !!glossaryText,
     );
-    const userPrompt = buildUserPrompt(DEFAULT_USER_PROMPT_STRUCTURE, targetLang, {
-      useGlossary: useGloss,
-      includeSummary: useSummary && !!summary,
-    });
+    const userPrompt = buildUserPrompt(
+      targetLang,
+      useGloss ? glossaryText : "",
+      "",
+      "",
+      useSummary ? summary : "",
+      useGloss,
+    );
     const summaryUserPrompt = buildSummaryUserPrompt(
       DEFAULT_SUMMARY_USER_PROMPT,
       summary || "",
     );
     return { systemPrompt, userPrompt, summaryUserPrompt };
   };
+
+  useEffect(() => {
+    const sampleChunk = [
+      "WEBVTT",
+      "",
+      "00:00:00.000 --> 00:00:02.000",
+      "<cue 1>",
+      "",
+      "00:00:02.500 --> 00:00:04.000",
+      "<cue 2>",
+    ].join("\n");
+    const userPromptPreview = buildUserPrompt(
+      targetLang,
+      useGlossary ? glossary : "",
+      "",
+      sampleChunk,
+      useSummary ? summaryText : "",
+      useGlossary,
+    );
+    setPromptPreview(userPromptPreview);
+  }, [targetLang, useGlossary, glossary, useSummary, summaryText]);
 
   const stitchResult = (
     chunkStatuses: ChunkStatus[],

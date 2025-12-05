@@ -49,6 +49,41 @@ export function stripDuplicateHeaders(text: string): {
   return { cleaned, warnings };
 }
 
+function normalizeTimecodeSegment(segment: string): string | null {
+  // Remove any non-digit/dot/colon characters first
+  const digits = Array.from(segment.matchAll(/\d+/g)).map((m) => m[0]);
+  if (digits.length < 3) return null;
+
+  let ms = digits.pop() || "0";
+  let sec = digits.pop() || "0";
+  let min = digits.pop() || "0";
+  const hour = digits.pop() || "0";
+
+  const pad2 = (val: string) => val.padStart(2, "0");
+  const pad3 = (val: string) => val.padStart(3, "0").slice(0, 3);
+
+  return `${pad2(hour)}:${pad2(min)}:${pad2(sec)}.${pad3(ms)}`;
+}
+
+function sanitizeTimecodes(text: string): { cleaned: string; warnings: string[] } {
+  const warnings: string[] = [];
+  const lines = normalizeNewlines(text).split("\n");
+  const cleanedLines = lines.map((line) => {
+    if (!line.includes("-->")) return line;
+    const [rawStart, rawEnd] = line.split("-->");
+    const start = normalizeTimecodeSegment(rawStart || "");
+    const end = normalizeTimecodeSegment(rawEnd || "");
+    if (start && end) {
+      if (line.trim() !== `${start} --> ${end}`) {
+        warnings.push("Sanitized malformed timecode line");
+      }
+      return `${start} --> ${end}`;
+    }
+    return line;
+  });
+  return { cleaned: cleanedLines.join("\n"), warnings };
+}
+
 export function ensureBlankLines(text: string): {
   cleaned: string;
   warnings: string[];
@@ -105,11 +140,17 @@ export function autoRepairVtt(vttText: string): {
 } {
   const codeBlockResult = stripCodeBlockWrappers(vttText);
   const headerResult = stripDuplicateHeaders(codeBlockResult.cleaned);
-  const blankResult = ensureBlankLines(headerResult.cleaned);
+  const sanitizeResult = sanitizeTimecodes(headerResult.cleaned);
+  const blankResult = ensureBlankLines(sanitizeResult.cleaned);
   const repaired = normalizeNewlines(blankResult.cleaned);
   return {
     repaired,
-    warnings: [...codeBlockResult.warnings, ...headerResult.warnings, ...blankResult.warnings],
+    warnings: [
+      ...codeBlockResult.warnings,
+      ...headerResult.warnings,
+      ...sanitizeResult.warnings,
+      ...blankResult.warnings,
+    ],
   };
 }
 

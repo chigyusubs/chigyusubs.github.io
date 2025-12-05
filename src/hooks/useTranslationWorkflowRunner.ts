@@ -264,10 +264,6 @@ export function useTranslationWorkflowRunner() {
       setVideoDuration(null);
       setVideoSizeMb(null);
       setMediaTooLargeWarning(true);
-      tActions.setUseSummary(false);
-      tActions.setSummaryText("");
-      tActions.setSummaryStatus("idle");
-      tActions.setSummaryError("");
       return;
     }
 
@@ -279,10 +275,6 @@ export function useTranslationWorkflowRunner() {
     setVideoName(null);
     setVideoDuration(null);
     setVideoSizeMb(null);
-    tActions.setUseSummary(false);
-    tActions.setSummaryText("");
-    tActions.setSummaryStatus("idle");
-    tActions.setSummaryError("");
     if (!file) return;
 
     try {
@@ -336,10 +328,6 @@ export function useTranslationWorkflowRunner() {
       setVideoUploadState("ready");
       setVideoUploadMessage("Media is uploaded, processed, and ready.");
       runnerActions.setProgress("");
-      tActions.setUseSummary(false);
-      tActions.setSummaryText("");
-      tActions.setSummaryStatus("idle");
-      tActions.setSummaryError("");
       setVideoSizeMb(prepared.sizeMb);
       setVideoDuration(prepared.duration);
     } catch (err) {
