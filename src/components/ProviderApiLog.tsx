@@ -2,10 +2,8 @@ import React, { useMemo, useState } from "react";
 import { useProviderLog } from "../lib/providerLog";
 import type { ProviderType } from "../lib/providers/types";
 import { useTheme, useThemeControl } from "../lib/themeContext";
-import { copyDebugBuffer } from "../lib/debugState";
 import { Button } from "./ui/Button";
 import { SectionCard } from "./ui/SectionCard";
-import { isDebugEnabled } from "../lib/debugToggle";
 
 function formatTime(ts: number) {
     const d = new Date(ts);
@@ -43,45 +41,13 @@ const providerColors: Record<
     ollama: { bg: "bg-orange-100", text: "text-orange-800", badge: "OLL" },
 };
 
-export function ProviderDebugLog() {
+export function ProviderApiLog() {
     const { entries, clear } = useProviderLog();
     const [open, setOpen] = useState(false);
     const theme = useTheme();
     const { name: themeName } = useThemeControl();
     const isDark = themeName === "dark";
-    const debugOn = isDebugEnabled();
 
-    const copyEvents = async () => {
-        const text = copyDebugBuffer();
-        if (!text || !text.trim()) {
-            alert("No internal events logged yet.");
-            return;
-        }
-        if (navigator?.clipboard?.writeText) {
-            try {
-                await navigator.clipboard.writeText(text);
-                alert("Internal events copied");
-                return;
-            } catch {
-                // fall back
-            }
-        }
-        // fallback textarea copy
-        const textarea = document.createElement("textarea");
-        textarea.value = text;
-        textarea.style.position = "fixed";
-        textarea.style.left = "-1000px";
-        document.body.appendChild(textarea);
-        textarea.select();
-        try {
-            document.execCommand("copy");
-            alert("Internal events copied");
-        } catch {
-            alert(text);
-        } finally {
-            document.body.removeChild(textarea);
-        }
-    };
 
     const latest = useMemo(() => entries.slice(0, 30), [entries]);
 
@@ -93,20 +59,20 @@ export function ProviderDebugLog() {
         : "border-t border-orange-100 bg-orange-50 text-orange-900 odd:bg-orange-100";
 
     return (
-        <SectionCard
-            title="Debug log"
-            subtitle="API calls in this session (not persisted; keys and prompts are never logged)."
-        >
+        <SectionCard>
+            <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                    <h2 className="text-lg font-semibold">API call log</h2>
+                    <p className={`${theme.mutedText} text-sm`}>
+                        Provider API calls for this session (user-facing; keys and prompts are never logged).
+                    </p>
+                </div>
+            </div>
             <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                     <Button tone="secondary" onClick={() => setOpen((o) => !o)}>
                         {open ? "Hide log" : "Show log"} ({entries.length})
                     </Button>
-                    {debugOn && (
-                        <Button tone="secondary" onClick={copyEvents}>
-                            Copy internal events
-                        </Button>
-                    )}
                 </div>
                 <Button tone="secondary" onClick={clear} disabled={!entries.length}>
                     Clear
@@ -207,6 +173,3 @@ export function ProviderDebugLog() {
         </SectionCard>
     );
 }
-
-// Re-export for backward compatibility
-export { ProviderDebugLog as GeminiDebugLog };

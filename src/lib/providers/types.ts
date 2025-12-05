@@ -43,6 +43,10 @@ export type GenerateRequest = {
     mediaUri?: string;
     mediaStartSeconds?: number;
     mediaEndSeconds?: number;
+    mediaInlineData?: {
+        mimeType: string;
+        data: string; // base64 encoded
+    };
     safetyOff?: boolean;
     // Provider-specific options can be added here
     providerOptions?: Record<string, unknown>;

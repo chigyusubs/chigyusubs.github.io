@@ -4,7 +4,9 @@ import { ProviderSettings } from "./components/ProviderSettings";
 import { FileUploader } from "./components/FileUploader";
 import { TranslationProgress } from "./components/TranslationProgress";
 import { ResultView } from "./components/ResultView";
-import { ProviderDebugLog } from "./components/ProviderDebugLog";
+import { TranscriptionProgress } from "./features/transcription/components/TranscriptionProgress";
+import { TranscriptionResultView } from "./features/transcription/components/TranscriptionResultView";
+import { ProviderApiLog } from "./components/ProviderApiLog";
 import { Button } from "./components/ui/Button";
 import { SectionCard } from "./components/ui/SectionCard";
 import { FieldLabel, TextArea, TextInput } from "./components/ui/Field";
@@ -18,11 +20,15 @@ import {
 } from "./config/defaults";
 import { RestoreButton } from "./components/RestoreButton";
 import { getProviderCapability } from "./lib/providers/capabilities";
+import { TranscriptionSettings } from "./features/transcription/components/TranscriptionSettings";
+import { isDebugEnabled } from "./lib/debugToggle";
+import { copyDebugBuffer } from "./lib/debugState";
 
 function App() {
   const { state, actions } = useTranslationWorkflowRunner();
   const theme = useTheme();
   const { name: themeName, toggleTheme } = useThemeControl();
+  const debugOn = isDebugEnabled();
   const running = state.isRunning;
   const locked = state.submitting || running;
   const providerCapability = getProviderCapability(state.selectedProvider);
@@ -69,7 +75,45 @@ function App() {
               </p>
             </div>
           </div>
-          <div>
+          <div className="flex items-center gap-2">
+            {debugOn && (
+              <Button
+                tone="secondary"
+                className="text-sm"
+                onClick={async () => {
+                  const text = copyDebugBuffer();
+                  if (!text || !text.trim()) {
+                    alert("No internal events logged yet.");
+                    return;
+                  }
+                  if (navigator?.clipboard?.writeText) {
+                    try {
+                      await navigator.clipboard.writeText(text);
+                      alert("Internal events copied");
+                      return;
+                    } catch {
+                      // fall through to fallback
+                    }
+                  }
+                  const textarea = document.createElement("textarea");
+                  textarea.value = text;
+                  textarea.style.position = "fixed";
+                  textarea.style.left = "-1000px";
+                  document.body.appendChild(textarea);
+                  textarea.select();
+                  try {
+                    document.execCommand("copy");
+                    alert("Internal events copied");
+                  } catch {
+                    alert(text);
+                  } finally {
+                    document.body.removeChild(textarea);
+                  }
+                }}
+              >
+                Debug mode: copy events
+              </Button>
+            )}
             <Button tone="secondary" onClick={toggleTheme} className="text-sm">
               {themeName === "dark" ? "☀️ Light mode" : "🌙 Dark mode"}
             </Button>
@@ -101,11 +145,12 @@ function App() {
                   onChange={() => actions.setWorkflowMode("transcription")}
                   disabled={locked}
                 />
-                <span>Transcription (Gemini)</span>
+                <span>Transcription (Gemini/OpenAI)</span>
               </label>
-              {state.workflowMode === "transcription" && state.selectedProvider !== "gemini" && (
+              {state.workflowMode === "transcription" &&
+                !["gemini", "openai"].includes(state.selectedProvider) && (
                 <span className={`text-xs ${theme.dangerText}`}>
-                  Transcription mode requires Gemini; switch provider to continue.
+                  Transcription mode requires Gemini or OpenAI; switch provider to continue.
                 </span>
               )}
             </div>
@@ -133,6 +178,8 @@ function App() {
             locked={locked}
             mediaResolution={state.mediaResolution}
             setMediaResolution={actions.setMediaResolution}
+            useInlineChunks={state.useInlineChunks}
+            setUseInlineChunks={actions.setUseInlineChunks}
             workflowMode={state.workflowMode}
           />
 
@@ -157,9 +204,16 @@ function App() {
             locked={locked}
             mediaTooLargeWarning={state.mediaTooLargeWarning}
             mode={state.workflowMode}
+            skipProviderUpload={
+              state.workflowMode === "transcription" &&
+              state.selectedProvider === "gemini" &&
+              state.useInlineChunks
+            }
 
             // Transcription props
-            showAudioUpload={state.selectedProvider === "openai" && state.providerConfigs.openai.transcriptionEnabled}
+            showAudioUpload={
+              state.workflowMode === "transcription" && state.selectedProvider === "openai"
+            }
             audioFile={state.audioFile}
             setAudioFile={actions.setAudioFile}
             transcriptionText={state.transcriptionText}
@@ -415,71 +469,27 @@ function App() {
           {state.workflowMode === "transcription" && (
             <SectionCard
               title="Transcription settings"
-              subtitle="Chunking and parallelism for Gemini transcription."
+              subtitle={
+                state.selectedProvider === "gemini"
+                  ? "Chunking and parallelism for Gemini transcription."
+                  : state.selectedProvider === "openai"
+                  ? "Processing options for OpenAI transcription."
+                  : "Provider-specific transcription settings."
+              }
             >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <FieldLabel>Chunk Length</FieldLabel>
-                  <select
-                    className={theme.input}
-                    value={state.providerConfigs.openai.transcriptionChunkSeconds ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS}
-                    onChange={(e) =>
-                      actions.updateProviderConfig("openai", {
-                        ...state.providerConfigs.openai,
-                        transcriptionChunkSeconds: Number(e.target.value),
-                      })
-                    }
-                    disabled={locked}
-                  >
-                    {[60, 120, 300, 600, 900, 1200].map((sec) => (
-                      <option key={sec} value={sec}>
-                        {Math.round(sec / 60)} min
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <FieldLabel>Chunk Overlap</FieldLabel>
-                  <select
-                    className={theme.input}
-                    value={state.transcriptionOverlapSeconds ?? TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS}
-                    onChange={(e) =>
-                      actions.setTranscriptionOverlapSeconds(
-                        Math.max(0, Number(e.target.value) || 0),
-                      )
-                    }
-                    disabled={locked}
-                  >
-                    {[0, 1, 2, 3, 4, 5, 10].map((ov) => (
-                      <option key={ov} value={ov}>
-                        {ov}s overlap
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <FieldLabel>Concurrency</FieldLabel>
-                  <select
-                    className={theme.input}
-                    value={state.providerConfigs.openai.transcriptionConcurrency ?? TRANSCRIPTION_DEFAULT_CONCURRENCY}
-                    onChange={(e) =>
-                      actions.updateProviderConfig("openai", {
-                        ...state.providerConfigs.openai,
-                        transcriptionConcurrency: Number(e.target.value),
-                      })
-                    }
-                    disabled={locked}
-                  >
-                    {[1, 2, 3, 4].map((c) => (
-                      <option key={c} value={c}>
-                        {c === 1 ? "Single" : `${c} parallel`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              <TranscriptionSettings
+                provider={state.selectedProvider}
+                locked={locked}
+                openaiConfig={state.providerConfigs.openai}
+                onUpdateOpenaiConfig={(cfg) => actions.updateProviderConfig("openai", cfg)}
+                transcriptionOverlapSeconds={state.transcriptionOverlapSeconds ?? TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS}
+                setTranscriptionOverlapSeconds={(val) =>
+                  actions.setTranscriptionOverlapSeconds(Math.max(0, val))
+                }
+              />
             </SectionCard>
           )}
+
 
           {state.workflowMode === "translation" && (
             <SectionCard
@@ -679,7 +689,7 @@ function App() {
                   type="button"
                   tone="secondary"
                   onClick={actions.resetWorkflow}
-                  disabled={!running && !state.paused && !state.result}
+                  disabled={!running && !state.paused && !state.translationResult}
                   title="Reset clears progress, drops queued work, and keeps uploaded media. Enabled when running, paused, or after results."
                 >
                   Reset
@@ -715,9 +725,16 @@ function App() {
                 locked ||
                 (state.workflowMode === "translation"
                   ? (!state.vttFile || (state.selectedProvider !== "ollama" && !state.apiKey))
-                  : (state.selectedProvider !== "gemini" ||
+                  : (
                     !state.apiKey ||
-                    !state.videoRef))
+                    (
+                      state.selectedProvider === "gemini"
+                        ? (!state.videoRef && !(state.useInlineChunks && state.mediaFile))
+                        : state.selectedProvider === "openai"
+                        ? !state.mediaFile
+                        : true
+                    )
+                  ))
               }
             >
               {state.submitting ? (
@@ -729,15 +746,32 @@ function App() {
           </div>
         </form>
 
-        <TranslationProgress progress={state.progress} result={state.result} />
+        {state.workflowMode === "translation" ? (
+          <TranslationProgress
+            progress={state.translationProgress}
+            result={state.translationResult}
+          />
+        ) : (
+          <TranscriptionProgress
+            progress={state.transcriptionProgress}
+            result={state.transcriptionResult}
+          />
+        )}
 
-        <ResultView
-          result={state.result}
-          handleRetryChunk={actions.handleRetryChunk}
-          handleManualChunkEdit={actions.handleManualChunkEdit}
-          retryingChunks={state.retryingChunks}
-          retryQueueIds={state.retryQueueIds}
-        />
+        {state.workflowMode === "translation" ? (
+          <ResultView
+            result={state.translationResult}
+            handleRetryChunk={actions.handleRetryChunk}
+            handleManualChunkEdit={actions.handleManualChunkEdit}
+            retryingChunks={state.retryingChunks}
+            retryQueueIds={state.retryQueueIds}
+          />
+        ) : (
+          <TranscriptionResultView
+            result={state.transcriptionResult}
+            onRetryChunk={actions.handleRetryTranscriptionChunk}
+          />
+        )}
 
         {state.statusMessage && (
           <div className={`p-4 rounded ${theme.well.info}`}>
@@ -753,7 +787,7 @@ function App() {
           </div>
         )}
 
-        <ProviderDebugLog />
+        <ProviderApiLog />
         <div className="flex justify-end">
           <Button
             type="button"

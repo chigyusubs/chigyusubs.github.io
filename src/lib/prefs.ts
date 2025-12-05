@@ -14,7 +14,6 @@ export type UserPrefs = {
   // Provider-specific configurations (e.g., OpenAI transcription settings)
   providerSpecificConfigs?: {
     openai?: {
-      transcriptionEnabled?: boolean;
       transcriptionModel?: "whisper-1" | "gpt-4o-transcribe" | "gpt-4o-mini-transcribe";
       transcriptionLanguage?: string;
       transcriptionConcurrency?: number;
@@ -39,6 +38,7 @@ export type UserPrefs = {
   glossary?: string;
   transcriptionPrompt?: string;
   transcriptionOverlapSeconds?: number;
+  useInlineChunks?: boolean;
   summaryText?: string;
   summaryPrompt?: string;
   glossaryPrompt?: string;

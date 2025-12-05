@@ -32,6 +32,9 @@ export type ChunkStatus = {
   model_name?: string;
   temperature?: number;
   duration_ms?: number;
+  // For transcription chunks - store time range for retry
+  mediaStartSeconds?: number;
+  mediaEndSeconds?: number;
 };
 
 function baseChunkStatus(

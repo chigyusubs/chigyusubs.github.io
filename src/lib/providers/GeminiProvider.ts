@@ -84,13 +84,22 @@ export class GeminiProvider extends BaseProvider {
         request: GenerateRequest,
         trace?: ProviderTrace,
     ): Promise<GenerateResponse> {
-        const { systemPrompt, userPrompt, temperature, safetyOff, mediaUri } = request;
+        const { systemPrompt, userPrompt, temperature, safetyOff, mediaUri, mediaInlineData } = request;
         const normalized = this.normalizeModel(this.config.modelName);
         const url = `${API_ROOT}/${normalized}:generateContent?key=${encodeURIComponent(this.config.apiKey!)}`;
         const startedAt = Date.now();
 
         const parts: unknown[] = [];
-        if (mediaUri) {
+
+        // Prefer inline data over file URI for better chunking
+        if (mediaInlineData) {
+            parts.push({
+                inlineData: {
+                    mimeType: mediaInlineData.mimeType,
+                    data: mediaInlineData.data,
+                },
+            });
+        } else if (mediaUri) {
             const hasOffsets =
                 typeof request.mediaStartSeconds === "number" ||
                 typeof request.mediaEndSeconds === "number";

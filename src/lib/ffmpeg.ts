@@ -46,6 +46,61 @@ export async function extractAudioToOggMono(input: File): Promise<File> {
   });
 }
 
+/**
+ * Extract a specific time range from media as audio
+ */
+export async function extractAudioChunk(
+  input: File,
+  startSeconds: number,
+  endSeconds?: number
+): Promise<File> {
+  const ffmpeg = await getFfmpeg();
+  const inputName = `input.${input.name.split(".").pop() || "mp4"}`;
+  const outputName = "chunk.ogg";
+
+  await ffmpeg.writeFile(inputName, await fetchFile(input));
+
+  const args = ["-i", inputName];
+
+  // Seek to start position (fast seek before input)
+  if (startSeconds > 0) {
+    args.unshift("-ss", startSeconds.toString());
+  }
+
+  // Duration (if endSeconds specified)
+  if (endSeconds !== undefined && endSeconds > startSeconds) {
+    args.push("-t", (endSeconds - startSeconds).toString());
+  }
+
+  // Audio extraction and encoding
+  args.push(
+    "-vn",           // No video
+    "-ac", "1",      // Mono
+    "-ar", "16000",  // 16kHz sample rate
+    "-b:a", "32k",   // 32kbps bitrate
+    "-c:a", "libvorbis",
+    outputName
+  );
+
+  try {
+    await ffmpeg.exec(args);
+  } catch (err) {
+    await ffmpeg.deleteFile(inputName).catch(() => {});
+    throw err;
+  }
+
+  const data = await ffmpeg.readFile(outputName);
+  await ffmpeg.deleteFile(inputName).catch(() => {});
+  await ffmpeg.deleteFile(outputName).catch(() => {});
+
+  const buffer = data instanceof Uint8Array ? data : new Uint8Array(data as ArrayBuffer);
+  const chunkName = endSeconds
+    ? `chunk-${startSeconds}-${endSeconds}.ogg`
+    : `chunk-${startSeconds}.ogg`;
+
+  return new File([buffer], chunkName, { type: "audio/ogg" });
+}
+
 export async function chunkMediaToOggSegments(
   input: File,
   maxSegmentSeconds: number,

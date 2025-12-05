@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import type { ProviderType } from "../lib/providers/types";
 import { LABELS } from "../config/ui";
 import { useTheme } from "../lib/themeContext";
@@ -25,7 +25,6 @@ type Props = {
     // Provider-specific configs
     providerConfigs: {
         openai: {
-            transcriptionEnabled: boolean;
             transcriptionModel?: "whisper-1" | "gpt-4o-transcribe" | "gpt-4o-mini-transcribe";
             transcriptionLanguage?: string;
             transcriptionConcurrency?: number;
@@ -49,6 +48,8 @@ type Props = {
     setSafetyOff: (v: boolean) => void;
     mediaResolution: "low" | "standard";
     setMediaResolution: (v: "low" | "standard") => void;
+    useInlineChunks: boolean;
+    setUseInlineChunks: (use: boolean) => void;
 
     locked?: boolean;
 };
@@ -74,6 +75,8 @@ export function ProviderSettings({
     setSafetyOff,
     mediaResolution,
     setMediaResolution,
+    useInlineChunks,
+    setUseInlineChunks,
     workflowMode = "translation",
     locked = false,
 }: Props) {
@@ -93,12 +96,62 @@ export function ProviderSettings({
         ollama: getProviderCapability("ollama").label,
     };
 
-    const providerDescriptions: Record<ProviderType, string> = {
-        gemini: "Best for video context and media-rich content",
-        openai: "GPT-4 and GPT-3.5 models for high-quality translation",
-        anthropic: "Claude models for nuanced and creative translation",
-        ollama: "Local models for privacy and offline use",
+    const transcriptionCapable: Record<ProviderType, boolean> = {
+        gemini: true,
+        openai: true,
+        anthropic: false,
+        ollama: false,
     };
+
+    const providerDescriptions: Record<ProviderType, string> = transcriptionMode
+        ? {
+              gemini: "Video/audio transcription with File API or inline chunking",
+              openai: "Whisper (VTT) or GPT-4o (text) transcription",
+              anthropic: "Not available for transcription",
+              ollama: "Not available for transcription",
+          }
+        : {
+              gemini: "Best for video context and media-rich content",
+              openai: "GPT-4 and GPT-3.5 models for high-quality translation",
+              anthropic: "Claude models for nuanced and creative translation",
+              ollama: "Local models for privacy and offline use",
+          };
+
+    const filteredModels =
+        transcriptionMode && selectedProvider === "openai"
+            ? models.filter((name) => {
+                  const lower = name.toLowerCase();
+                  return lower.includes("whisper") || lower.includes("transcribe");
+              })
+            : models;
+    const modelsToDisplay = filteredModels.length ? filteredModels : models;
+    const filteredFallback =
+        transcriptionMode && selectedProvider === "openai" && !filteredModels.length;
+
+    useEffect(() => {
+        if (
+            transcriptionMode &&
+            selectedProvider === "openai" &&
+            modelsToDisplay.length > 0 &&
+            !modelsToDisplay.includes(modelName)
+        ) {
+            const nextModel = modelsToDisplay[0];
+            setModelName(nextModel);
+            const modelId = nextModel.includes("/") ? nextModel.split("/").pop() || nextModel : nextModel;
+            const lowered = modelId.toLowerCase();
+            if (lowered.includes("whisper") || lowered.includes("transcribe")) {
+                onProviderConfigChange("openai", {
+                    ...providerConfigs.openai,
+                    transcriptionModel: modelId as
+                        | "whisper-1"
+                        | "gpt-4o-transcribe"
+                        | "gpt-4o-mini-transcribe",
+                });
+            }
+        }
+        // Only react to model list / mode changes; intentional to skip providerConfigs in deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [transcriptionMode, selectedProvider, modelsToDisplay]);
 
     return (
         <SectionCard
@@ -119,10 +172,10 @@ export function ProviderSettings({
                             <option
                                 key={provider}
                                 value={provider}
-                                disabled={transcriptionMode && provider !== "gemini"}
+                                disabled={transcriptionMode && !transcriptionCapable[provider]}
                             >
                                 {providerLabels[provider]}
-                                {transcriptionMode && provider !== "gemini" ? " (not available for transcription)" : ""}
+                                {transcriptionMode && !transcriptionCapable[provider] ? " (not available for transcription)" : ""}
                             </option>
                         ))}
                     </select>
@@ -175,10 +228,26 @@ export function ProviderSettings({
                         <select
                             className={theme.input}
                             value={modelName}
-                            onChange={(e) => setModelName(e.target.value)}
-                            disabled={locked || models.length === 0}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                setModelName(value);
+                                if (transcriptionMode && selectedProvider === "openai") {
+                                    const modelId = value.includes("/") ? value.split("/").pop() || value : value;
+                                    const lowered = modelId.toLowerCase();
+                                    if (lowered.includes("whisper") || lowered.includes("transcribe")) {
+                                        onProviderConfigChange("openai", {
+                                            ...providerConfigs.openai,
+                                            transcriptionModel: modelId as
+                                                | "whisper-1"
+                                                | "gpt-4o-transcribe"
+                                                | "gpt-4o-mini-transcribe",
+                                        });
+                                    }
+                                }
+                            }}
+                            disabled={locked || modelsToDisplay.length === 0}
                         >
-                            {models.map((m) => (
+                            {modelsToDisplay.map((m) => (
                                 <option key={m} value={m}>
                                     {m}
                                 </option>
@@ -193,7 +262,32 @@ export function ProviderSettings({
                             Load Models
                         </Button>
                     </div>
+                    {transcriptionMode && selectedProvider === "openai" && (
+                        <p className={theme.helperText}>
+                            Showing models that include "whisper" or "transcribe"
+                            {filteredFallback ? " (none found, showing all models)" : ""}
+                        </p>
+                    )}
                 </div>
+
+                {/* Gemini transcription chunking mode (inline vs File API) */}
+                {transcriptionMode && selectedProvider === "gemini" && (
+                    <div className="space-y-2 md:col-span-2">
+                        <FieldLabel>Gemini Media Mode</FieldLabel>
+                        <select
+                            className={theme.input}
+                            value={useInlineChunks ? "inline" : "fileapi"}
+                            onChange={(e) => setUseInlineChunks(e.target.value === "inline")}
+                            disabled={locked}
+                        >
+                            <option value="fileapi">File API (upload then reference with time offsets)</option>
+                            <option value="inline">Inline audio chunks (no upload; extract locally)</option>
+                        </select>
+                        <p className={theme.helperText}>
+                            File API uploads media then uses offsets per chunk. Inline extracts audio chunks locally and skips provider upload (token-accurate, slower client-side).
+                        </p>
+                    </div>
+                )}
 
                 {/* Temperature */}
                 <div className="space-y-2">

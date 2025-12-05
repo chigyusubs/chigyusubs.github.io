@@ -1,23 +1,19 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   DEFAULT_CHUNK_SECONDS,
   DEFAULT_CONCURRENCY,
-  DEFAULT_GLOSSARY_PROMPT,
   DEFAULT_MODEL,
   DEFAULT_MODELS,
   DEFAULT_OVERLAP_CUES,
-  DEFAULT_SUMMARY_PROMPT,
-  DEFAULT_SUMMARY_USER_PROMPT,
-  DEFAULT_SUMMARY_FILE_LABELS,
+  DEFAULT_SYSTEM_PROMPT_TEXT,
   DEFAULT_TARGET_LANG,
   DEFAULT_TEMPERATURE,
   DEFAULT_USE_AUDIO_ONLY,
   DEFAULT_USE_GLOSSARY,
   DEFAULT_USE_SUMMARY,
-  DEFAULT_SYSTEM_PROMPT_TEXT,
-  DEFAULT_USER_PROMPT_STRUCTURE,
+  DEFAULT_GLOSSARY_PROMPT,
+  DEFAULT_SUMMARY_PROMPT,
   MAX_CONCURRENCY,
-  PROMPT_PRESETS,
   TRANSCRIPTION_DEFAULT_CHUNK_SECONDS,
   TRANSCRIPTION_DEFAULT_CONCURRENCY,
   TRANSCRIPTION_MAX_CONCURRENCY,
@@ -27,90 +23,51 @@ import {
   TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS,
   DEFAULT_WORKFLOW_MODE,
   type WorkflowMode,
-  type PromptPresetId,
 } from "../config/defaults";
 import { parseModelName, ProviderFactory } from "../lib/providers/ProviderFactory";
 import type { ProviderType, GenerateRequest } from "../lib/providers/types";
 import { getProviderCapability } from "../lib/providers/capabilities";
 import { type ChunkStatus } from "../lib/translation";
-import {
-  buildSummaryUserPrompt,
-  buildUserPrompt,
-  glossarySystemPrompt,
-  summarySystemPrompt,
-} from "../lib/prompts";
-import { parseSrt, parseVtt, serializeVtt } from "../lib/vtt";
-import { deriveSrt } from "../lib/stitcher";
-import { autoRepairVtt } from "../lib/validator";
+import { parseVtt, serializeVtt } from "../lib/vtt";
 import { useTranslationRunner } from "./useTranslationRunner";
 import { getMediaDuration } from "../lib/mediaDuration";
 import { extractAudioToOggMono } from "../lib/ffmpeg";
 import { transcribeOpenAiMedia } from "../lib/transcription/openai";
-import { useTranscriptionRunner } from "./useTranscriptionRunner";
+import { useTranscriptionWorkflowRunner } from "./useTranscriptionWorkflowRunner";
+import type { TranscriptionChunk } from "../features/transcription/types";
+import { useProviderState } from "./useProviderState";
+import { useTranslationWorkflow } from "../features/translation/hooks/useTranslationWorkflow";
 
 import { clearPrefs, loadPrefs, savePrefs, type UserPrefs } from "../lib/prefs";
-import {
-  type CustomPreset,
-  importPresets,
-  downloadPresetFile,
-  createPresetFromCurrent,
-} from "../lib/presetImportExport";
 
 export function useTranslationWorkflowRunner() {
   const saved = loadPrefs();
   const mediaProbeIdRef = useRef(0);
 
-  // Provider state
-  const [selectedProvider, setSelectedProvider] = useState<ProviderType>(
-    saved?.selectedProvider ?? "gemini"
-  );
-  const [apiKeys, setApiKeys] = useState<Record<ProviderType, string>>(() => {
-    const defaultKeys: Record<ProviderType, string> = {
-      gemini: "",
-      openai: "",
-      anthropic: "",
-      ollama: "",
-    };
-    if (saved?.providerConfigs) {
-      Object.entries(saved.providerConfigs).forEach(([provider, config]) => {
-        if (config.apiKey) {
-          defaultKeys[provider as ProviderType] = config.apiKey;
-        }
-      });
-    }
-    return defaultKeys;
-  });
-  const [ollamaBaseUrl, setOllamaBaseUrl] = useState(
-    saved?.providerConfigs?.ollama?.baseUrl ?? "http://localhost:11434"
-  );
-
+  // Provider state (extracted)
+  const {
+    selectedProvider,
+    setSelectedProvider,
+    apiKeys,
+    setApiKey,
+    apiKey,
+    ollamaBaseUrl,
+    setOllamaBaseUrl,
+    models,
+    setModels,
+    modelName,
+    setModelName,
+    providerConfigs,
+    updateProviderConfig,
+  } = useProviderState(saved);
   // File state
   const [vttFile, setVttFile] = useState<File | null>(null);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [useAudioOnly, setUseAudioOnly] = useState(
     saved?.useAudioOnly ?? DEFAULT_USE_AUDIO_ONLY,
   );
-  const [targetLang, setTargetLang] = useState(
-    saved?.targetLang ?? DEFAULT_TARGET_LANG,
-  );
-  const [concurrency, setConcurrency] = useState<number>(
-    saved?.concurrency ?? DEFAULT_CONCURRENCY,
-  );
-  const [chunkSeconds, setChunkSeconds] = useState<number>(
-    saved?.chunkSeconds ?? DEFAULT_CHUNK_SECONDS,
-  );
-  const [chunkOverlap, setChunkOverlap] = useState<number>(
-    saved?.chunkOverlap ?? DEFAULT_OVERLAP_CUES,
-  );
-  const [models, setModels] = useState<string[]>(
-    saved?.models && saved.models.length ? saved.models : DEFAULT_MODELS,
-  );
-  const [modelName, setModelName] = useState(saved?.modelName ?? DEFAULT_MODEL);
   const [workflowMode, setWorkflowMode] = useState<WorkflowMode>(
     saved?.workflowMode ?? DEFAULT_WORKFLOW_MODE,
-  );
-  const [customPrompt, setCustomPrompt] = useState(
-    saved?.customPrompt ?? DEFAULT_SYSTEM_PROMPT_TEXT,
   );
   const [transcriptionPrompt, setTranscriptionPrompt] = useState(
     saved?.transcriptionPrompt ?? DEFAULT_TRANSCRIPTION_PROMPT,
@@ -118,16 +75,12 @@ export function useTranslationWorkflowRunner() {
   const [transcriptionOverlapSeconds, setTranscriptionOverlapSeconds] = useState(
     saved?.transcriptionOverlapSeconds ?? TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS,
   );
-  const [glossary, setGlossary] = useState(saved?.glossary ?? "");
-  const [useGlossary, setUseGlossary] = useState(
-    saved?.useGlossary ?? DEFAULT_USE_GLOSSARY,
+  const [useInlineChunks, setUseInlineChunks] = useState(
+    saved?.useInlineChunks ?? false,
   );
-
-  // Current API key (derived from selected provider)
-  const apiKey = apiKeys[selectedProvider];
-  const setApiKey = (provider: ProviderType, key: string) => {
-    setApiKeys(prev => ({ ...prev, [provider]: key }));
-  };
+  const translationWorkflow = useTranslationWorkflow(saved);
+  const tState = translationWorkflow.state;
+  const tActions = translationWorkflow.actions;
 
   // Video/media state
   const [videoName, setVideoName] = useState<string | null>(null);
@@ -143,78 +96,13 @@ export function useTranslationWorkflowRunner() {
   >("idle");
   const [videoUploadMessage, setVideoUploadMessage] = useState("");
   const [mediaTooLargeWarning, setMediaTooLargeWarning] = useState(false);
-  const [temperature, setTemperature] = useState(
-    saved?.temperature ?? DEFAULT_TEMPERATURE,
-  );
   const [error, setError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [summaryText, setSummaryText] = useState(saved?.summaryText ?? "");
-  const [summaryStatus, setSummaryStatus] = useState<
-    "idle" | "loading" | "ready" | "error"
-  >("idle");
-  const [summaryError, setSummaryError] = useState("");
-  const [glossaryStatus, setGlossaryStatus] = useState<"idle" | "loading">(
-    "idle",
-  );
-  const [glossaryError, setGlossaryError] = useState("");
-  const [summaryPrompt, setSummaryPrompt] = useState(
-    saved?.summaryPrompt ?? DEFAULT_SUMMARY_PROMPT,
-  );
-  const [useSummary, setUseSummary] = useState(
-    saved?.useSummary ?? DEFAULT_USE_SUMMARY,
-  );
-  const [glossaryPrompt, setGlossaryPrompt] = useState(
-    saved?.glossaryPrompt ?? DEFAULT_GLOSSARY_PROMPT,
-  );
   const [safetyOff, setSafetyOff] = useState(saved?.safetyOff ?? false);
   const [mediaResolution, setMediaResolution] = useState<"low" | "standard">(
     saved?.mediaResolution ?? "low",
   );
-  const [currentPreset, setCurrentPreset] = useState<PromptPresetId | "">(
-    "general",
-  );
-  const [useGlossaryInSummary, setUseGlossaryInSummary] = useState(
-    saved?.useGlossaryInSummary ?? false,
-  );
-
-  // Custom presets stored in localStorage
-  const [customPresets, setCustomPresets] = useState<CustomPreset[]>(() => {
-    try {
-      const stored = window.localStorage.getItem("customPresets");
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  // Provider-specific configurations
-  const [providerConfigs, setProviderConfigs] = useState<{
-    openai: {
-      transcriptionEnabled: boolean;
-      transcriptionModel?: "whisper-1" | "gpt-4o-transcribe" | "gpt-4o-mini-transcribe";
-      transcriptionLanguage?: string;
-      transcriptionConcurrency?: number;
-      transcriptionChunkSeconds?: number;
-    };
-  }>(() => {
-    const defaultConfig = {
-      openai: {
-        transcriptionEnabled: false,
-        transcriptionModel: "gpt-4o-mini-transcribe" as const,
-        transcriptionLanguage: "",
-        transcriptionConcurrency: TRANSCRIPTION_DEFAULT_CONCURRENCY,
-        transcriptionChunkSeconds: TRANSCRIPTION_DEFAULT_CHUNK_SECONDS,
-      },
-    };
-    // Try to load from saved prefs
-    if (saved?.providerSpecificConfigs?.openai) {
-      return {
-        openai: { ...defaultConfig.openai, ...saved.providerSpecificConfigs.openai },
-      };
-    }
-    return defaultConfig;
-  });
 
   // Audio transcription state (for OpenAI)
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -271,39 +159,6 @@ export function useTranslationWorkflowRunner() {
     return `${h.padStart(2, "0")}:${m.padStart(2, "0")}:${sec.padStart(2, "0")}.${ms}`;
   };
 
-  const normalizeVttForParse = (text: string): { cues: ReturnType<typeof parseVtt>; normalized: boolean } => {
-    try {
-      return { cues: parseVtt(text), normalized: false };
-    } catch {
-      const lines = text.split("\n").map((line) => {
-        if (line.includes("-->")) {
-          const [startRaw, endRaw] = line.split("-->").map((p) => p.trim());
-          const start = normalizeVttTimecode(startRaw);
-          const end = normalizeVttTimecode(endRaw.split(" ")[0]);
-          return `${start} --> ${end}`;
-        }
-        return line;
-      });
-      return { cues: parseVtt(lines.join("\n")), normalized: true };
-    }
-  };
-
-  const tryParseVttFlexible = (text: string): {
-    cues: ReturnType<typeof parseVtt> | null;
-    warnings: string[];
-  } => {
-    const warnings: string[] = [];
-    try {
-      const { cues, normalized } = normalizeVttForParse(text);
-      if (normalized) warnings.push("Normalized timecodes");
-      return { cues, warnings };
-    } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : "Unable to parse VTT from transcription";
-      warnings.push(msg);
-      return { cues: null, warnings };
-    }
-  };
 
   const resolveProviderConfig = () => {
     const parsed = parseModelName(modelName);
@@ -321,51 +176,27 @@ export function useTranslationWorkflowRunner() {
   };
 
   const { state: runnerState, actions: runnerActions } = useTranslationRunner();
-  const { state: transcriptionRunnerState, actions: transcriptionRunnerActions } = useTranscriptionRunner();
+  const { state: transcriptionRunnerState, actions: transcriptionRunnerActions } = useTranscriptionWorkflowRunner();
 
-  // Save custom presets to localStorage whenever they change
-  useEffect(() => {
-    try {
-      if (customPresets.length === 0) {
-        window.localStorage.removeItem("customPresets");
-      } else {
-        window.localStorage.setItem(
-          "customPresets",
-          JSON.stringify(customPresets),
-        );
-      }
-    } catch {
-      // ignore storage errors
-    }
-  }, [customPresets]);
-
-  const clampConcurrency = (value: number) =>
-    Math.min(MAX_CONCURRENCY, Math.max(1, value));
   const setConcurrencyClamped = (value: number) =>
-    setConcurrency(clampConcurrency(value));
-  const normalizeCustomPrompt = (value: string) => {
-    const trimmed = value.trim();
-    return trimmed && trimmed === DEFAULT_SYSTEM_PROMPT_TEXT.trim()
-      ? ""
-      : trimmed;
-  };
+    tActions.setConcurrency(Math.min(MAX_CONCURRENCY, Math.max(1, value)));
+  const normalizeCustomPrompt = tActions.normalizeCustomPrompt;
 
   const resumeTranscription = () => {
+    transcriptionRunnerActions.resume();
     transcriptionPausedRef.current = false;
     setTranscriptionPaused(false);
-    pauseResolversRef.current.forEach((resolve) => resolve());
-    pauseResolversRef.current = [];
   };
 
   const pauseTranscription = () => {
+    transcriptionRunnerActions.pause();
     transcriptionPausedRef.current = true;
     setTranscriptionPaused(true);
   };
 
   const cancelTranscription = () => {
+    transcriptionRunnerActions.cancel();
     transcriptionCancelRef.current = true;
-    pauseResolversRef.current.forEach((resolve) => resolve());
-    pauseResolversRef.current = [];
     setTranscriptionRunning(false);
     setTranscriptionPaused(false);
     transcriptionPausedRef.current = false;
@@ -400,23 +231,24 @@ export function useTranslationWorkflowRunner() {
       workflowMode,
       mediaResolution,
       useAudioOnly,
-      targetLang,
-      chunkSeconds,
-      chunkOverlap,
-      concurrency,
-      temperature,
-      customPrompt,
-      glossary,
-      summaryText,
-      summaryPrompt,
-      glossaryPrompt,
-      useSummary,
-      useGlossary,
+      targetLang: tState.targetLang,
+      chunkSeconds: tState.chunkSeconds,
+      chunkOverlap: tState.chunkOverlap,
+      concurrency: tState.concurrency,
+      temperature: tState.temperature,
+      customPrompt: tState.customPrompt,
+      glossary: tState.glossary,
+      summaryText: tState.summaryText,
+      summaryPrompt: tState.summaryPrompt,
+      glossaryPrompt: tState.glossaryPrompt,
+      useSummary: tState.useSummary,
+      useGlossary: tState.useGlossary,
       safetyOff,
-      useGlossaryInSummary,
+      useGlossaryInSummary: tState.useGlossaryInSummary,
       useTranscriptionForSummary,
       transcriptionPrompt,
       transcriptionOverlapSeconds,
+      useInlineChunks,
     };
     savePrefs(prefs);
   }, [
@@ -430,23 +262,24 @@ export function useTranslationWorkflowRunner() {
     workflowMode,
     mediaResolution,
     useAudioOnly,
-    targetLang,
-    chunkSeconds,
-    chunkOverlap,
-    concurrency,
-    temperature,
-    customPrompt,
-    glossary,
-    summaryText,
-    summaryPrompt,
-    glossaryPrompt,
-    useSummary,
-    useGlossary,
+    tState.targetLang,
+    tState.chunkSeconds,
+    tState.chunkOverlap,
+    tState.concurrency,
+    tState.temperature,
+    tState.customPrompt,
+    tState.glossary,
+    tState.summaryText,
+    tState.summaryPrompt,
+    tState.glossaryPrompt,
+    tState.useSummary,
+    tState.useGlossary,
     safetyOff,
-    useGlossaryInSummary,
+    tState.useGlossaryInSummary,
     useTranscriptionForSummary,
     transcriptionPrompt,
     transcriptionOverlapSeconds,
+    useInlineChunks,
   ]);
 
   const handleMediaChange = async (file: File | null) => {
@@ -507,6 +340,10 @@ export function useTranslationWorkflowRunner() {
     }
     if (selectedProvider !== "ollama" && !apiKey) {
       setError(`${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key is required to upload video`);
+      return;
+    }
+    if (selectedProvider === "gemini" && useInlineChunks) {
+      setError("Inline mode selected; no upload needed.");
       return;
     }
     setError("");
@@ -645,194 +482,52 @@ export function useTranslationWorkflowRunner() {
 
   const handleGenerateGlossary = async () => {
     if (!vttFile) {
-      setGlossaryError("Load subtitles first to generate glossary");
+      tActions.setGlossaryError("Load subtitles first to generate glossary");
       return;
     }
     const resolvedProvider = resolveProviderConfig();
-    if (resolvedProvider.mismatch) {
-      setGlossaryStatus("idle");
-      setGlossaryError(
-        `Selected provider (${resolvedProvider.selectedLabel}) does not match the model's provider (${resolvedProvider.providerLabel}). Refresh and choose a ${resolvedProvider.selectedLabel} model.`,
-      );
-      return;
-    }
-    if (resolvedProvider.providerType !== "ollama" && !resolvedProvider.apiKeyForProvider) {
-      setGlossaryStatus("idle");
-      setGlossaryError(`${resolvedProvider.providerLabel} API key required to generate glossary`);
-      return;
-    }
-    setGlossaryStatus("loading");
+    tActions.setGlossaryStatus("loading");
     try {
-      const fileText = await vttFile.text();
-      let cues: ReturnType<typeof parseVtt>;
-      try {
-        cues = vttFile.name.toLowerCase().endsWith(".srt")
-          ? parseSrt(fileText)
-          : parseVtt(fileText);
-      } catch {
-        cues = parseSrt(fileText);
-      }
-      const rawText = cues.map((c) => `${c.text}`).join("\n");
-      const truncated = rawText.slice(0, 8000);
-      const systemPrompt = glossarySystemPrompt(glossaryPrompt, targetLang);
-      const userPrompt =
-        "Generate a glossary for these subtitles. Output ONLY CSV lines: source,target. Focus on recurring names/terms that should stay consistent. Text follows:\n\n" +
-        truncated;
-      const { providerType, modelForProvider, apiKeyForProvider, baseUrlForProvider } = resolvedProvider;
-
-      // Create provider instance
-      const config = {
-        apiKey: providerType !== "ollama" ? apiKeyForProvider : undefined,
-        modelName: modelForProvider,
-        baseUrl: baseUrlForProvider,
-      };
-
-      const provider = ProviderFactory.create(providerType, config);
-
-      // Prepare the request
-      const request = {
-        systemPrompt,
-        userPrompt,
-        temperature: DEFAULT_TEMPERATURE,
+      await tActions.generateGlossary({
+        vttFile,
+        resolvedProvider,
         safetyOff,
-      };
-
-      const trace = { purpose: "glossary" };
-
-      const generated = await provider.generateContent(request, trace);
-      const text = generated.text.trim();
-      setGlossary(text);
-      setUseGlossary(!!text);
-      setGlossaryError("");
+        setGlossary: tActions.setGlossary,
+        setUseGlossary: tActions.setUseGlossary,
+      });
+      tActions.setGlossaryError("");
     } catch (err) {
-      setGlossaryError(
+      tActions.setGlossaryError(
         err instanceof Error ? err.message : "Failed to generate glossary",
       );
     } finally {
-      setGlossaryStatus("idle");
+      tActions.setGlossaryStatus("idle");
     }
   };
 
   const handleGenerateSummary = async () => {
-    if (workflowMode === "transcription") {
-      setSummaryError("Switch to translation mode to generate summaries");
-      return;
-    }
+    tActions.setSummaryError("");
+    tActions.setSummaryStatus("loading");
     const resolvedProvider = resolveProviderConfig();
-    if (resolvedProvider.mismatch) {
-      setSummaryError(
-        `Selected provider (${resolvedProvider.selectedLabel}) does not match the model's provider (${resolvedProvider.providerLabel}). Refresh and choose a ${resolvedProvider.selectedLabel} model.`,
-      );
-      return;
-    }
-    if (resolvedProvider.providerType !== "ollama" && !resolvedProvider.apiKeyForProvider) {
-      setSummaryError(`${resolvedProvider.providerLabel} API key required to generate summary`);
-      return;
-    }
-    const isMediaSummary = !!mediaFile;
-    const hasTextTranscript =
-      useTranscriptionForSummary && Boolean(transcriptionText.trim());
-    if (isMediaSummary && !videoRef) {
-      setSummaryError("Upload media first to generate a summary from media");
-      return;
-    }
-    if (!isMediaSummary && !vttFile && !hasTextTranscript) {
-      setSummaryError(
-        "Load subtitles or generate a transcription first to summarize",
-      );
-      return;
-    }
-
-    setSummaryError("");
-    setSummaryStatus("loading");
     try {
-      const fileLabel = isMediaSummary
-        ? DEFAULT_SUMMARY_FILE_LABELS.media
-        : DEFAULT_SUMMARY_FILE_LABELS.transcript;
-      const systemPrompt = summarySystemPrompt(
-        summaryPrompt,
-        targetLang,
-        fileLabel,
-      );
-      const template = isMediaSummary
-        ? DEFAULT_SUMMARY_USER_PROMPT.media
-        : DEFAULT_SUMMARY_USER_PROMPT.subtitles;
-      let transcriptText: string | undefined;
-      if (!isMediaSummary && vttFile) {
-        const fileText = await vttFile.text();
-        let cues: ReturnType<typeof parseVtt>;
-        const lowerName = vttFile.name.toLowerCase();
-        try {
-          if (lowerName.endsWith(".srt")) {
-            cues = parseSrt(fileText);
-          } else {
-            try {
-              cues = parseVtt(fileText);
-            } catch {
-              cues = parseSrt(fileText);
-            }
-          }
-        } catch {
-          throw new Error("Unable to parse subtitles for summary");
-        }
-        const rawText = cues.map((cue) => cue.text).join("\n");
-        transcriptText = rawText.slice(0, 8000);
-      } else if (!isMediaSummary && hasTextTranscript) {
-        transcriptText = transcriptionText.trim().slice(0, 8000);
-      }
-      const glossaryBlock =
-        useGlossaryInSummary && glossary.trim()
-          ? `${DEFAULT_USER_PROMPT_STRUCTURE.glossaryHeader}\n${glossary.trim()}\n\n`
-          : "";
-      const userPrompt = buildSummaryUserPrompt(template, targetLang, {
-        glossary: glossaryBlock,
-        text: transcriptText,
-      });
-      // Determine provider from model name (parseModelName handles defaulting to gemini)
-      const { providerType, modelForProvider, apiKeyForProvider, baseUrlForProvider } = resolvedProvider;
-
-      // Create provider instance
-      const config = {
-        apiKey: providerType !== "ollama" ? apiKeyForProvider : undefined,
-        modelName: modelForProvider,
-        baseUrl: baseUrlForProvider,
-      };
-
-      const provider = ProviderFactory.create(providerType, config);
-
-      // Prepare the request - including mediaUri if supported
-      const request: GenerateRequest = {
-        systemPrompt,
-        userPrompt,
-        temperature: DEFAULT_TEMPERATURE,
+      await tActions.generateSummary({
+        workflowMode,
+        resolvedProvider,
         safetyOff,
-        mediaUri: (isMediaSummary && provider.capabilities.supportsMediaUpload && videoRef) ? videoRef : undefined,
-      };
-
-      const trace = { purpose: isMediaSummary ? "summary" : "summary-subtitles" };
-
-      const summary = await provider.generateContent(request, trace);
-      const text = summary.text.trim();
-      setSummaryText(text);
-      setUseSummary(!!text);
-      setSummaryStatus("ready");
-      setSummaryError("");
+        mediaFile,
+        videoRef,
+        vttFile,
+        transcriptionText,
+        useTranscriptionForSummary,
+      });
+      tActions.setSummaryStatus("ready");
+      tActions.setSummaryError("");
     } catch (err) {
-      setSummaryStatus("error");
-      setSummaryError(
+      tActions.setSummaryStatus("error");
+      tActions.setSummaryError(
         err instanceof Error ? err.message : "Summary generation failed",
       );
     }
-  };
-
-  const updateProviderConfig = (
-    provider: "openai",
-    config: typeof providerConfigs.openai
-  ) => {
-    setProviderConfigs((prev) => ({
-      ...prev,
-      [provider]: config,
-    }));
   };
 
   const handleTranscribeAudio = async () => {
@@ -903,7 +598,84 @@ export function useTranslationWorkflowRunner() {
     }
   };
 
-  const handleGeminiTranscription = async () => {
+  const handleTranscription = async () => {
+    let resolvedProvider = resolveProviderConfig();
+    const isTranscriptionCapable = resolvedProvider.providerType === "gemini" || resolvedProvider.providerType === "openai";
+
+    if (!isTranscriptionCapable) {
+      setError(`Transcription mode requires Gemini or OpenAI provider (current: ${resolvedProvider.providerLabel})`);
+      return;
+    }
+
+    // For OpenAI, we need videoFile; for Gemini we need videoRef
+    if (resolvedProvider.providerType === "gemini" && !videoRef) {
+      if (!(useInlineChunks && mediaFile)) {
+        setError("Upload media to transcribe with Gemini");
+        return;
+      }
+    }
+    if (resolvedProvider.providerType === "openai" && !mediaFile) {
+      setError("Select media file to transcribe with OpenAI");
+      return;
+    }
+    if (!apiKey) {
+      setError(`${resolvedProvider.providerLabel} API key is required for transcription`);
+      return;
+    }
+
+    // Use new transcription feature
+    const chunkLength = providerConfigs.openai.transcriptionChunkSeconds ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS;
+    const overlapSeconds = Math.max(0, transcriptionOverlapSeconds ?? 0);
+    const totalDuration = videoDuration && Number.isFinite(videoDuration) ? videoDuration : null;
+
+    setSubmitting(true);
+    setTranscriptionRunning(true);
+    transcriptionCancelRef.current = false;
+    transcriptionPausedRef.current = false;
+
+    try {
+      const baseConfig = {
+        videoRef: videoRef ?? "",
+        videoFile: mediaFile ?? undefined,
+        apiKey: resolvedProvider.apiKeyForProvider,
+        chunkLength,
+        overlapSeconds,
+        videoDuration: totalDuration,
+      };
+
+      if (resolvedProvider.providerType === "openai") {
+        await transcriptionRunnerActions.start({
+          ...baseConfig,
+          provider: "openai",
+          model: providerConfigs.openai.transcriptionModel ?? "gpt-4o-mini-transcribe",
+          language: providerConfigs.openai.transcriptionLanguage,
+          concurrency: providerConfigs.openai.transcriptionConcurrency ?? TRANSCRIPTION_DEFAULT_CONCURRENCY,
+        });
+      } else {
+        await transcriptionRunnerActions.start({
+          ...baseConfig,
+          provider: "gemini",
+          modelName: resolvedProvider.modelForProvider,
+          useInlineChunks,
+          prompt: transcriptionPrompt,
+          temperature: DEFAULT_TEMPERATURE,
+          safetyOff,
+        });
+      }
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Transcription failed");
+    } finally {
+      setSubmitting(false);
+      setTranscriptionRunning(false);
+      setTranscriptionPaused(false);
+      transcriptionPausedRef.current = false;
+    }
+  };
+
+  // OLD IMPLEMENTATION - KEEP COMMENTED FOR REFERENCE, DELETE LATER
+  /*
+  const handleGeminiTranscription_OLD = async () => {
     const resolvedProvider = resolveProviderConfig();
     if (resolvedProvider.providerType !== "gemini") {
       setError("Transcription mode requires the Gemini provider");
@@ -918,10 +690,10 @@ export function useTranslationWorkflowRunner() {
       return;
     }
 
-    // Reset translation runner state for UI progress display
-    runnerActions.reset();
-    runnerActions.setProgress("");
-    runnerActions.setResult(null);
+    // Reset transcription runner state for UI progress display
+    transcriptionRunnerActions.reset();
+    transcriptionRunnerActions.setProgress("");
+    transcriptionRunnerActions.setResult(null);
 
     const startedAt = Date.now();
     transcriptionRunnerActions.startRun();
@@ -964,8 +736,8 @@ export function useTranslationWorkflowRunner() {
       const chunkStatuses: ChunkStatus[] = [];
 
       // Create synthetic pending chunks for UI
-      ranges.forEach((_, idx) => {
-        runnerActions.setResult((prev) => {
+      ranges.forEach((range, idx) => {
+        transcriptionRunnerActions.setResult((prev) => {
           const pending: ChunkStatus = {
             idx,
             status: "processing",
@@ -983,6 +755,8 @@ export function useTranslationWorkflowRunner() {
             model_name: resolvedProvider.modelForProvider,
             temperature: DEFAULT_TEMPERATURE,
             duration_ms: 0,
+            mediaStartSeconds: range.start,
+            mediaEndSeconds: range.end,
           };
           return {
             ok: false,
@@ -1019,7 +793,9 @@ export function useTranslationWorkflowRunner() {
         });
         const text = response.text.trim();
         const repair = autoRepairVtt(text);
-        const parsed = tryParseVttFlexible(repair.repaired);
+        const parsed = tActions.tryParseVttFlexible
+          ? tActions.tryParseVttFlexible(repair.repaired)
+          : { cues: null, warnings: ["Parser unavailable"] };
         if (parsed.warnings.length) {
           parsed.warnings.forEach((w) =>
             warnings.push(`Chunk ${i + 1}: ${w}`),
@@ -1054,6 +830,8 @@ export function useTranslationWorkflowRunner() {
             model_name: resolvedProvider.modelForProvider,
             temperature: DEFAULT_TEMPERATURE,
             duration_ms: Date.now() - startedAt,
+            mediaStartSeconds: start,
+            mediaEndSeconds: end,
           };
         } else {
           chunkStatus = {
@@ -1073,6 +851,8 @@ export function useTranslationWorkflowRunner() {
             model_name: resolvedProvider.modelForProvider,
             temperature: DEFAULT_TEMPERATURE,
             duration_ms: Date.now() - startedAt,
+            mediaStartSeconds: start,
+            mediaEndSeconds: end,
           };
         }
 
@@ -1094,8 +874,8 @@ export function useTranslationWorkflowRunner() {
       }
 
       if (transcriptionCancelRef.current) {
-        runnerActions.reset();
-        runnerActions.setProgress("");
+        transcriptionRunnerActions.reset();
+        transcriptionRunnerActions.setProgress("");
         setSubmitting(false);
         setTranscriptionRunning(false);
         setTranscriptionPaused(false);
@@ -1149,6 +929,7 @@ export function useTranslationWorkflowRunner() {
       transcriptionRunnerActions.finishRun();
     }
   };
+  */
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -1160,20 +941,23 @@ export function useTranslationWorkflowRunner() {
     // Validate input: Need either VTT file OR enabled transcription
     const hasVttFile = Boolean(vttFile);
     const hasTranscription = Boolean(useTranscription && transcriptionText);
-    if (workflowMode === "transcription" && selectedProvider !== "gemini") {
-      setError("Transcription mode requires the Gemini provider");
+    let resolvedProvider = resolveProviderConfig();
+    const isTranscriptionCapable = resolvedProvider.providerType === "gemini" || resolvedProvider.providerType === "openai";
+
+    if (workflowMode === "transcription" && !isTranscriptionCapable) {
+      setError(`Transcription mode requires Gemini or OpenAI provider (current: ${resolvedProvider.providerLabel})`);
       return;
     }
     if (workflowMode === "transcription" && !mediaFile) {
-      setError("Upload media to transcribe");
+      setError("Upload or select media to transcribe");
       return;
     }
     if (workflowMode === "transcription" && !apiKey) {
-      setError("Gemini API key is required for transcription");
+      setError(`${resolvedProvider.providerLabel} API key is required for transcription`);
       return;
     }
     if (workflowMode === "transcription") {
-      await handleGeminiTranscription();
+      await handleTranscription();
       return;
     }
 
@@ -1182,7 +966,7 @@ export function useTranslationWorkflowRunner() {
       return;
     }
 
-    const resolvedProvider = resolveProviderConfig();
+    resolvedProvider = resolveProviderConfig();
     if (resolvedProvider.mismatch) {
       setError(
         `Selected provider (${resolvedProvider.selectedLabel}) does not match the model's provider (${resolvedProvider.providerLabel}). Refresh and choose a ${resolvedProvider.selectedLabel} model.`,
@@ -1214,16 +998,14 @@ export function useTranslationWorkflowRunner() {
     }
 
     let cues: ReturnType<typeof parseVtt>;
-    const lowerName = fileNameForParsing.toLowerCase();
     try {
-      if (lowerName.endsWith(".srt")) {
-        cues = parseSrt(vttText);
-      } else {
-        try {
-          cues = parseVtt(vttText);
-        } catch {
-          cues = parseSrt(vttText);
-        }
+      const parsed = tActions.parseSubtitleText(
+        vttText,
+        fileNameForParsing,
+      );
+      cues = parsed.cues;
+      if (parsed.warnings.length) {
+        setStatusMessage(parsed.warnings.join(", "));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid VTT or SRT file");
@@ -1232,23 +1014,23 @@ export function useTranslationWorkflowRunner() {
     }
 
     const activeVideoRef = videoRef;
-    const combinedPrompt = normalizeCustomPrompt(customPrompt);
+    const combinedPrompt = normalizeCustomPrompt(tState.customPrompt);
     try {
-      const data = await runnerActions.runTranslation({
+      const data = await tActions.runTranslation({
         cues,
-        chunkSeconds,
-        chunkOverlap,
+        chunkSeconds: tState.chunkSeconds,
+        chunkOverlap: tState.chunkOverlap,
         provider: resolvedProvider.providerType,
-        apiKey: resolvedProvider.apiKeyForProvider,
+        apiKey: resolvedProvider.apiKeyForProvider ?? "",
         modelName: resolvedProvider.modelForProvider,
-        targetLang,
-        glossary,
-        useGlossary,
+        targetLang: tState.targetLang,
+        glossary: tState.glossary,
+        useGlossary: tState.useGlossary,
         customPrompt: combinedPrompt,
-        concurrency,
-        temperature,
-        useSummary,
-        summaryText,
+        concurrency: tState.concurrency,
+        temperature: tState.temperature,
+        useSummary: tState.useSummary,
+        summaryText: tState.summaryText,
         videoRef: activeVideoRef,
         safetyOff,
         baseUrl: resolvedProvider.baseUrlForProvider,
@@ -1275,6 +1057,7 @@ export function useTranslationWorkflowRunner() {
 
   const handleRetryChunk = async (chunk: ChunkStatus) => {
     const resolvedProvider = resolveProviderConfig();
+
     if (!runnerState.result) {
       setError("No translation run found to retry");
       return;
@@ -1293,21 +1076,21 @@ export function useTranslationWorkflowRunner() {
       setError("No chunk payload available to retry");
       return;
     }
-    runnerActions
-      .retryChunk({
+    tActions
+      .retryTranslationChunk({
         chunk,
         provider: resolvedProvider.providerType,
-        apiKey: resolvedProvider.apiKeyForProvider,
+        apiKey: resolvedProvider.apiKeyForProvider ?? "",
         modelName: resolvedProvider.modelForProvider,
-        targetLang,
-        glossary,
-        useGlossary,
-        customPrompt: normalizeCustomPrompt(customPrompt) || "",
-        temperature,
-        useSummary,
-        summaryText,
+        targetLang: tState.targetLang,
+        glossary: tState.glossary,
+        useGlossary: tState.useGlossary,
+        customPrompt: normalizeCustomPrompt(tState.customPrompt) || "",
+        temperature: tState.temperature,
+        useSummary: tState.useSummary,
+        summaryText: tState.summaryText,
         safetyOff,
-        concurrency,
+        concurrency: tState.concurrency,
         baseUrl: resolvedProvider.baseUrlForProvider,
       })
       .catch((err) =>
@@ -1332,11 +1115,52 @@ export function useTranslationWorkflowRunner() {
     }
   };
 
+  const handleRetryTranscriptionChunk = async (chunk: TranscriptionChunk) => {
+    const resolvedProvider = resolveProviderConfig();
+    if (resolvedProvider.providerType !== "gemini") {
+      setError("Transcription retry is available for Gemini runs only");
+      return;
+    }
+    if (!apiKey) {
+      setError(`${resolvedProvider.providerLabel} API key is required for transcription retry`);
+      return;
+    }
+    if (!videoRef && !(useInlineChunks && mediaFile)) {
+      setError("No media file available for transcription retry");
+      return;
+    }
+
+    const chunkLength = providerConfigs.openai.transcriptionChunkSeconds ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS;
+    const overlapSeconds = Math.max(0, transcriptionOverlapSeconds ?? 0);
+    const totalDuration = videoDuration && Number.isFinite(videoDuration) ? videoDuration : null;
+
+    try {
+      await transcriptionRunnerActions.retryChunk(chunk, {
+        provider: "gemini",
+        videoRef: videoRef ?? "",
+        videoFile: mediaFile ?? undefined,
+        useInlineChunks,
+        apiKey: resolvedProvider.apiKeyForProvider,
+        modelName: resolvedProvider.modelForProvider,
+        chunkLength,
+        overlapSeconds,
+        videoDuration: totalDuration,
+        prompt: transcriptionPrompt,
+        temperature: DEFAULT_TEMPERATURE,
+        safetyOff,
+      });
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Transcription retry failed");
+    }
+  };
+
   const resetWorkflow = () => {
     // Reset run state only; keep user-configured options and text fields.
     setError("");
     setSubmitting(false);
     runnerActions.reset();
+    transcriptionRunnerActions.reset();
   };
 
   const clearPreferences = () => {
@@ -1345,18 +1169,18 @@ export function useTranslationWorkflowRunner() {
     setModelName(DEFAULT_MODEL);
     setMediaResolution("low");
     setUseAudioOnly(DEFAULT_USE_AUDIO_ONLY);
-    setTargetLang(DEFAULT_TARGET_LANG);
-    setChunkSeconds(DEFAULT_CHUNK_SECONDS);
-    setChunkOverlap(DEFAULT_OVERLAP_CUES);
+    tActions.setTargetLang(DEFAULT_TARGET_LANG);
+    tActions.setChunkSeconds(DEFAULT_CHUNK_SECONDS);
+    tActions.setChunkOverlap(DEFAULT_OVERLAP_CUES);
     setConcurrencyClamped(DEFAULT_CONCURRENCY);
-    setTemperature(DEFAULT_TEMPERATURE);
-    setCustomPrompt(DEFAULT_SYSTEM_PROMPT_TEXT);
+    tActions.setTemperature(DEFAULT_TEMPERATURE);
+    tActions.setCustomPrompt(DEFAULT_SYSTEM_PROMPT_TEXT);
     // Keep user-entered summary/glossary content
-    setSummaryPrompt(DEFAULT_SUMMARY_PROMPT);
-    setGlossaryPrompt(DEFAULT_GLOSSARY_PROMPT);
-    setUseSummary(DEFAULT_USE_SUMMARY);
-    setUseGlossary(DEFAULT_USE_GLOSSARY);
-    setUseGlossaryInSummary(false);
+    tActions.setSummaryPrompt(DEFAULT_SUMMARY_PROMPT);
+    tActions.setGlossaryPrompt(DEFAULT_GLOSSARY_PROMPT);
+    tActions.setUseSummary(DEFAULT_USE_SUMMARY);
+    tActions.setUseGlossary(DEFAULT_USE_GLOSSARY);
+    tActions.setUseGlossaryInSummary(false);
     setSafetyOff(false);
     try {
       clearPrefs();
@@ -1365,113 +1189,6 @@ export function useTranslationWorkflowRunner() {
       // ignore storage errors
     }
   };
-
-  const promptPreview = useMemo(() => {
-    return buildUserPrompt(
-      targetLang,
-      glossary,
-      chunkOverlap > 0 ? "(Previous chunk context will appear here...)" : "",
-      "(Subtitle cues to translate will appear here...)",
-      useSummary && summaryText ? summaryText : undefined,
-      useGlossary,
-    );
-  }, [
-    targetLang,
-    glossary,
-    useSummary,
-    summaryText,
-    useGlossary,
-    chunkOverlap,
-  ]);
-
-  const applyPreset = (presetId: PromptPresetId) => {
-    const preset = PROMPT_PRESETS[presetId];
-    if (!preset) return;
-    setCustomPrompt(preset.systemText);
-    setSummaryPrompt(preset.summary);
-    setGlossaryPrompt(preset.glossary);
-    setCurrentPreset(presetId);
-  };
-
-  const applyCustomPreset = (preset: CustomPreset) => {
-    setCustomPrompt(preset.systemText);
-    setSummaryPrompt(preset.summary);
-    setGlossaryPrompt(preset.glossary);
-    setCurrentPreset(preset.id as PromptPresetId);
-  };
-
-  const exportCurrentAsPreset = (name: string, description?: string) => {
-    const id = `custom-${Date.now()}`;
-    const preset = createPresetFromCurrent(
-      id,
-      name,
-      customPrompt,
-      customPrompt, // Using same for video (could be enhanced later)
-      customPrompt, // Using same for audio (could be enhanced later)
-      summaryPrompt,
-      glossaryPrompt,
-      description,
-    );
-    downloadPresetFile(
-      [preset],
-      `${name.toLowerCase().replace(/\s+/g, "-")}.json`,
-    );
-  };
-
-  const importPresetsFromJson = (jsonString: string) => {
-    try {
-      const imported = importPresets(jsonString);
-      setCustomPresets((prev) => {
-        // Merge, avoiding duplicates by ID
-        const existingIds = new Set(prev.map((p) => p.id));
-        const newPresets = imported.filter((p) => !existingIds.has(p.id));
-        return [...prev, ...newPresets];
-      });
-      return { success: true, count: imported.length };
-    } catch (err) {
-      return {
-        success: false,
-        error: err instanceof Error ? err.message : "Import failed",
-      };
-    }
-  };
-
-  const deleteCustomPreset = (id: string) => {
-    setCustomPresets((prev) => prev.filter((p) => p.id !== id));
-    if (currentPreset === id) {
-      setCurrentPreset("general");
-    }
-  };
-
-  const exportAllCustomPresets = () => {
-    if (customPresets.length === 0) return;
-    downloadPresetFile(customPresets, "chigyusubs-custom-presets.json");
-  };
-
-  const clearCustomPresets = () => {
-    setCustomPresets([]);
-    setCurrentPreset("general");
-    try {
-      window.localStorage.removeItem("customPresets");
-    } catch {
-      // ignore storage errors
-    }
-  };
-
-  // Merge built-in and custom presets for display
-  const allPresets = useMemo(() => {
-    const builtIn = Object.entries(PROMPT_PRESETS).map(([id, preset]) => ({
-      id,
-      name: preset.name,
-      isBuiltIn: true,
-    }));
-    const custom = customPresets.map((p) => ({
-      id: p.id,
-      name: p.name,
-      isBuiltIn: false,
-    }));
-    return [...builtIn, ...custom];
-  }, [customPresets]);
 
   return {
     state: {
@@ -1483,16 +1200,16 @@ export function useTranslationWorkflowRunner() {
       vttFile,
       mediaFile,
       useAudioOnly,
-      targetLang,
-      concurrency,
-      chunkSeconds,
-      chunkOverlap,
+      targetLang: tState.targetLang,
+      concurrency: tState.concurrency,
+      chunkSeconds: tState.chunkSeconds,
+      chunkOverlap: tState.chunkOverlap,
       models,
       modelName,
       workflowMode,
-      customPrompt,
-      glossary,
-      useGlossary,
+      customPrompt: tState.customPrompt,
+      glossary: tState.glossary,
+      useGlossary: tState.useGlossary,
       apiKey,
       videoName,
       videoRef,
@@ -1501,19 +1218,11 @@ export function useTranslationWorkflowRunner() {
       mediaTooLargeWarning,
       videoSizeMb,
       videoDuration,
-      temperature,
-      progress:
-        workflowMode === "translation"
-          ? runnerState.progress
-          : transcriptionRunnerState.progress,
-      result:
-        workflowMode === "translation"
-          ? runnerState.result
-          : transcriptionRunnerState.result,
+      temperature: tState.temperature,
       paused:
         workflowMode === "translation"
           ? runnerState.paused
-          : transcriptionRunnerState.paused,
+          : transcriptionRunnerState.isPaused,
       isRunning:
         workflowMode === "translation"
           ? runnerState.isRunning
@@ -1523,24 +1232,27 @@ export function useTranslationWorkflowRunner() {
       submitting,
       retryingChunks: runnerState.retryingChunks,
       retryQueueIds: runnerState.retryQueueIds,
-      summaryText,
-      summaryStatus,
-      summaryError,
-      glossaryStatus,
-      glossaryError,
-      summaryPrompt,
-      useSummary,
-      glossaryPrompt,
-      promptPreview,
+      summaryText: tState.summaryText,
+      summaryStatus: tState.summaryStatus,
+      summaryError: tState.summaryError,
+      glossaryStatus: tState.glossaryStatus,
+      glossaryError: tState.glossaryError,
+      summaryPrompt: tState.summaryPrompt,
+      useSummary: tState.useSummary,
+      glossaryPrompt: tState.glossaryPrompt,
+      promptPreview: tState.promptPreview,
       safetyOff,
       mediaResolution,
-      currentPreset,
-      customPresets,
-      allPresets,
-      useGlossaryInSummary,
-      workflowMode,
+      currentPreset: tState.currentPreset,
+      customPresets: tState.customPresets,
+      allPresets: tState.allPresets,
+      useGlossaryInSummary: tState.useGlossaryInSummary,
       transcriptionRunning,
       transcriptionPaused,
+      translationResult: tState.runnerState.result,
+      translationProgress: tState.runnerState.progress,
+      transcriptionResult: transcriptionRunnerState.result,
+      transcriptionProgress: transcriptionRunnerState.progress,
       // Transcription state
       providerConfigs,
       audioFile,
@@ -1550,6 +1262,7 @@ export function useTranslationWorkflowRunner() {
       useTranscriptionForSummary,
       transcriptionPrompt,
       transcriptionOverlapSeconds,
+      useInlineChunks,
     },
     actions: {
       // Provider actions
@@ -1566,34 +1279,33 @@ export function useTranslationWorkflowRunner() {
       setUseTranscriptionForSummary,
       setTranscriptionPrompt,
       setTranscriptionOverlapSeconds,
-      pauseTranscription,
-      resumeTranscription,
-      cancelTranscription,
+      setUseInlineChunks,
       handleTranscribeAudio, // New action
       handleManualChunkEdit,
       setUseAudioOnly,
-      setTargetLang,
-      setConcurrency: setConcurrencyClamped,
-      setChunkSeconds,
-      setChunkOverlap,
+      setTargetLang: translationWorkflow.actions.setTargetLang,
+      setConcurrency: translationWorkflow.actions.setConcurrency,
+      setChunkSeconds: translationWorkflow.actions.setChunkSeconds,
+      setChunkOverlap: translationWorkflow.actions.setChunkOverlap,
       setModelName,
-      setCustomPrompt,
-      setGlossary,
-      setUseGlossary,
-      setTemperature,
+      setCustomPrompt: translationWorkflow.actions.setCustomPrompt,
+      setGlossary: translationWorkflow.actions.setGlossary,
+      setUseGlossary: translationWorkflow.actions.setUseGlossary,
+      setTemperature: translationWorkflow.actions.setTemperature,
       handleSubmit,
       handleLoadModels,
       handleGenerateGlossary,
       handleGenerateSummary,
       handleRetryChunk,
+      handleRetryTranscriptionChunk,
       handleUploadVideo,
       handleDeleteVideo,
       resetWorkflow,
       clearPreferences,
-      setSummaryText,
-      setUseSummary,
-      setGlossaryPrompt,
-      setSummaryPrompt,
+      setSummaryText: tActions.setSummaryText,
+      setUseSummary: tActions.setUseSummary,
+      setGlossaryPrompt: tActions.setGlossaryPrompt,
+      setSummaryPrompt: tActions.setSummaryPrompt,
       setSafetyOff,
       setMediaResolution,
       setWorkflowMode,
@@ -1602,14 +1314,14 @@ export function useTranslationWorkflowRunner() {
       pauseTranscription,
       resumeTranscription,
       cancelTranscription,
-      applyPreset,
-      applyCustomPreset,
-      exportCurrentAsPreset,
-      importPresetsFromJson,
-      deleteCustomPreset,
-      exportAllCustomPresets,
-      clearCustomPresets,
-      setUseGlossaryInSummary,
+      applyPreset: tActions.applyPreset,
+      applyCustomPreset: tActions.applyCustomPreset,
+      exportCurrentAsPreset: tActions.exportCurrentAsPreset,
+      importPresetsFromJson: tActions.importPresetsFromJson,
+      deleteCustomPreset: tActions.deleteCustomPreset,
+      exportAllCustomPresets: tActions.exportAllCustomPresets,
+      clearCustomPresets: tActions.clearCustomPresets,
+      setUseGlossaryInSummary: tActions.setUseGlossaryInSummary,
     },
   };
 }
