@@ -11,6 +11,7 @@ import { Button } from "./components/ui/Button";
 import { SectionCard } from "./components/ui/SectionCard";
 import { FieldLabel, TextArea, TextInput } from "./components/ui/Field";
 import { useTheme, useThemeControl } from "./lib/themeContext";
+import { RuntimeErrorBoundary } from "./components/RuntimeErrorBoundary";
 import {
   DEFAULT_GLOSSARY_PROMPT,
   DEFAULT_SUMMARY_PROMPT,
@@ -148,7 +149,8 @@ function App() {
           </div>
         </div>
       </header>
-      <main className="max-w-5xl mx-auto px-6 py-8 space-y-6 pb-20">
+      <RuntimeErrorBoundary>
+        <main className="max-w-5xl mx-auto px-6 py-8 space-y-6 pb-20">
         <form className="space-y-6" onSubmit={actions.handleSubmit}>
           <SectionCard
             title="Mode"
@@ -828,7 +830,8 @@ function App() {
             Restore defaults
           </Button>
         </div>
-      </main>
+        </main>
+      </RuntimeErrorBoundary>
       <footer
         className={`${theme.header} text-center text-sm ${theme.subtext}`}
       >
