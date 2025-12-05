@@ -301,6 +301,69 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
     await runnerActions.runTranslation(opts);
   };
 
+  const submitTranslationRun = async ({
+    vttText,
+    fileNameForParsing,
+    videoRef,
+    resolvedProvider,
+    safetyOff,
+    onStatus,
+  }: {
+    vttText: string;
+    fileNameForParsing: string;
+    videoRef: string | null;
+    resolvedProvider: {
+      mismatch: boolean;
+      selectedLabel: string;
+      providerLabel: string;
+      providerType: ProviderType;
+      apiKeyForProvider?: string;
+      modelForProvider: string;
+      baseUrlForProvider?: string;
+    };
+    safetyOff: boolean;
+    onStatus?: (message: string) => void;
+  }) => {
+    const setStatus = onStatus ?? (() => {});
+    if (resolvedProvider.mismatch) {
+      throw new Error(
+        `Selected provider (${resolvedProvider.selectedLabel}) does not match the model's provider (${resolvedProvider.providerLabel}). Refresh and choose a ${resolvedProvider.selectedLabel} model.`,
+      );
+    }
+    if (resolvedProvider.providerType !== "ollama" && !resolvedProvider.apiKeyForProvider) {
+      throw new Error(`${resolvedProvider.providerLabel} API key is required`);
+    }
+
+    setStatus("Reading subtitles…");
+    const parsed = parseSubtitleText(vttText, fileNameForParsing);
+    if (parsed.warnings.length) {
+      setStatus(parsed.warnings.join(", "));
+    }
+
+    const combinedPrompt = normalizeCustomPrompt(customPrompt);
+    await runTranslation({
+      cues: parsed.cues,
+      chunkSeconds,
+      chunkOverlap,
+      provider: resolvedProvider.providerType,
+      apiKey: resolvedProvider.apiKeyForProvider ?? "",
+      modelName: resolvedProvider.modelForProvider,
+      baseUrl: resolvedProvider.baseUrlForProvider,
+      targetLang,
+      glossary,
+      useGlossary,
+      customPrompt: combinedPrompt,
+      concurrency,
+      temperature,
+      useSummary,
+      summaryText,
+      videoRef,
+      safetyOff,
+    });
+
+    return parsed.warnings;
+  };
+
   const retryTranslationChunk = async (opts: {
     chunk: ChunkStatus;
     provider: ProviderType;
@@ -643,15 +706,16 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
       deleteCustomPreset,
       exportAllCustomPresets,
       clearCustomPresets,
-    buildPrompts,
-    stitchResult,
-    normalizeVtt,
-    parseSubtitleText,
-    runTranslation,
-    retryTranslationChunk,
-    runnerActions,
-    generateGlossary,
-    generateSummary,
-  },
+      buildPrompts,
+      stitchResult,
+      normalizeVtt,
+      parseSubtitleText,
+      runTranslation,
+      submitTranslationRun,
+      retryTranslationChunk,
+      runnerActions,
+      generateGlossary,
+      generateSummary,
+    },
   };
 }

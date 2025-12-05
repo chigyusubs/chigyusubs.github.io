@@ -966,18 +966,6 @@ export function useTranslationWorkflowRunner() {
       return;
     }
 
-    resolvedProvider = resolveProviderConfig();
-    if (resolvedProvider.mismatch) {
-      setError(
-        `Selected provider (${resolvedProvider.selectedLabel}) does not match the model's provider (${resolvedProvider.providerLabel}). Refresh and choose a ${resolvedProvider.selectedLabel} model.`,
-      );
-      return;
-    }
-    if (resolvedProvider.providerType !== "ollama" && !resolvedProvider.apiKeyForProvider) {
-      setError(`${resolvedProvider.providerLabel} API key is required`);
-      return;
-    }
-
     setSubmitting(true);
     runnerActions.setProgress("Reading subtitles…");
 
@@ -997,47 +985,19 @@ export function useTranslationWorkflowRunner() {
       return;
     }
 
-    let cues: ReturnType<typeof parseVtt>;
     try {
-      const parsed = tActions.parseSubtitleText(
+      const resolved = resolveProviderConfig();
+      const activeVideoRef = videoRef;
+      const warnings = await tActions.submitTranslationRun({
         vttText,
         fileNameForParsing,
-      );
-      cues = parsed.cues;
-      if (parsed.warnings.length) {
-        setStatusMessage(parsed.warnings.join(", "));
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid VTT or SRT file");
-      setSubmitting(false);
-      return;
-    }
-
-    const activeVideoRef = videoRef;
-    const combinedPrompt = normalizeCustomPrompt(tState.customPrompt);
-    try {
-      const data = await tActions.runTranslation({
-        cues,
-        chunkSeconds: tState.chunkSeconds,
-        chunkOverlap: tState.chunkOverlap,
-        provider: resolvedProvider.providerType,
-        apiKey: resolvedProvider.apiKeyForProvider ?? "",
-        modelName: resolvedProvider.modelForProvider,
-        targetLang: tState.targetLang,
-        glossary: tState.glossary,
-        useGlossary: tState.useGlossary,
-        customPrompt: combinedPrompt,
-        concurrency: tState.concurrency,
-        temperature: tState.temperature,
-        useSummary: tState.useSummary,
-        summaryText: tState.summaryText,
         videoRef: activeVideoRef,
+        resolvedProvider: resolved,
         safetyOff,
-        baseUrl: resolvedProvider.baseUrlForProvider,
+        onStatus: setStatusMessage,
       });
-      if (!data) {
-        setSubmitting(false);
-        return;
+      if (warnings.length) {
+        setStatusMessage(warnings.join(", "));
       }
       if (activeVideoRef) {
         setVideoUploadState("ready");
