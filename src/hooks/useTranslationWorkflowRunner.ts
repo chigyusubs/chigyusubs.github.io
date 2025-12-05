@@ -110,7 +110,7 @@ export function useTranslationWorkflowRunner() {
   const [transcriptionStatus, setTranscriptionStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
-  const [useTranscription, setUseTranscription] = useState(false);
+  const [useTranscriptionEnabled, setUseTranscriptionEnabled] = useState(false);
   const [useTranscriptionForSummary, setUseTranscriptionForSummary] = useState(
     saved?.useTranscriptionForSummary ?? false,
   );
@@ -673,7 +673,7 @@ export function useTranslationWorkflowRunner() {
 
     // Validate input: Need either VTT file OR enabled transcription
     const hasVttFile = Boolean(vttFile);
-    const hasTranscription = Boolean(useTranscription && transcriptionText);
+    const hasTranscription = Boolean(useTranscriptionEnabled && transcriptionText);
     let resolvedProvider = resolveProviderConfig();
     const isTranscriptionCapable = resolvedProvider.providerType === "gemini" || resolvedProvider.providerType === "openai";
 
@@ -706,7 +706,7 @@ export function useTranslationWorkflowRunner() {
     let fileNameForParsing = "transcription.vtt";
 
     try {
-      if (useTranscription && transcriptionText) {
+      if (useTranscriptionEnabled && transcriptionText) {
         vttText = transcriptionText;
       } else if (vttFile) {
         vttText = await vttFile.text();
@@ -922,7 +922,7 @@ export function useTranslationWorkflowRunner() {
       audioFile,
       transcriptionText,
       transcriptionStatus,
-      useTranscription,
+      useTranscription: useTranscriptionEnabled,
       useTranscriptionForSummary,
       transcriptionPrompt,
       transcriptionOverlapSeconds,
@@ -939,7 +939,7 @@ export function useTranslationWorkflowRunner() {
       setMediaFile: handleMediaChange,
       setAudioFile, // New action
       setTranscriptionText, // New action
-      setUseTranscription, // New action
+      setUseTranscription: setUseTranscriptionEnabled, // New action
       setUseTranscriptionForSummary,
       setTranscriptionPrompt,
       setTranscriptionOverlapSeconds,
