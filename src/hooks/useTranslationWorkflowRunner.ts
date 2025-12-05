@@ -33,7 +33,7 @@ import { useTranslationRunner } from "./useTranslationRunner";
 import { getMediaDuration } from "../lib/mediaDuration";
 import { extractAudioToOggMono } from "../lib/ffmpeg";
 import { transcribeOpenAiMedia } from "../lib/transcription/openai";
-import { useTranscriptionWorkflowRunner } from "./useTranscriptionWorkflowRunner";
+import { useTranscription } from "../features/transcription";
 import type { TranscriptionChunk } from "../features/transcription/types";
 import { useProviderState } from "./useProviderState";
 import { useTranslationWorkflow } from "../features/translation/hooks/useTranslationWorkflow";
@@ -114,8 +114,6 @@ export function useTranslationWorkflowRunner() {
   const [useTranscriptionForSummary, setUseTranscriptionForSummary] = useState(
     saved?.useTranscriptionForSummary ?? false,
   );
-  const [transcriptionRunning, setTranscriptionRunning] = useState(false);
-  const [transcriptionPaused, setTranscriptionPaused] = useState(false);
 
   const providerLabels: Record<ProviderType, string> = {
     gemini: getProviderCapability("gemini").label,
@@ -176,33 +174,29 @@ export function useTranslationWorkflowRunner() {
   };
 
   const { state: runnerState, actions: runnerActions } = useTranslationRunner();
-  const { state: transcriptionRunnerState, actions: transcriptionRunnerActions } = useTranscriptionWorkflowRunner();
+  const transcriptionFeature = useTranscription();
+  const transcriptionState = transcriptionFeature.state;
+  const transcriptionActions = transcriptionFeature.actions;
 
   const setConcurrencyClamped = (value: number) =>
     tActions.setConcurrency(Math.min(MAX_CONCURRENCY, Math.max(1, value)));
   const normalizeCustomPrompt = tActions.normalizeCustomPrompt;
 
   const resumeTranscription = () => {
-    transcriptionRunnerActions.resume();
+    transcriptionFeature.actions.resume();
     transcriptionPausedRef.current = false;
-    setTranscriptionPaused(false);
   };
 
   const pauseTranscription = () => {
-    transcriptionRunnerActions.pause();
+    transcriptionFeature.actions.pause();
     transcriptionPausedRef.current = true;
-    setTranscriptionPaused(true);
   };
 
   const cancelTranscription = () => {
-    transcriptionRunnerActions.cancel();
+    transcriptionFeature.actions.cancel();
     transcriptionCancelRef.current = true;
-    setTranscriptionRunning(false);
-    setTranscriptionPaused(false);
     transcriptionPausedRef.current = false;
-    transcriptionRunnerActions.reset();
-    transcriptionRunnerActions.setProgress("");
-    transcriptionRunnerActions.setResult(null);
+    transcriptionFeature.actions.reset();
     setTranscriptionStatus("idle");
     setSubmitting(false);
     setError("");
@@ -485,12 +479,11 @@ export function useTranslationWorkflowRunner() {
       tActions.setGlossaryError("Load subtitles first to generate glossary");
       return;
     }
-    const resolvedProvider = resolveProviderConfig();
     tActions.setGlossaryStatus("loading");
     try {
       await tActions.generateGlossary({
         vttFile,
-        resolvedProvider,
+        resolvedProvider: resolveProviderConfig(),
         safetyOff,
         setGlossary: tActions.setGlossary,
         setUseGlossary: tActions.setUseGlossary,
@@ -508,11 +501,10 @@ export function useTranslationWorkflowRunner() {
   const handleGenerateSummary = async () => {
     tActions.setSummaryError("");
     tActions.setSummaryStatus("loading");
-    const resolvedProvider = resolveProviderConfig();
     try {
       await tActions.generateSummary({
         workflowMode,
-        resolvedProvider,
+        resolvedProvider: resolveProviderConfig(),
         safetyOff,
         mediaFile,
         videoRef,
@@ -629,7 +621,6 @@ export function useTranslationWorkflowRunner() {
     const totalDuration = videoDuration && Number.isFinite(videoDuration) ? videoDuration : null;
 
     setSubmitting(true);
-    setTranscriptionRunning(true);
     transcriptionCancelRef.current = false;
     transcriptionPausedRef.current = false;
 
@@ -644,7 +635,7 @@ export function useTranslationWorkflowRunner() {
       };
 
       if (resolvedProvider.providerType === "openai") {
-        await transcriptionRunnerActions.start({
+        await transcriptionActions.start({
           ...baseConfig,
           provider: "openai",
           model: providerConfigs.openai.transcriptionModel ?? "gpt-4o-mini-transcribe",
@@ -652,7 +643,7 @@ export function useTranslationWorkflowRunner() {
           concurrency: providerConfigs.openai.transcriptionConcurrency ?? TRANSCRIPTION_DEFAULT_CONCURRENCY,
         });
       } else {
-        await transcriptionRunnerActions.start({
+        await transcriptionActions.start({
           ...baseConfig,
           provider: "gemini",
           modelName: resolvedProvider.modelForProvider,
@@ -667,8 +658,6 @@ export function useTranslationWorkflowRunner() {
       setError(err instanceof Error ? err.message : "Transcription failed");
     } finally {
       setSubmitting(false);
-      setTranscriptionRunning(false);
-      setTranscriptionPaused(false);
       transcriptionPausedRef.current = false;
     }
   };
@@ -1066,7 +1055,7 @@ export function useTranslationWorkflowRunner() {
     const totalDuration = videoDuration && Number.isFinite(videoDuration) ? videoDuration : null;
 
     try {
-      await transcriptionRunnerActions.retryChunk(chunk, {
+      await transcriptionActions.retryChunk(chunk, {
         provider: "gemini",
         videoRef: videoRef ?? "",
         videoFile: mediaFile ?? undefined,
@@ -1091,7 +1080,7 @@ export function useTranslationWorkflowRunner() {
     setError("");
     setSubmitting(false);
     runnerActions.reset();
-    transcriptionRunnerActions.reset();
+    transcriptionActions.reset();
   };
 
   const clearPreferences = () => {
@@ -1153,11 +1142,11 @@ export function useTranslationWorkflowRunner() {
       paused:
         workflowMode === "translation"
           ? runnerState.paused
-          : transcriptionRunnerState.isPaused,
+          : transcriptionState.isPaused,
       isRunning:
         workflowMode === "translation"
           ? runnerState.isRunning
-          : transcriptionRunnerState.isRunning,
+          : transcriptionState.isRunning,
       error,
       statusMessage,
       submitting,
@@ -1178,12 +1167,12 @@ export function useTranslationWorkflowRunner() {
       customPresets: tState.customPresets,
       allPresets: tState.allPresets,
       useGlossaryInSummary: tState.useGlossaryInSummary,
-      transcriptionRunning,
-      transcriptionPaused,
+      transcriptionRunning: transcriptionState.isRunning,
+      transcriptionPaused: transcriptionState.isPaused,
       translationResult: tState.runnerState.result,
       translationProgress: tState.runnerState.progress,
-      transcriptionResult: transcriptionRunnerState.result,
-      transcriptionProgress: transcriptionRunnerState.progress,
+      transcriptionResult: transcriptionState.result,
+      transcriptionProgress: transcriptionState.progress,
       // Transcription state
       providerConfigs,
       audioFile,
