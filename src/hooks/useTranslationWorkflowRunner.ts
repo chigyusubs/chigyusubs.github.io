@@ -33,7 +33,7 @@ import { useTranslationRunner } from "./useTranslationRunner";
 import { getMediaDuration } from "../lib/mediaDuration";
 import { extractAudioToOggMono } from "../lib/ffmpeg";
 import { transcribeOpenAiMedia } from "../lib/transcription/openai";
-import { useTranscription } from "../features/transcription";
+import { useTranscription } from "../features/transcription/hooks/useTranscription";
 import type { TranscriptionChunk } from "../features/transcription/types";
 import { useProviderState } from "./useProviderState";
 import { useTranslationWorkflow } from "../features/translation/hooks/useTranslationWorkflow";
