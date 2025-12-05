@@ -11,3 +11,5 @@ coverage/
 *.log
 .vite/
 .eslintcache
+.vscode/
+.claude/
