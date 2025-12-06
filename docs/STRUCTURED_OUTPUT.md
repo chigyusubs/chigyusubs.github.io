@@ -169,9 +169,105 @@ const settings = {
 ```
 
 **Chunking:**
-- 2 minutes per chunk (balance context and API limits)
+- **1 minute per chunk** (critical — see Validation Findings below)
 - 5 second overlap (prevent word cutoff)
 - Deduplicate overlap region (±1s timestamp tolerance)
+
+## Validation Findings
+
+> **Status**: Validated with test scripts. Key constraint: **1-minute chunks required**.
+
+### Test Scripts
+
+Located in `scripts/`:
+
+| Script | Purpose |
+|--------|---------|
+| `test-structured-transcription.ts` | Main transcription test with full schema |
+| `test-structured-translation.ts` | Translation test preserving speaker context |
+| `convert-to-vtt.ts` | JSON → VTT converter with speaker/notes options |
+| `align-by-time.ts` | Time-based alignment with Whisper (experimental) |
+| `test-minimal-transcription.ts` | Minimal schema variant (debugging) |
+| `test-compact-transcription.ts` | Compact format variant (debugging) |
+
+**Usage:**
+```bash
+# Transcription (uses GEMINI_MODEL env var, defaults to gemini-2.5-pro)
+npm run test:structured path/to/video.mp4
+
+# With different model
+GEMINI_MODEL=gemini-2.5-flash npm run test:structured video.mp4
+
+# Translation
+npm run test:translate transcription.json --lang en
+
+# Convert to VTT
+npm run convert:vtt translation.json --include-speaker > output.vtt
+```
+
+### Key Findings
+
+**Chunk Duration Limits:**
+
+| Duration | Pro | Flash | Result |
+|----------|-----|-------|--------|
+| 3 min | Skips ~40s of content | Skips content | ❌ |
+| 2 min | Gaps around 60s | Timestamps wrap at 60s | ❌ |
+| **1 min** | Continuous coverage | Continuous coverage | ✅ |
+
+**Token Usage (1-min 720p 5fps video):**
+- Input: ~18k tokens
+- Output: ~2.5k tokens
+
+**Model Comparison:**
+
+| Aspect | gemini-2.5-pro | gemini-2.5-flash |
+|--------|----------------|------------------|
+| Speaker names | Japanese (浜田雅功) | Sometimes romanized |
+| Transcription | More accurate | Some errors |
+| Speed | Slower, stricter limits | Faster |
+| Visual notes | Richer context | Basic |
+
+**Validated Capabilities:**
+- ✅ Speaker identification from タイトルカード (name cards)
+- ✅ Visual context in notes field
+- ✅ Sound effect detection (拍手, 笑い声)
+- ✅ Structured JSON output with schema validation
+- ✅ Translation preserving speaker context
+
+### Prompt Guidelines
+
+Added to transcription prompt (validated):
+```
+CUE LENGTH GUIDELINES:
+- Keep each cue short: maximum ~20 Japanese characters
+- Split long sentences at natural pause points (、。 or breath pauses)
+- Each cue should be 2-6 seconds long
+- If someone speaks continuously for more than 6 seconds, split into multiple cues
+- Aim for 4-7 characters per second (CPS) for comfortable reading
+```
+
+### Why Alignment Failed
+
+**Problem:** Whisper has accurate timing but wrong text (especially proper nouns).
+Gemini has correct text but timing drifts on longer clips.
+
+**Attempted solutions:**
+1. Text similarity (Levenshtein) — too slow, Kanji mismatch issues
+2. Phonetic normalization — complexity not justified
+3. Time-based overlap — works but doesn't fix content gaps
+
+**Solution:** Use 1-minute chunks to keep Gemini timing accurate. No alignment needed.
+
+### Recommended Pipeline
+
+```
+Video → FFmpeg split (1-min chunks with overlap)
+      → Gemini transcribe each chunk
+      → Offset timestamps + merge overlapping cues
+      → Translate (preserving speaker/notes)
+      → Convert to VTT
+```
 
 ## Show Format Presets (Deferred)
 
