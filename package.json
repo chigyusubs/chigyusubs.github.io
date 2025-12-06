@@ -10,7 +10,10 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "fmt": "prettier --write .",
     "test": "vitest run",
-    "test:structured": "npx tsx scripts/test-structured-transcription.ts"
+    "test:structured": "npx tsx scripts/test-structured-transcription.ts",
+    "test:translate": "npx tsx scripts/test-structured-translation.ts",
+    "convert:vtt": "npx tsx scripts/convert-to-vtt.ts",
+    "align": "npx tsx scripts/align-transcriptions.ts"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.10",

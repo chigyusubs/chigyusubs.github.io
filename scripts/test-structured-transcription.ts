@@ -92,6 +92,13 @@ IMPORTANT - Speaker identification:
 - Common formats: 名前 alone, 名前(グループ名), or テロップ with 名前
 - If no name card is visible, use "Unknown"
 
+CUE LENGTH GUIDELINES (for readable subtitles):
+- Keep each cue short: maximum ~20 Japanese characters
+- Split long sentences at natural pause points (、。 or breath pauses)
+- Each cue should be 2-6 seconds long
+- If someone speaks continuously for more than 6 seconds, split into multiple cues
+- Aim for 4-7 characters per second (CPS) for comfortable reading
+
 Return a JSON object with:
 - cues: array of transcription cues (SPOKEN dialogue only, not on-screen text)
 - metadata: { language: "ja", duration: video duration in seconds }
@@ -199,6 +206,12 @@ async function main() {
         const text = response.text();
 
         console.log("✅ Response received");
+
+        // Token usage
+        const usage = response.usageMetadata;
+        if (usage) {
+            console.log(`📊 Tokens: ${usage.promptTokenCount} in / ${usage.candidatesTokenCount} out / ${usage.totalTokenCount} total`);
+        }
         console.log("");
 
         // Parse and validate

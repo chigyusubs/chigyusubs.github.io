@@ -1,0 +1,4 @@
+
+> chigyusubs@0.1.0 align
+> npx tsx scripts/align-transcriptions.ts /home/npk/Downloads/kuro25_test/WDT (2025-01-22) (Raw) (Jap) (short).vtt /home/npk/Downloads/kuro25_test/transcription.json
+
