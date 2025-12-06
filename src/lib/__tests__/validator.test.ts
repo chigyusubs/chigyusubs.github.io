@@ -78,4 +78,17 @@ describe("validateVtt", () => {
     const validation = validateVtt(repaired.repaired);
     expect(validation.errors.length).toBe(0);
   });
+
+  it("normalizes short mm:ss and ss.mmm timecodes", () => {
+    const input = [
+      "WEBVTT",
+      "",
+      "00:57.655 --> 100.955",
+      "Hello",
+    ].join("\n");
+    const repaired = autoRepairVtt(input);
+    expect(repaired.repaired).toContain("00:00:57.655 --> 00:01:40.955");
+    const validation = validateVtt(repaired.repaired);
+    expect(validation.errors.length).toBe(0);
+  });
 });

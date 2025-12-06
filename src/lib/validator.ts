@@ -49,20 +49,49 @@ export function stripDuplicateHeaders(text: string): {
   return { cleaned, warnings };
 }
 
-function normalizeTimecodeSegment(segment: string): string | null {
-  // Remove any non-digit/dot/colon characters first
-  const digits = Array.from(segment.matchAll(/\d+/g)).map((m) => m[0]);
-  if (digits.length < 3) return null;
+function formatSecondsToHMS(seconds: number): string {
+  const totalMs = Math.max(0, Math.round(seconds * 1000));
+  const ms = totalMs % 1000;
+  const totalSec = Math.floor(totalMs / 1000);
+  const sec = totalSec % 60;
+  const totalMin = Math.floor(totalSec / 60);
+  const min = totalMin % 60;
+  const hr = Math.floor(totalMin / 60);
+  const pad = (n: number, len: number) => n.toString().padStart(len, "0");
+  return `${pad(hr, 2)}:${pad(min, 2)}:${pad(sec, 2)}.${pad(ms, 3)}`;
+}
 
-  let ms = digits.pop() || "0";
-  let sec = digits.pop() || "0";
-  let min = digits.pop() || "0";
-  const hour = digits.pop() || "0";
+function parseFlexibleTimecode(raw: string): number | null {
+  const cleaned = raw.replace(/[^\d:.]/g, "");
+  if (!cleaned) return null;
+  const parts = cleaned.split(":").filter((p) => p.length > 0);
 
-  const pad2 = (val: string) => val.padStart(2, "0");
-  const pad3 = (val: string) => val.padStart(3, "0").slice(0, 3);
+  const parseSec = (val: string): number | null => {
+    const num = Number.parseFloat(val);
+    return Number.isFinite(num) ? num : null;
+  };
 
-  return `${pad2(hour)}:${pad2(min)}:${pad2(sec)}.${pad3(ms)}`;
+  if (parts.length === 1) {
+    // Could be seconds.millis
+    return parseSec(parts[0]);
+  }
+
+  if (parts.length === 2) {
+    const min = Number.parseInt(parts[0], 10);
+    const sec = parseSec(parts[1]);
+    if (!Number.isFinite(min) || sec === null) return null;
+    return min * 60 + sec;
+  }
+
+  if (parts.length >= 3) {
+    const hr = Number.parseInt(parts[parts.length - 3], 10);
+    const min = Number.parseInt(parts[parts.length - 2], 10);
+    const sec = parseSec(parts[parts.length - 1]);
+    if (!Number.isFinite(hr) || !Number.isFinite(min) || sec === null) return null;
+    return hr * 3600 + min * 60 + sec;
+  }
+
+  return null;
 }
 
 function sanitizeTimecodes(text: string): { cleaned: string; warnings: string[] } {
@@ -71,9 +100,11 @@ function sanitizeTimecodes(text: string): { cleaned: string; warnings: string[] 
   const cleanedLines = lines.map((line) => {
     if (!line.includes("-->")) return line;
     const [rawStart, rawEnd] = line.split("-->");
-    const start = normalizeTimecodeSegment(rawStart || "");
-    const end = normalizeTimecodeSegment(rawEnd || "");
-    if (start && end) {
+    const startSeconds = parseFlexibleTimecode(rawStart || "");
+    const endSeconds = parseFlexibleTimecode(rawEnd || "");
+    if (startSeconds !== null && endSeconds !== null) {
+      const start = formatSecondsToHMS(startSeconds);
+      const end = formatSecondsToHMS(endSeconds);
       if (line.trim() !== `${start} --> ${end}`) {
         warnings.push("Sanitized malformed timecode line");
       }
