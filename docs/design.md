@@ -338,6 +338,8 @@ External constraints imposed by the Gemini API (free tier):
 
 ### Translation Quality
 
+> **Scope reminder**: These are aspirational targets for a solo hobby project. "Good enough to share" is the goal—not broadcast-perfect. See [MISSION.md](./MISSION.md) for project scope.
+
 **Format Compliance**
 - **Target**: 100% of successful chunks parse as valid WebVTT
 - **Measurement**: TBD; auto-repair catches common issues

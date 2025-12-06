@@ -51,6 +51,7 @@ Before working on this codebase, familiarize yourself with:
 - Concurrency guardrails: cap translation concurrency at 10 to respect Gemini 2.5 Flash free-tier RPM; UI should enforce the same cap.
 - Minimize attack surface: avoid new dependencies that phone home, collect analytics, or expand permissions. Prefer small, auditable libraries and document any security-sensitive additions.
 - Debugging: keep Gemini API call logging separate from internal run/chunk/retry logging. Internal events are dev-only, avoid keys/prompts, and should remain modular so they can be disabled/removed easily. Enable via `?debug=1` or `localStorage.debugEvents="1"`; keep UI affordances (e.g., copy button) hidden when debug is off.
+- **Project scope**: This is a solo hobby project. Prompts are developed and tested with Japanese comedy content (variety shows, manzai, etc.). Other languages/genres may work but aren't actively maintained. Quality target is "good enough to share"—not broadcast-perfect. See [MISSION.md](./docs/MISSION.md).
 
 ### Gemini API constraints (quick reference)
 

@@ -49,6 +49,7 @@ Open http://localhost:5173, paste your Gemini API key, and translate. You can bu
 ## 📚 Documentation
 
 ### For Users
+- **[Mission & Scope](./docs/MISSION.md)** — Why this tool exists, what it's for, and what to expect
 - **[Usage Guide](./docs/usage.md)** — Detailed documentation on features, controls, and workflows
 - **[API Provider Setup](./docs/providers.md)** — Multi-provider support: Gemini, OpenAI, Anthropic, Ollama
 - **[Gemini API Setup](./docs/gemini.md)** — How to get and use your Gemini API key  
@@ -90,7 +91,7 @@ This project is provided as-is with no guarantees or SLAs.
 - **Bug reports**: Welcome! Please include clear reproduction steps.
 - **Feature requests**: Unlikely to be accepted; forks are encouraged for experiments.
 - **Response time**: I may not reply quickly (or at all).
-- **Scope**: This tool will stay minimal and focused.
+- **Scope**: This tool will stay minimal and focused. Prompts are tested with Japanese comedy content—other source/target languages may work but aren't actively maintained.
 
 ## Scripts
 

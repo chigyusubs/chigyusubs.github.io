@@ -6,7 +6,7 @@ This document explains how the **prompt system** for subtitle translation is str
 
 ## 🧩 Overview
 
-The goal of this system is to produce **broadcast-quality subtitle translations** using large language models (LLMs) while ensuring:
+The goal of this system is to produce **natural, consistent subtitle translations** using large language models (LLMs) while ensuring:
 
 * **Faithfulness** to original timing (WebVTT cues remain unchanged)
 * **Consistency** across multi-chunk workflows (using glossary + summary context)
@@ -384,6 +384,8 @@ When all components are combined (Glossary + Summary + Translation with optional
 * **Perfectly preserved timing** (no timecode drift)
 * **Cross-chunk consistency** (names, terms, style)
 * **Format compliance** (valid WebVTT that passes validation)
+
+> **Note**: Quality targets are "good enough to share"—not broadcast-perfect. See [MISSION.md](./MISSION.md) for project scope and expectations.
 
 ---
 
