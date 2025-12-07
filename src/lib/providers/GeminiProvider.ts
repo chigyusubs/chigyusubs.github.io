@@ -121,10 +121,26 @@ export class GeminiProvider extends BaseProvider {
         }
         parts.push({ text: userPrompt });
 
+        // Gemma models don't support system_instruction - prepend to user message instead
+        const isGemmaModel = normalized.toLowerCase().includes("gemma");
+
         const body: Record<string, unknown> = {
             contents: [{ role: "user", parts }],
-            system_instruction: { parts: [{ text: systemPrompt }] },
         };
+
+        // Only add system_instruction for non-Gemma models
+        if (!isGemmaModel && systemPrompt) {
+            body.system_instruction = { parts: [{ text: systemPrompt }] };
+        } else if (isGemmaModel && systemPrompt) {
+            // For Gemma, prepend system prompt to the first text part
+            const textPartIndex = parts.findIndex((p: unknown) =>
+                typeof p === "object" && p !== null && "text" in p
+            );
+            if (textPartIndex !== -1) {
+                const textPart = parts[textPartIndex] as { text: string };
+                textPart.text = `${systemPrompt}\n\n${textPart.text}`;
+            }
+        }
 
         if (typeof temperature === "number") {
             body.generationConfig = { temperature };
