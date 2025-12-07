@@ -269,6 +269,25 @@ Video → FFmpeg split (1-min chunks with overlap)
       → Convert to VTT
 ```
 
+### Development with Mock Mode
+
+> **Note**: With free tier limited to ~40 RPD, use mock mode for pipeline development.
+
+**Strategy:**
+- Save test outputs as JSON fixtures
+- Add `--mock` flag to transcription scripts
+- Mock returns cached fixture instead of calling API
+- Structured output makes validation easy (schema guarantees shape)
+- Test stitching, offset, dedup logic without burning API calls
+
+```bash
+# Real API (uses limited quota)
+npm run test:structured video.mp4
+
+# Mock mode (uses saved fixtures)
+npm run test:structured video.mp4 --mock
+```
+
 ## Show Format Presets (Deferred)
 
 > **Status**: Not implementing until generic prompts proven insufficient
