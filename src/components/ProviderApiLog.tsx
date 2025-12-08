@@ -26,7 +26,8 @@ function formatTokens(tokens?: {
     return parts.length ? parts.join(" / ") : "—";
 }
 
-function formatDurationMs(ms?: number) {
+function formatDurationMs(ms?: number, isPending?: boolean) {
+    if (isPending) return "⏱️";
     if (typeof ms !== "number" || Number.isNaN(ms)) return "—";
     return `${(ms / 1000).toFixed(1)}s`;
 }
@@ -140,16 +141,19 @@ export function ProviderApiLog() {
                                             {formatTokens(entry.tokens)}
                                         </td>
                                         <td className="px-3 py-2 whitespace-nowrap">
-                                            {formatDurationMs(entry.durationMs)}
+                                            {formatDurationMs(entry.durationMs, entry.status === "pending")}
                                         </td>
                                         <td className="px-3 py-2 whitespace-nowrap">
                                             <span
                                                 className={
                                                     entry.status === "ok"
                                                         ? theme.successText
+                                                        : entry.status === "pending"
+                                                        ? "text-blue-600 dark:text-blue-400"
                                                         : theme.dangerText
                                                 }
                                             >
+                                                {entry.status === "pending" && "⏳ "}
                                                 {entry.status}
                                             </span>
                                         </td>

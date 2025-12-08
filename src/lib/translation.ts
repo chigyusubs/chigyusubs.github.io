@@ -14,6 +14,9 @@ import { parseVtt, serializeVtt, type Cue } from "./vtt";
 import { MAX_CONCURRENCY } from "../config/defaults";
 import type { ProviderType } from "./providers/types";
 import { ProviderFactory } from "./providers/ProviderFactory";
+import { buildStructuredUserPrompt } from "./structured/StructuredPrompt";
+import { validateStructuredOutput } from "./structured/StructuredOutput";
+import { reconstructVtt } from "./structured/VttReconstructor";
 
 export type ChunkStatus = {
   idx: number;
@@ -95,6 +98,7 @@ type TranslateOptions = {
   shouldCancel?: () => boolean;
   shouldPause?: () => boolean;
   runId?: number;
+  useStructuredOutput?: boolean;
 };
 
 type ChunkRetryOptions = {
@@ -113,6 +117,7 @@ type ChunkRetryOptions = {
   useGlossary?: boolean;
   safetyOff?: boolean;
   runId?: number;
+  useStructuredOutput?: boolean;
 };
 
 function tokensEstimate(text: string): number {
@@ -165,6 +170,29 @@ async function translateChunk(
       context_vtt: contextVtt,
     }),
   );
+
+  // Branch to structured output if enabled
+  if (opts.useStructuredOutput) {
+    return translateChunkStructured({
+      chunkVtt,
+      contextVtt,
+      idx: chunk.idx,
+      provider: opts.provider,
+      apiKey: opts.apiKey,
+      modelName: opts.modelName,
+      baseUrl: opts.baseUrl,
+      targetLang: opts.targetLang,
+      glossary: opts.glossary,
+      customPrompt: opts.customPrompt,
+      temperature: opts.temperature,
+      summaryText: opts.summaryText,
+      useGlossary: opts.useGlossary,
+      safetyOff: opts.safetyOff,
+      runId: opts.runId,
+      useStructuredOutput: true,
+    });
+  }
+
   return translateChunkFromText({
     chunkVtt,
     contextVtt,
@@ -176,9 +204,6 @@ async function translateChunk(
     targetLang: opts.targetLang,
     glossary: opts.glossary,
     customPrompt: opts.customPrompt,
-    videoUri: undefined,
-    videoLabel: null,
-    mediaKind: undefined,
     temperature: opts.temperature,
     summaryText: opts.summaryText,
     useGlossary: opts.useGlossary,
@@ -495,6 +520,7 @@ export async function translateCues(
     onChunkUpdate,
     temperature,
     safetyOff,
+    useStructuredOutput,
   } = opts;
   const effectiveTarget = targetSeconds;
   const effectiveOverlap = (overlap ?? 2);
@@ -536,6 +562,7 @@ export async function translateCues(
         safetyOff,
         shouldPause: opts.shouldPause,
         shouldCancel: opts.shouldCancel,
+        useStructuredOutput,
       });
       results.push(res);
       onChunkUpdate?.(res);
@@ -583,6 +610,7 @@ export async function translateCues(
           shouldPause: opts.shouldPause,
           shouldCancel: opts.shouldCancel,
           runId: opts.runId,
+          useStructuredOutput,
         });
       },
       (chunkResult) => onChunkUpdate?.(chunkResult),
@@ -624,4 +652,133 @@ export async function translateCues(
     srt: finalSrt,
     video_ref: opts.videoUri, // Return the video reference that was passed in
   };
+}
+
+export async function translateChunkStructured(
+  opts: ChunkRetryOptions,
+): Promise<ChunkStatus> {
+  const warnings: string[] = [];
+  const {
+    chunkVtt,
+    contextVtt,
+    provider,
+    apiKey,
+    modelName,
+    baseUrl,
+    targetLang,
+    glossary,
+    customPrompt,
+    temperature,
+    summaryText,
+    useGlossary,
+    safetyOff,
+  } = opts;
+  const startedAt = Date.now();
+
+  let cues: Cue[] = [];
+  try {
+    cues = parseVtt(chunkVtt);
+  } catch (err) {
+    return {
+      idx: opts.idx,
+      status: "failed",
+      tokens_estimate: tokensEstimate(chunkVtt),
+      warnings: ["Invalid VTT input for structured translation"],
+      vtt: "", raw_vtt: chunkVtt, raw_model_output: "", chunk_vtt: chunkVtt, context_vtt: contextVtt, prompt: "", started_at: startedAt, finished_at: Date.now()
+    };
+  }
+
+  // Build Structured Prompt
+  const userPrompt = buildStructuredUserPrompt(
+    cues,
+    targetLang,
+    useGlossary ? glossary : undefined,
+    contextVtt,
+    summaryText
+  );
+
+  // Create provider
+  const config = {
+    apiKey: provider !== "ollama" ? apiKey : undefined,
+    modelName,
+    baseUrl: provider === "ollama" ? baseUrl || "http://localhost:11434" : baseUrl,
+  };
+  const providerInstance = ProviderFactory.create(provider, config);
+
+  // Determine system prompt: use custom if provided, otherwise default structured one.
+  const systemPromptTemplate = customPrompt && customPrompt.trim().length > 10
+    ? customPrompt
+    : (await import("../config/defaults")).STRUCTURED_SYSTEM_PROMPT;
+
+  const systemPrompt = systemPromptTemplate.replace(/<target>/g, targetLang);
+
+  const request = {
+    systemPrompt,
+    userPrompt,
+    temperature,
+    safetyOff,
+    responseMimeType: "application/json"
+  };
+
+  const trace = { purpose: "translateChunkStructured", chunkIdx: opts.idx, runId: opts.runId };
+
+  let rawModelOutput = "";
+  try {
+    try {
+      const response = await providerInstance.generateContent(request, trace);
+      rawModelOutput = response.text;
+    } catch (err) {
+      // Fallback: If API (specifically Google Gemini) complains that JSON mode is not enabled for this model,
+      // retry without the enforcement flag. The system prompt still requests JSON.
+      if (err instanceof Error && err.message.includes("JSON mode is not enabled")) {
+        const fallbackRequest = { ...request, responseMimeType: undefined };
+        const response = await providerInstance.generateContent(fallbackRequest, trace);
+        rawModelOutput = response.text;
+      } else {
+        throw err;
+      }
+    }
+
+    let json: any;
+    try {
+      json = JSON.parse(rawModelOutput);
+    } catch {
+      // Fallback extraction
+      const match = rawModelOutput.match(/```json\n([\s\S]*?)\n```/) || rawModelOutput.match(/```\n([\s\S]*?)\n```/);
+      if (match) {
+        json = JSON.parse(match[1]);
+      } else {
+        throw new Error("Failed to parse JSON response");
+      }
+    }
+
+    const validated = validateStructuredOutput(json);
+    const result = reconstructVtt(validated, cues);
+
+    warnings.push(...result.warnings);
+
+    return {
+      idx: opts.idx,
+      status: "ok",
+      tokens_estimate: tokensEstimate(chunkVtt),
+      warnings,
+      vtt: result.vtt,
+      raw_vtt: result.vtt,
+      raw_model_output: rawModelOutput,
+      chunk_vtt: chunkVtt,
+      context_vtt: contextVtt,
+      prompt: userPrompt,
+      started_at: startedAt,
+      finished_at: Date.now()
+    };
+
+  } catch (err) {
+    return {
+      idx: opts.idx,
+      status: "failed",
+      tokens_estimate: tokensEstimate(chunkVtt),
+      warnings: [err instanceof Error ? err.message : "Structure translation failed"],
+      vtt: "", raw_vtt: "", raw_model_output: rawModelOutput, chunk_vtt: chunkVtt, context_vtt: contextVtt, prompt: userPrompt, started_at: startedAt, finished_at: Date.now()
+    };
+  }
 }

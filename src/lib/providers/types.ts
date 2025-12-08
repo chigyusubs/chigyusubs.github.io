@@ -48,6 +48,7 @@ export type GenerateRequest = {
         data: string; // base64 encoded
     };
     safetyOff?: boolean;
+    responseMimeType?: string;
     // Provider-specific options can be added here
     providerOptions?: Record<string, unknown>;
 };

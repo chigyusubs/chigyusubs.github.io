@@ -53,6 +53,8 @@ type SavedPrefs = {
   useSummary?: boolean;
   glossaryPrompt?: string;
   useGlossaryInSummary?: boolean;
+  useStructuredOutput?: boolean;
+  customPresets?: CustomPreset[];
 };
 
 export function useTranslationWorkflow(saved?: SavedPrefs) {
@@ -103,6 +105,9 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
   );
   const [useGlossaryInSummary, setUseGlossaryInSummary] = useState(
     saved?.useGlossaryInSummary ?? false,
+  );
+  const [useStructuredOutput, setUseStructuredOutput] = useState(
+    saved?.useStructuredOutput ?? false,
   );
   const [promptPreview, setPromptPreview] = useState("");
   const [customPresets, setCustomPresets] = useState<CustomPreset[]>(() => {
@@ -162,7 +167,6 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
     const systemPrompt = glossarySystemPrompt(
       glossaryPrompt,
       targetLang,
-      useGloss && !!glossaryText,
     );
     const userPrompt = buildUserPrompt(
       targetLang,
@@ -173,8 +177,9 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
       useGloss,
     );
     const summaryUserPrompt = buildSummaryUserPrompt(
-      DEFAULT_SUMMARY_USER_PROMPT,
-      summary || "",
+      DEFAULT_SUMMARY_USER_PROMPT.subtitles,
+      targetLang,
+      { text: summary || "" },
     );
     return { systemPrompt, userPrompt, summaryUserPrompt };
   };
@@ -321,6 +326,7 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
     summaryText: string;
     videoRef: string | null;
     safetyOff: boolean;
+    useStructuredOutput: boolean;
   }) => {
     await runnerActions.runTranslation(opts);
   };
@@ -348,7 +354,7 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
     safetyOff: boolean;
     onStatus?: (message: string) => void;
   }) => {
-    const setStatus = onStatus ?? (() => {});
+    const setStatus = onStatus ?? (() => { });
     if (resolvedProvider.mismatch) {
       throw new Error(
         `Selected provider (${resolvedProvider.selectedLabel}) does not match the model's provider (${resolvedProvider.providerLabel}). Refresh and choose a ${resolvedProvider.selectedLabel} model.`,
@@ -383,6 +389,7 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
       summaryText,
       videoRef,
       safetyOff,
+      useStructuredOutput,
     });
 
     return parsed.warnings;
@@ -437,6 +444,7 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
       safetyOff,
       concurrency: retryConcurrency,
       baseUrl: resolvedProvider.baseUrlForProvider,
+      useStructuredOutput,
     });
   };
 
@@ -456,6 +464,7 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
     safetyOff: boolean;
     concurrency: number;
     runToken?: number;
+    useStructuredOutput: boolean;
   }) => {
     await runnerActions.retryChunk(opts);
   };
@@ -753,6 +762,7 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
       promptPreview,
       customPresets,
       allPresets,
+      useStructuredOutput,
     },
     actions: {
       setTargetLang,
@@ -793,6 +803,7 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
       runnerActions,
       generateGlossary,
       generateSummary,
+      setUseStructuredOutput,
     },
   };
 }

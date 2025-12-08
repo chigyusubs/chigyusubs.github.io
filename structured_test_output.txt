@@ -1,0 +1,50 @@
+Testing Structured Output Pipeline...
+
+--- Generated Prompt ---
+### CUES TO TRANSLATE ###
+Format: [ID: <id>] (<duration_hint>) <source_text>
+---
+[ID: 1] (Short) Hello
+[ID: 2] (Short) World
+[ID: 3] (Long) Long monologue...
+---
+Task: Translate the above cues into Spanish.
+Rules:
+1. Output a JSON object with a "translations" array.
+2. Each item must have "ids" (array of numbers) and "text" (translated string).
+3. You MAY merge adjacent cues if they are marked (Short) and form a complete phrase.
+4. Do NOT merge cues marked (Long) unless absolutely necessary.
+5. You strictly CANNOT split a single ID into multiple output items.
+6. Every Input ID must appear exactly once in the Output IDs.
+
+--- Mock Response ---
+{
+  "translations": [
+    {
+      "ids": [
+        1,
+        2
+      ],
+      "text": "Hola Mundo"
+    },
+    {
+      "ids": [
+        3
+      ],
+      "text": "Largo monologo..."
+    }
+  ]
+}
+
+--- Reconstructed VTT ---
+WEBVTT
+
+00:00:00.000 --> 00:00:02.000
+Hola Mundo
+
+00:00:02.000 --> 00:00:10.000
+Largo monologo...
+
+Warnings: []
+
+PASS: Pipeline verified.

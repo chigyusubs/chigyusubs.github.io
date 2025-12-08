@@ -3,6 +3,7 @@ import { chunkCues } from "../lib/chunker";
 import { deriveSrt, stitchVtt } from "../lib/stitcher";
 import {
   translateChunkFromText,
+  translateChunkStructured,
   translateCues,
   type ChunkStatus,
   type TranslateResult,
@@ -39,6 +40,7 @@ type RunOptions = {
   summaryText: string;
   videoRef: string | null;
   safetyOff: boolean;
+  useStructuredOutput?: boolean;
 };
 
 type RetryOptions = {
@@ -58,6 +60,7 @@ type RetryOptions = {
   concurrency: number;
   runId?: number;
   cancelVersion?: number;
+  useStructuredOutput?: boolean;
 };
 
 export function useTranslationRunner() {
@@ -193,6 +196,7 @@ export function useTranslationRunner() {
           ? opts.summaryText.trim()
           : undefined,
       safetyOff: opts.safetyOff,
+      useStructuredOutput: opts.useStructuredOutput,
       shouldCancel: () => cancelVersionRef.current !== cancelVersion,
       shouldPause: () => pausedRef.current || autoPauseRef.current,
       runId,
@@ -240,13 +244,13 @@ export function useTranslationRunner() {
           const stitchedVtt = okParts.length ? stitchVtt(okParts) : "";
           const warnings = merged.flatMap((c) => c.warnings || []);
           const completed = merged.filter(
-            (c) => c.status === "ok" || c.status === "failed",
+            (c) => c.status === "ok",
           ).length;
           const isOk =
             merged.length === totalChunks &&
             merged.every((c) => c.status === "ok");
           completedCount = completed;
-          mergedCount = merged.length;
+          mergedCount = totalChunks;
           const nextResult: TranslateResult = {
             ok: isOk,
             warnings,
@@ -263,12 +267,12 @@ export function useTranslationRunner() {
     });
 
     if (cancelVersionRef.current === cancelVersion) {
-        setResult(() => {
-          resultRef.current = data;
-          return data;
-        });
+      setResult(() => {
+        resultRef.current = data;
+        return data;
+      });
       setProgress(
-        `Completed chunk ${data.chunks.filter((c) => c.status === "ok" || c.status === "failed").length}/${data.chunks.length || 0}`,
+        `Completed chunk ${data.chunks.filter((c) => c.status === "ok").length}/${data.chunks.length || 0}`,
       );
       setIsRunning(false);
       if (isDebugEnabled()) {
@@ -313,7 +317,10 @@ export function useTranslationRunner() {
         resultRef.current = nextResult;
         return nextResult;
       });
-      const updated = await translateChunkFromText({
+      const retryFn = opts.useStructuredOutput
+        ? translateChunkStructured
+        : translateChunkFromText;
+      const updated = await retryFn({
         idx: chunk.idx,
         chunkVtt: chunk.chunk_vtt || "",
         contextVtt: chunk.context_vtt || "",
@@ -324,9 +331,6 @@ export function useTranslationRunner() {
         targetLang: opts.targetLang,
         glossary: opts.glossary,
         customPrompt: opts.customPrompt,
-        videoUri: undefined,
-        videoLabel: null,
-        mediaKind: undefined,
         temperature: opts.temperature,
         useGlossary: opts.useGlossary && opts.glossary.trim() ? true : false,
         summaryText:
@@ -513,6 +517,12 @@ export function useTranslationRunner() {
         );
       },
       setManualChunkStatus,
+      stitchChunks: (chunks: ChunkStatus[]) => {
+        const parts = chunks
+          .filter((c) => c.status === "ok")
+          .map((c) => c.vtt || "");
+        return stitchVtt(parts);
+      },
     },
   };
 }

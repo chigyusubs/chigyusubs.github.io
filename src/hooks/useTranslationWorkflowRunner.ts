@@ -63,7 +63,7 @@ export function useTranslationWorkflowRunner() {
     setModelName,
     providerConfigs,
     updateProviderConfig,
-  } = useProviderState(saved);
+  } = useProviderState(saved ?? undefined);
   // File state
   const [vttFile, setVttFile] = useState<File | null>(null);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
@@ -82,7 +82,7 @@ export function useTranslationWorkflowRunner() {
   const [useInlineChunks, setUseInlineChunks] = useState(
     saved?.useInlineChunks ?? false,
   );
-  const translationWorkflow = useTranslationWorkflow(saved);
+  const translationWorkflow = useTranslationWorkflow(saved ?? undefined);
   const tState = translationWorkflow.state;
   const tActions = translationWorkflow.actions;
 
@@ -220,6 +220,7 @@ export function useTranslationWorkflowRunner() {
       transcriptionPrompt,
       transcriptionOverlapSeconds,
       useInlineChunks,
+      useStructuredOutput: tState.useStructuredOutput,
     };
     savePrefs(prefs);
   }, [
@@ -250,6 +251,7 @@ export function useTranslationWorkflowRunner() {
     transcriptionPrompt,
     transcriptionOverlapSeconds,
     useInlineChunks,
+    tState.useStructuredOutput,
   ]);
 
   const handleMediaChange = async (file: File | null) => {
@@ -942,6 +944,7 @@ export function useTranslationWorkflowRunner() {
       transcriptionPrompt,
       transcriptionOverlapSeconds,
       useInlineChunks,
+      useStructuredOutput: tState.useStructuredOutput,
     },
     actions: {
       // Provider actions
@@ -1001,6 +1004,7 @@ export function useTranslationWorkflowRunner() {
       exportAllCustomPresets: tActions.exportAllCustomPresets,
       clearCustomPresets: tActions.clearCustomPresets,
       setUseGlossaryInSummary: tActions.setUseGlossaryInSummary,
+      setUseStructuredOutput: tActions.setUseStructuredOutput,
     },
   };
 }

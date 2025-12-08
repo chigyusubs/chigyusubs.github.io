@@ -65,6 +65,7 @@ export class OllamaProvider extends BaseProvider {
             model: this.config.modelName,
             messages,
             stream: false,
+            format: request.responseMimeType === "application/json" ? "json" : undefined,
         };
 
         if (typeof temperature === "number") {

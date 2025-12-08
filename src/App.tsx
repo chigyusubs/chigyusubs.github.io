@@ -30,6 +30,11 @@ import {
   enableDebugEvents,
   setDebugWriter,
 } from "./lib/debugState";
+// ============================================================================
+// MOCK MODE UI (can be removed with src/lib/mock/)
+// ============================================================================
+import { MockModeIndicator } from "./components/MockModeIndicator";
+// ============================================================================
 
 function App() {
   const { state, actions } = useTranslationWorkflowRunner();
@@ -70,8 +75,8 @@ function App() {
   const hasSummarySource = state.mediaFile
     ? !!state.videoRef
     : !!state.vttFile ||
-      (state.useTranscriptionForSummary &&
-        !!state.transcriptionText.trim());
+    (state.useTranscriptionForSummary &&
+      !!state.transcriptionText.trim());
   const canGenerateSummary =
     (!providerCapability.requiresApiKey || !!state.apiKey) &&
     hasSummarySource &&
@@ -85,12 +90,56 @@ function App() {
       : state.submitting
         ? "Translating..."
         : "Start Translation";
-  const statusText = state.statusMessage || (state.workflowMode === "translation"
-    ? state.translationProgress
-    : state.transcriptionProgress);
+
+  // Dynamic status badge text
+  const getStatusText = () => {
+    if (state.workflowMode === "translation") {
+      if (!running && !state.translationResult) return null;
+
+      // Check for active retries (deduplicate chunk IDs)
+      const retryingIds = new Set([
+        ...(state.retryingChunks || []),
+        ...(state.retryQueueIds || [])
+      ]);
+      const totalRetrying = retryingIds.size;
+
+      if (totalRetrying > 0) {
+        return `Retrying ${totalRetrying} chunk${totalRetrying > 1 ? 's' : ''}`;
+      }
+
+      if (state.paused) return "Paused";
+      if (running) {
+        const okChunks = state.translationResult?.chunks.filter(c => c.status === "ok").length || 0;
+        const totalChunks = state.translationResult?.chunks.length || 0;
+        return totalChunks > 0 ? `Translating (${okChunks}/${totalChunks})` : "Translating...";
+      }
+      if (state.translationResult?.ok) return "Completed";
+      const okChunks = state.translationResult?.chunks.filter(c => c.status === "ok").length || 0;
+      const totalChunks = state.translationResult?.chunks.length || 0;
+      const failedChunks = state.translationResult?.chunks.filter(c => c.status === "failed").length || 0;
+      if (failedChunks > 0) return `${failedChunks} chunk${failedChunks > 1 ? 's' : ''} failed`;
+      if (okChunks === totalChunks && totalChunks > 0) return "Completed";
+      return null;
+    } else {
+      if (!state.transcriptionRunning && !state.transcriptionResult) return null;
+      if (state.transcriptionPaused) return "Paused";
+      if (state.transcriptionRunning) {
+        const okChunks = state.transcriptionResult?.chunks.filter(c => c.status === "ok").length || 0;
+        const totalChunks = state.transcriptionResult?.chunks.length || 0;
+        return totalChunks > 0 ? `Transcribing (${okChunks}/${totalChunks})` : "Transcribing...";
+      }
+      if (state.transcriptionResult?.ok) return "Completed";
+      return null;
+    }
+  };
+
+  const statusText = getStatusText();
 
   return (
     <div className={theme.page}>
+      {/* Mock mode indicator - DELETE THIS LINE to remove mock mode UI */}
+      <MockModeIndicator />
+
       <header className={theme.header}>
         <div className="max-w-5xl mx-auto flex items-center justify-between px-6">
           <div className="flex items-center gap-4">
@@ -154,687 +203,725 @@ function App() {
       </header>
       <RuntimeErrorBoundary>
         <main className="max-w-5xl mx-auto px-6 py-8 space-y-6 pb-20">
-        <form className="space-y-6" onSubmit={actions.handleSubmit}>
-          <SectionCard
-            title="Mode"
-            subtitle="Switch between translation and transcription."
-          >
-            <div className="flex flex-wrap items-center gap-4">
-              <label className="inline-flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  value="translation"
-                  checked={state.workflowMode === "translation"}
-                  onChange={() => actions.setWorkflowMode("translation")}
-                  disabled={locked}
-                />
-                <span>Translation</span>
-              </label>
-              <label className="inline-flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  value="transcription"
-                  checked={state.workflowMode === "transcription"}
-                  onChange={() => actions.setWorkflowMode("transcription")}
-                  disabled={locked}
-                />
-                <span>Transcription (Gemini/OpenAI)</span>
-              </label>
-              {state.workflowMode === "transcription" &&
-                !["gemini", "openai"].includes(state.selectedProvider) && (
-                <span className={`text-xs ${theme.dangerText}`}>
-                  Transcription mode requires Gemini or OpenAI; switch provider to continue.
-                </span>
-              )}
-            </div>
-          </SectionCard>
-
-          <ProviderSettings
-            selectedProvider={state.selectedProvider}
-            setSelectedProvider={actions.setSelectedProvider}
-            apiKeys={state.apiKeys}
-            setApiKey={actions.setApiKey}
-            ollamaBaseUrl={state.ollamaBaseUrl}
-            setOllamaBaseUrl={actions.setOllamaBaseUrl}
-            providerConfigs={state.providerConfigs}
-            onProviderConfigChange={actions.updateProviderConfig}
-            modelName={state.modelName}
-            setModelName={actions.setModelName}
-            models={state.models}
-            handleLoadModels={actions.handleLoadModels}
-            submitting={state.submitting}
-            error={state.error}
-            temperature={state.temperature}
-            setTemperature={actions.setTemperature}
-            safetyOff={state.safetyOff}
-            setSafetyOff={actions.setSafetyOff}
-            locked={locked}
-            mediaResolution={state.mediaResolution}
-            setMediaResolution={actions.setMediaResolution}
-            useInlineChunks={state.useInlineChunks}
-            setUseInlineChunks={actions.setUseInlineChunks}
-            workflowMode={state.workflowMode}
-          />
-
-          <FileUploader
-            vttFile={state.vttFile}
-            setVttFile={actions.setVttFile}
-            mediaFile={state.mediaFile}
-            setMediaFile={actions.setMediaFile}
-            useAudioOnly={state.useAudioOnly}
-            setUseAudioOnly={actions.setUseAudioOnly}
-            supportsMediaUpload={providerCapability.supportsMediaUpload}
-            videoRef={state.videoRef}
-            videoUploadState={state.videoUploadState}
-            videoUploadMessage={state.videoUploadMessage}
-            videoSizeMb={state.videoSizeMb}
-            videoDuration={state.videoDuration}
-            mediaResolution={state.mediaResolution}
-            handleUploadVideo={actions.handleUploadVideo}
-            handleDeleteVideo={actions.handleDeleteVideo}
-            submitting={state.submitting}
-            apiKey={state.apiKey}
-            locked={locked}
-            mediaTooLargeWarning={state.mediaTooLargeWarning}
-            mode={state.workflowMode}
-            skipProviderUpload={
-              state.workflowMode === "transcription" &&
-              state.selectedProvider === "gemini" &&
-              state.useInlineChunks
-            }
-
-            // Transcription props
-            showAudioUpload={
-              state.workflowMode === "transcription" && state.selectedProvider === "openai"
-            }
-            audioFile={state.audioFile}
-            setAudioFile={actions.setAudioFile}
-            transcriptionText={state.transcriptionText}
-            setTranscriptionText={actions.setTranscriptionText}
-            transcriptionStatus={state.transcriptionStatus}
-            onTranscribe={actions.handleTranscribeAudio}
-            useTranscription={state.useTranscription}
-            setUseTranscription={actions.setUseTranscription}
-            useTranscriptionForSummary={state.useTranscriptionForSummary}
-            setUseTranscriptionForSummary={actions.setUseTranscriptionForSummary}
-          />
-
-          {state.workflowMode === "translation" && (
+          <form className="space-y-6" onSubmit={actions.handleSubmit}>
             <SectionCard
-              title="Prompts"
-              subtitle="Configure translation prompts and load presets."
+              title="Mode"
+              subtitle="Switch between translation and transcription."
             >
-            <div className="mb-3">
-              <FieldLabel>Target Language</FieldLabel>
-              <TextInput
-                value={state.targetLang}
-                onChange={(e) => actions.setTargetLang(e.target.value)}
-                disabled={locked}
-              />
-            </div>
+              <div className="flex flex-wrap items-center gap-4">
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    value="translation"
+                    checked={state.workflowMode === "translation"}
+                    onChange={() => actions.setWorkflowMode("translation")}
+                    disabled={locked}
+                  />
+                  <span>Translation</span>
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    value="transcription"
+                    checked={state.workflowMode === "transcription"}
+                    onChange={() => actions.setWorkflowMode("transcription")}
+                    disabled={locked}
+                  />
+                  <span>Transcription (Gemini/OpenAI)</span>
+                </label>
+                {state.workflowMode === "transcription" &&
+                  !["gemini", "openai"].includes(state.selectedProvider) && (
+                    <span className={`text-xs ${theme.dangerText}`}>
+                      Transcription mode requires Gemini or OpenAI; switch provider to continue.
+                    </span>
+                  )}
+              </div>
+            </SectionCard>
 
-            <div className="mb-3">
-              <FieldLabel>Prompt Preset</FieldLabel>
-              <select
-                className={theme.input}
-                value={state.currentPreset}
-                onChange={(e) => {
-                  const presetId = e.target.value;
-                  if (!presetId) return;
+            <ProviderSettings
+              selectedProvider={state.selectedProvider}
+              setSelectedProvider={actions.setSelectedProvider}
+              apiKeys={state.apiKeys}
+              setApiKey={actions.setApiKey}
+              ollamaBaseUrl={state.ollamaBaseUrl}
+              setOllamaBaseUrl={actions.setOllamaBaseUrl}
+              providerConfigs={state.providerConfigs}
+              onProviderConfigChange={actions.updateProviderConfig}
+              modelName={state.modelName}
+              setModelName={actions.setModelName}
+              models={state.models}
+              handleLoadModels={actions.handleLoadModels}
+              submitting={state.submitting}
+              error={state.error}
+              temperature={state.temperature}
+              setTemperature={actions.setTemperature}
+              safetyOff={state.safetyOff}
+              setSafetyOff={actions.setSafetyOff}
+              locked={locked}
+              mediaResolution={state.mediaResolution}
+              setMediaResolution={actions.setMediaResolution}
+              useInlineChunks={state.useInlineChunks}
+              setUseInlineChunks={actions.setUseInlineChunks}
+              workflowMode={state.workflowMode}
+            />
 
-                  // Check if it's a built-in preset
-                  if (presetId in PROMPT_PRESETS) {
-                    actions.applyPreset(
-                      presetId as keyof typeof PROMPT_PRESETS,
-                    );
-                  } else {
-                    // It's a custom preset
-                    const customPreset = state.customPresets.find(
-                      (p) => p.id === presetId,
-                    );
-                    if (customPreset) {
-                      actions.applyCustomPreset(customPreset);
-                    }
-                  }
-                }}
-                disabled={locked}
+            <FileUploader
+              vttFile={state.vttFile}
+              setVttFile={actions.setVttFile}
+              mediaFile={state.mediaFile}
+              setMediaFile={actions.setMediaFile}
+              useAudioOnly={state.useAudioOnly}
+              setUseAudioOnly={actions.setUseAudioOnly}
+              supportsMediaUpload={providerCapability.supportsMediaUpload}
+              videoRef={state.videoRef}
+              videoUploadState={state.videoUploadState}
+              videoUploadMessage={state.videoUploadMessage}
+              videoSizeMb={state.videoSizeMb}
+              videoDuration={state.videoDuration}
+              mediaResolution={state.mediaResolution}
+              handleUploadVideo={actions.handleUploadVideo}
+              handleDeleteVideo={actions.handleDeleteVideo}
+              submitting={state.submitting}
+              apiKey={state.apiKey}
+              locked={locked}
+              mediaTooLargeWarning={state.mediaTooLargeWarning}
+              mode={state.workflowMode}
+              skipProviderUpload={
+                state.workflowMode === "transcription" &&
+                state.selectedProvider === "gemini" &&
+                state.useInlineChunks
+              }
+
+              // Transcription props
+              showAudioUpload={
+                state.workflowMode === "transcription" && state.selectedProvider === "openai"
+              }
+              audioFile={state.audioFile}
+              setAudioFile={actions.setAudioFile}
+              transcriptionText={state.transcriptionText}
+              setTranscriptionText={actions.setTranscriptionText}
+              transcriptionStatus={state.transcriptionStatus}
+              onTranscribe={actions.handleTranscribeAudio}
+              useTranscription={state.useTranscription}
+              setUseTranscription={actions.setUseTranscription}
+              useTranscriptionForSummary={state.useTranscriptionForSummary}
+              setUseTranscriptionForSummary={actions.setUseTranscriptionForSummary}
+            />
+
+            {state.workflowMode === "translation" && (
+              <SectionCard
+                title="Prompts"
+                subtitle="Configure translation prompts and load presets."
               >
-                {state.allPresets.map((preset) => (
-                  <option key={preset.id} value={preset.id}>
-                    {preset.name}
-                    {!preset.isBuiltIn ? " (Custom)" : ""}
-                  </option>
-                ))}
-              </select>
-              <p className={theme.helperText}>
-                Switching presets will update the system prompt, summary prompt,
-                and glossary prompt below.
-              </p>
-            </div>
+                <div className="mb-3">
+                  <FieldLabel>Target Language</FieldLabel>
+                  <TextInput
+                    value={state.targetLang}
+                    onChange={(e) => actions.setTargetLang(e.target.value)}
+                    disabled={locked}
+                  />
+                </div>
 
-            <div className="flex gap-2 mb-3">
-              <Button
-                type="button"
-                tone="secondary"
-                onClick={() => {
-                  const name = window.prompt("Enter a name for this preset:");
-                  if (name) {
-                    actions.exportCurrentAsPreset(name);
-                  }
-                }}
-                disabled={locked}
-                className="text-sm"
-              >
-                Export Current
-              </Button>
-              <Button
-                type="button"
-                tone="secondary"
-                onClick={() => {
-                  const input = document.createElement("input");
-                  input.type = "file";
-                  input.accept = ".json";
-                  input.onchange = async (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0];
-                    if (!file) return;
-                    try {
-                      const text = await file.text();
-                      const result = actions.importPresetsFromJson(text);
-                      if (result.success) {
-                        alert(
-                          `Successfully imported ${result.count} preset(s)!`,
+                <div className="mb-3">
+                  <FieldLabel>Prompt Preset</FieldLabel>
+                  <select
+                    className={theme.input}
+                    value={state.currentPreset}
+                    onChange={(e) => {
+                      const presetId = e.target.value;
+                      if (!presetId) return;
+
+                      // Check if it's a built-in preset
+                      if (presetId in PROMPT_PRESETS) {
+                        actions.applyPreset(
+                          presetId as keyof typeof PROMPT_PRESETS,
                         );
                       } else {
-                        alert(`Import failed: ${result.error}`);
+                        // It's a custom preset
+                        const customPreset = state.customPresets.find(
+                          (p) => p.id === presetId,
+                        );
+                        if (customPreset) {
+                          actions.applyCustomPreset(customPreset);
+                        }
                       }
-                    } catch {
-                      alert("Failed to read file");
-                    }
-                  };
-                  input.click();
-                }}
-                disabled={locked}
-                className="text-sm"
-              >
-                Import Presets
-              </Button>
-              {state.customPresets.length > 0 && (
-                <>
+                    }}
+                    disabled={locked}
+                  >
+                    {state.allPresets.map((preset) => (
+                      <option key={preset.id} value={preset.id}>
+                        {preset.name}
+                        {!preset.isBuiltIn ? " (Custom)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <p className={theme.helperText}>
+                    Switching presets will update the system prompt, summary prompt,
+                    and glossary prompt below.
+                  </p>
+                </div>
+
+                <div className="flex gap-2 mb-3">
                   <Button
                     type="button"
                     tone="secondary"
-                    onClick={() => actions.exportAllCustomPresets()}
-                    disabled={locked}
-                    className="text-sm"
-                  >
-                    Export All Custom
-                  </Button>
-                  <Button
-                    type="button"
-                    tone="danger"
                     onClick={() => {
-                      if (
-                        window.confirm(
-                          "Clear all custom presets? This cannot be undone.",
-                        )
-                      ) {
-                        actions.clearCustomPresets();
+                      const name = window.prompt("Enter a name for this preset:");
+                      if (name) {
+                        actions.exportCurrentAsPreset(name);
                       }
                     }}
                     disabled={locked}
                     className="text-sm"
                   >
-                    Clear Custom Presets
+                    Export Current
+                  </Button>
+                  <Button
+                    type="button"
+                    tone="secondary"
+                    onClick={() => {
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = ".json";
+                      input.onchange = async (e) => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
+                        if (!file) return;
+                        try {
+                          const text = await file.text();
+                          const result = actions.importPresetsFromJson(text);
+                          if (result.success) {
+                            alert(
+                              `Successfully imported ${result.count} preset(s)!`,
+                            );
+                          } else {
+                            alert(`Import failed: ${result.error}`);
+                          }
+                        } catch {
+                          alert("Failed to read file");
+                        }
+                      };
+                      input.click();
+                    }}
+                    disabled={locked}
+                    className="text-sm"
+                  >
+                    Import Presets
+                  </Button>
+                  {state.customPresets.length > 0 && (
+                    <>
+                      <Button
+                        type="button"
+                        tone="secondary"
+                        onClick={() => actions.exportAllCustomPresets()}
+                        disabled={locked}
+                        className="text-sm"
+                      >
+                        Export All Custom
+                      </Button>
+                      <Button
+                        type="button"
+                        tone="danger"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              "Clear all custom presets? This cannot be undone.",
+                            )
+                          ) {
+                            actions.clearCustomPresets();
+                          }
+                        }}
+                        disabled={locked}
+                        className="text-sm"
+                      >
+                        Clear Custom Presets
+                      </Button>
+                    </>
+                  )}
+                </div>
+
+                <details className="mt-3 mb-2">
+                  <summary className={`cursor-pointer text-sm ${theme.subtext}`}>
+                    Glossary Prompt
+                  </summary>
+                  <div className="flex justify-end mb-1">
+                    <RestoreButton
+                      onClick={() =>
+                        actions.setGlossaryPrompt(DEFAULT_GLOSSARY_PROMPT)
+                      }
+                      disabled={
+                        locked ||
+                        state.glossaryPrompt.trim() ===
+                        DEFAULT_GLOSSARY_PROMPT.trim()
+                      }
+                      title="Restore default glossary system prompt"
+                    />
+                  </div>
+                  <TextArea
+                    variant="code"
+                    className="h-24 mt-2"
+                    value={state.glossaryPrompt}
+                    onChange={(e) => actions.setGlossaryPrompt(e.target.value)}
+                    disabled={locked}
+                  />
+                </details>
+
+                <details className="mt-3 mb-2">
+                  <summary className={`cursor-pointer text-sm ${theme.subtext}`}>
+                    Summary Prompt
+                  </summary>
+                  <div className="flex justify-end mb-1">
+                    <RestoreButton
+                      onClick={() =>
+                        actions.setSummaryPrompt(DEFAULT_SUMMARY_PROMPT)
+                      }
+                      disabled={
+                        locked ||
+                        state.summaryPrompt.trim() === DEFAULT_SUMMARY_PROMPT.trim()
+                      }
+                      title="Restore default summary system prompt"
+                    />
+                  </div>
+                  <TextArea
+                    variant="code"
+                    className="h-24 mt-2"
+                    value={state.summaryPrompt}
+                    onChange={(e) => actions.setSummaryPrompt(e.target.value)}
+                    disabled={locked}
+                  />
+                </details>
+                <details className="mt-4">
+                  <summary className={`cursor-pointer text-sm ${theme.subtext}`}>
+                    Translation System Prompt
+                  </summary>
+                  <div className="flex justify-end mt-2">
+                    <RestoreButton
+                      onClick={() =>
+                        actions.setCustomPrompt(DEFAULT_SYSTEM_PROMPT_TEXT)
+                      }
+                      disabled={
+                        locked ||
+                        state.customPrompt.trim() ===
+                        DEFAULT_SYSTEM_PROMPT_TEXT.trim()
+                      }
+                      title="Restore default system prompt"
+                    />
+                  </div>
+                  <TextArea
+                    variant="code"
+                    className="h-32 mt-2"
+                    value={state.customPrompt}
+                    onChange={(e) => actions.setCustomPrompt(e.target.value)}
+                    placeholder="Override the default system prompt..."
+                    disabled={locked}
+                  />
+                </details>
+
+                <details className="mt-4">
+                  <summary className={`cursor-pointer text-sm ${theme.subtext}`}>
+                    User Prompt Preview
+                  </summary>
+                  <pre
+                    className="mt-2 p-3 rounded border text-base whitespace-pre-wrap h-48 overflow-y-auto"
+                    style={{
+                      backgroundColor: theme.codeBackground,
+                      borderColor: theme.borderColor,
+                    }}
+                  >
+                    {state.promptPreview}
+                  </pre>
+                </details>
+              </SectionCard>
+            )}
+
+            {state.workflowMode === "transcription" && (
+              <SectionCard
+                title="Transcription Prompt"
+                subtitle="Optional prompt to steer Gemini transcription."
+              >
+                <TextArea
+                  variant="code"
+                  className="h-32"
+                  value={state.transcriptionPrompt}
+                  onChange={(e) => actions.setTranscriptionPrompt(e.target.value)}
+                  disabled={locked}
+                />
+              </SectionCard>
+            )}
+
+            {state.workflowMode === "transcription" && (
+              <SectionCard
+                title="Transcription settings"
+                subtitle={
+                  state.selectedProvider === "gemini"
+                    ? "Chunking and parallelism for Gemini transcription."
+                    : state.selectedProvider === "openai"
+                      ? "Processing options for OpenAI transcription."
+                      : "Provider-specific transcription settings."
+                }
+              >
+                <TranscriptionSettings
+                  provider={state.selectedProvider}
+                  locked={locked}
+                  openaiConfig={state.providerConfigs.openai}
+                  onUpdateOpenaiConfig={(cfg) => actions.updateProviderConfig("openai", cfg)}
+                  transcriptionOverlapSeconds={state.transcriptionOverlapSeconds ?? TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS}
+                  setTranscriptionOverlapSeconds={(val) =>
+                    actions.setTranscriptionOverlapSeconds(Math.max(0, val))
+                  }
+                />
+              </SectionCard>
+            )}
+
+
+            {state.workflowMode === "translation" && (
+              <SectionCard
+                title="Context (optional)"
+                subtitle="Generate media summary and glossary to guide translations."
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Button
+                    type="button"
+                    tone="upload"
+                    onClick={actions.handleGenerateGlossary}
+                    disabled={
+                      !state.vttFile || state.glossaryStatus === "loading" || locked
+                    }
+                    title={
+                      !state.vttFile
+                        ? "Load subtitles to generate a glossary"
+                        : undefined
+                    }
+                  >
+                    {state.glossaryStatus === "loading"
+                      ? "Generating..."
+                      : "Generate Glossary"}
+                  </Button>
+                </div>
+                <TextArea
+                  variant="code"
+                  className="h-32"
+                  placeholder="Glossary (source,target)..."
+                  value={state.glossary}
+                  onChange={(e) => {
+                    actions.setGlossary(e.target.value);
+                    actions.setUseGlossary(!!e.target.value.trim());
+                  }}
+                  disabled={locked}
+                />
+                <label className="inline-flex items-center gap-2 text-sm mt-2">
+                  <input
+                    type="checkbox"
+                    checked={state.useGlossary}
+                    onChange={(e) => actions.setUseGlossary(e.target.checked)}
+                    disabled={locked}
+                  />
+                  <span>Use glossary for translation</span>
+                </label>
+                {state.glossaryError && (
+                  <p className={`text-sm ${theme.dangerText} mt-2`}>
+                    {state.glossaryError}
+                  </p>
+                )}
+
+                <hr className="my-4" style={{ borderColor: theme.borderColor }} />
+
+                <div className="flex items-center gap-2 mb-3">
+                  <Button
+                    type="button"
+                    tone="upload"
+                    onClick={actions.handleGenerateSummary}
+                    disabled={!canGenerateSummary || state.workflowMode === "transcription"}
+                  >
+                    {summaryButtonLabel}
+                  </Button>
+                  {state.summaryStatus === "ready" && (
+                    <span className={`text-xs ${theme.successText}`}>
+                      Generated
+                    </span>
+                  )}
+                  {state.summaryStatus === "error" && (
+                    <span className={`text-xs ${theme.dangerText}`}>Error</span>
+                  )}
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={state.useGlossaryInSummary}
+                      onChange={(e) =>
+                        actions.setUseGlossaryInSummary(e.target.checked)
+                      }
+                      disabled={locked || !state.glossary.trim()}
+                    />
+                    <span>Use glossary in summary generation</span>
+                  </label>
+                </div>
+                {state.summaryError && (
+                  <p className={`text-sm ${theme.dangerText} mb-2`}>
+                    {state.summaryError}
+                  </p>
+                )}
+                <TextArea
+                  variant="code"
+                  className="h-32"
+                  placeholder="Summary context..."
+                  value={state.summaryText}
+                  onChange={(e) => {
+                    actions.setSummaryText(e.target.value);
+                    actions.setUseSummary(!!e.target.value.trim());
+                  }}
+                  disabled={locked}
+                />
+                <label className="inline-flex items-center gap-2 text-sm mt-2">
+                  <input
+                    type="checkbox"
+                    checked={state.useSummary}
+                    onChange={(e) => actions.setUseSummary(e.target.checked)}
+                    disabled={locked}
+                  />
+                  <span>Use summary for translation</span>
+                </label>
+              </SectionCard>
+            )}
+
+            {state.workflowMode === "translation" && (
+              <SectionCard
+                title="Translation settings"
+                subtitle="Set chunking and model controls."
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <FieldLabel>Chunk Size</FieldLabel>
+                    <select
+                      className={theme.input}
+                      value={state.chunkSeconds}
+                      onChange={(e) =>
+                        actions.setChunkSeconds(Number(e.target.value))
+                      }
+                      disabled={locked}
+                    >
+                      {[1, 2, 3, 5, 10, 12, 15, 20, 25, 30, 40].map((min) => {
+                        const seconds = min * 60;
+                        return (
+                          <option key={seconds} value={seconds}>
+                            {min} minute{min === 1 ? "" : "s"}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                  <div>
+                    <FieldLabel>Overlap</FieldLabel>
+                    <select
+                      className={theme.input}
+                      value={state.chunkOverlap}
+                      onChange={(e) =>
+                        actions.setChunkOverlap(Number(e.target.value))
+                      }
+                      disabled={locked}
+                    >
+                      {[0, 1, 2, 3, 4, 5, 6, 8, 10].map((ov) => (
+                        <option key={ov} value={ov}>
+                          {ov} cue{ov === 1 ? "" : "s"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <FieldLabel>Concurrency</FieldLabel>
+                    <select
+                      className={theme.input}
+                      value={state.concurrency}
+                      onChange={(e) =>
+                        actions.setConcurrency(Number(e.target.value))
+                      }
+                      disabled={locked}
+                    >
+                      {Array.from(
+                        { length: MAX_CONCURRENCY },
+                        (_, idx) => idx + 1,
+                      ).map((c) => {
+                        const label = c === 1 ? "Single task" : `${c} parallel`;
+                        return (
+                          <option key={c} value={c}>
+                            {label}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <p className={theme.helperText}>
+                      Capped at {MAX_CONCURRENCY} to respect free-tier RPM.
+                    </p>
+                  </div>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="inline-flex items-center gap-2 text-sm mt-2">
+                    <input
+                      type="checkbox"
+                      checked={state.useStructuredOutput}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        actions.setUseStructuredOutput(checked);
+                        if (checked) {
+                          actions.applyPreset("structured");
+                        } else {
+                          actions.applyPreset("general");
+                        }
+                      }}
+                      disabled={locked}
+                    />
+                    <span>
+                      Use Structured Output (JSON){" "}
+                      <span className={theme.subtext}>
+                        — Experimental. Reduces syntax errors and verifies timing.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              </SectionCard>
+            )}
+
+            <div className="flex justify-end items-center mt-8 mb-12 gap-3 flex-wrap">
+              {statusText && (
+                <span
+                  className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-xs font-semibold ${theme.well.info}`}
+                  title="Current workflow phase"
+                >
+                  <span className="text-[11px] uppercase tracking-wide">Status</span>
+                  <span className="text-sm">{statusText}</span>
+                </span>
+              )}
+              {state.workflowMode === "translation" ? (
+                <>
+                  <Button
+                    type="button"
+                    tone="secondary"
+                    onClick={state.paused ? actions.resume : actions.pause}
+                    disabled={!running}
+                    title="Pause stops starting new chunks/retries; in-flight calls continue."
+                  >
+                    {state.paused ? "Resume" : "Pause"}
+                  </Button>
+                  <Button
+                    type="button"
+                    tone="secondary"
+                    onClick={actions.resetWorkflow}
+                    disabled={!running && !state.paused && !state.translationResult}
+                    title="Reset clears progress, drops queued work, and keeps uploaded media. Enabled when running, paused, or after results."
+                  >
+                    Reset
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    tone="secondary"
+                    onClick={state.transcriptionPaused ? actions.resumeTranscription : actions.pauseTranscription}
+                    disabled={
+                      !state.transcriptionRunning &&
+                      !state.transcriptionResult?.chunks.some(c => c.status === "processing" || c.status === "waiting")
+                    }
+                    title="Pause stops starting new transcription chunks."
+                  >
+                    {state.transcriptionPaused ? "Resume" : "Pause"}
+                  </Button>
+                  <Button
+                    type="button"
+                    tone="secondary"
+                    onClick={actions.cancelTranscription}
+                    disabled={
+                      !state.transcriptionRunning &&
+                      !state.transcriptionResult
+                    }
+                    title="Cancel current transcription run."
+                  >
+                    Reset
                   </Button>
                 </>
               )}
-            </div>
-
-            <details className="mt-3 mb-2">
-              <summary className={`cursor-pointer text-sm ${theme.subtext}`}>
-                Glossary Prompt
-              </summary>
-              <div className="flex justify-end mb-1">
-                <RestoreButton
-                  onClick={() =>
-                    actions.setGlossaryPrompt(DEFAULT_GLOSSARY_PROMPT)
-                  }
-                  disabled={
-                    locked ||
-                    state.glossaryPrompt.trim() ===
-                    DEFAULT_GLOSSARY_PROMPT.trim()
-                  }
-                  title="Restore default glossary system prompt"
-                />
-              </div>
-              <TextArea
-                variant="code"
-                className="h-24 mt-2"
-                value={state.glossaryPrompt}
-                onChange={(e) => actions.setGlossaryPrompt(e.target.value)}
-                disabled={locked}
-              />
-            </details>
-
-            <details className="mt-3 mb-2">
-              <summary className={`cursor-pointer text-sm ${theme.subtext}`}>
-                Summary Prompt
-              </summary>
-              <div className="flex justify-end mb-1">
-                <RestoreButton
-                  onClick={() =>
-                    actions.setSummaryPrompt(DEFAULT_SUMMARY_PROMPT)
-                  }
-                  disabled={
-                    locked ||
-                    state.summaryPrompt.trim() === DEFAULT_SUMMARY_PROMPT.trim()
-                  }
-                  title="Restore default summary system prompt"
-                />
-              </div>
-              <TextArea
-                variant="code"
-                className="h-24 mt-2"
-                value={state.summaryPrompt}
-                onChange={(e) => actions.setSummaryPrompt(e.target.value)}
-                disabled={locked}
-              />
-            </details>
-            <details className="mt-4">
-              <summary className={`cursor-pointer text-sm ${theme.subtext}`}>
-                Translation System Prompt
-              </summary>
-              <div className="flex justify-end mt-2">
-                <RestoreButton
-                  onClick={() =>
-                    actions.setCustomPrompt(DEFAULT_SYSTEM_PROMPT_TEXT)
-                  }
-                  disabled={
-                    locked ||
-                    state.customPrompt.trim() ===
-                    DEFAULT_SYSTEM_PROMPT_TEXT.trim()
-                  }
-                  title="Restore default system prompt"
-                />
-              </div>
-              <TextArea
-                variant="code"
-                className="h-32 mt-2"
-                value={state.customPrompt}
-                onChange={(e) => actions.setCustomPrompt(e.target.value)}
-                placeholder="Override the default system prompt..."
-                disabled={locked}
-              />
-            </details>
-
-            <details className="mt-4">
-              <summary className={`cursor-pointer text-sm ${theme.subtext}`}>
-                User Prompt Preview
-              </summary>
-              <pre
-                className="mt-2 p-3 rounded border text-base whitespace-pre-wrap h-48 overflow-y-auto"
-                style={{
-                  backgroundColor: theme.codeBackground,
-                  borderColor: theme.borderColor,
-                }}
-              >
-                {state.promptPreview}
-              </pre>
-            </details>
-            </SectionCard>
-          )}
-
-          {state.workflowMode === "transcription" && (
-            <SectionCard
-              title="Transcription Prompt"
-              subtitle="Optional prompt to steer Gemini transcription."
-            >
-              <TextArea
-                variant="code"
-                className="h-32"
-                value={state.transcriptionPrompt}
-                onChange={(e) => actions.setTranscriptionPrompt(e.target.value)}
-                disabled={locked}
-              />
-            </SectionCard>
-          )}
-
-          {state.workflowMode === "transcription" && (
-            <SectionCard
-              title="Transcription settings"
-              subtitle={
-                state.selectedProvider === "gemini"
-                  ? "Chunking and parallelism for Gemini transcription."
-                  : state.selectedProvider === "openai"
-                  ? "Processing options for OpenAI transcription."
-                  : "Provider-specific transcription settings."
-              }
-            >
-              <TranscriptionSettings
-                provider={state.selectedProvider}
-                locked={locked}
-                openaiConfig={state.providerConfigs.openai}
-                onUpdateOpenaiConfig={(cfg) => actions.updateProviderConfig("openai", cfg)}
-                transcriptionOverlapSeconds={state.transcriptionOverlapSeconds ?? TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS}
-                setTranscriptionOverlapSeconds={(val) =>
-                  actions.setTranscriptionOverlapSeconds(Math.max(0, val))
-                }
-              />
-            </SectionCard>
-          )}
-
-
-          {state.workflowMode === "translation" && (
-            <SectionCard
-              title="Context (optional)"
-              subtitle="Generate media summary and glossary to guide translations."
-            >
-            <div className="flex items-center gap-2 mb-3">
               <Button
-                type="button"
+                type="submit"
                 tone="upload"
-                onClick={actions.handleGenerateGlossary}
                 disabled={
-                  !state.vttFile || state.glossaryStatus === "loading" || locked
+                  state.submitting ||
+                  locked ||
+                  (state.workflowMode === "translation"
+                    ? (!!state.translationResult || !state.vttFile || (state.selectedProvider !== "ollama" && !state.apiKey))
+                    : (
+                      !!state.transcriptionResult ||
+                      !state.apiKey ||
+                      (
+                        state.selectedProvider === "gemini"
+                          ? (!state.videoRef && !(state.useInlineChunks && state.mediaFile))
+                          : state.selectedProvider === "openai"
+                            ? !state.mediaFile
+                            : true
+                      )
+                    ))
                 }
                 title={
-                  !state.vttFile
-                    ? "Load subtitles to generate a glossary"
-                    : undefined
+                  state.workflowMode === "translation" && state.translationResult
+                    ? "Translation complete. Click Reset to start a new translation."
+                    : state.workflowMode === "transcription" && state.transcriptionResult
+                      ? "Transcription complete. Click Reset to start a new transcription."
+                      : undefined
                 }
               >
-                {state.glossaryStatus === "loading"
-                  ? "Generating..."
-                  : "Generate Glossary"}
+                {state.submitting ? (
+                  <span className="animate-pulse">{startButtonLabel}</span>
+                ) : (
+                  startButtonLabel
+                )}
               </Button>
             </div>
-            <TextArea
-              variant="code"
-              className="h-32"
-              placeholder="Glossary (source,target)..."
-              value={state.glossary}
-              onChange={(e) => {
-                actions.setGlossary(e.target.value);
-                actions.setUseGlossary(!!e.target.value.trim());
-              }}
-              disabled={locked}
+          </form>
+
+          {state.workflowMode === "translation" ? (
+            <TranslationProgress
+              progress={state.translationProgress}
+              result={state.translationResult}
             />
-            <label className="inline-flex items-center gap-2 text-sm mt-2">
-              <input
-                type="checkbox"
-                checked={state.useGlossary}
-                onChange={(e) => actions.setUseGlossary(e.target.checked)}
-                disabled={locked}
-              />
-              <span>Use glossary for translation</span>
-            </label>
-            {state.glossaryError && (
-              <p className={`text-sm ${theme.dangerText} mt-2`}>
-                {state.glossaryError}
-              </p>
-            )}
+          ) : (
+            <TranscriptionProgress
+              progress={state.transcriptionProgress}
+              result={state.transcriptionResult}
+            />
+          )}
 
-            <hr className="my-4" style={{ borderColor: theme.borderColor }} />
+          {state.workflowMode === "translation" ? (
+            <ResultView
+              result={state.translationResult}
+              handleRetryChunk={actions.handleRetryChunk}
+              handleManualChunkEdit={actions.handleManualChunkEdit}
+              retryingChunks={state.retryingChunks}
+              retryQueueIds={state.retryQueueIds}
+            />
+          ) : (
+            <TranscriptionResultView
+              result={state.transcriptionResult}
+              onRetryChunk={actions.handleRetryTranscriptionChunk}
+            />
+          )}
 
-            <div className="flex items-center gap-2 mb-3">
-              <Button
-                type="button"
-                tone="upload"
-                onClick={actions.handleGenerateSummary}
-                disabled={!canGenerateSummary || state.workflowMode === "transcription"}
-              >
-                {summaryButtonLabel}
-              </Button>
-              {state.summaryStatus === "ready" && (
-                <span className={`text-xs ${theme.successText}`}>
-                  Generated
-                </span>
-              )}
-              {state.summaryStatus === "error" && (
-                <span className={`text-xs ${theme.dangerText}`}>Error</span>
-              )}
-              <label className="inline-flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={state.useGlossaryInSummary}
-                  onChange={(e) =>
-                    actions.setUseGlossaryInSummary(e.target.checked)
-                  }
-                  disabled={locked || !state.glossary.trim()}
-                />
-                <span>Use glossary in summary generation</span>
-              </label>
+          {state.error && (
+            <div className={`p-4 rounded ${theme.well.error}`}>
+              <p className="font-bold">Error</p>
+              <p>{state.error}</p>
             </div>
-            {state.summaryError && (
-              <p className={`text-sm ${theme.dangerText} mb-2`}>
-                {state.summaryError}
-              </p>
-            )}
-            <TextArea
-              variant="code"
-              className="h-32"
-              placeholder="Summary context..."
-              value={state.summaryText}
-              onChange={(e) => {
-                actions.setSummaryText(e.target.value);
-                actions.setUseSummary(!!e.target.value.trim());
-              }}
-              disabled={locked}
-            />
-            <label className="inline-flex items-center gap-2 text-sm mt-2">
-              <input
-                type="checkbox"
-                checked={state.useSummary}
-                onChange={(e) => actions.setUseSummary(e.target.checked)}
-                disabled={locked}
-              />
-              <span>Use summary for translation</span>
-            </label>
-            </SectionCard>
           )}
 
-          {state.workflowMode === "translation" && (
-            <SectionCard
-              title="Translation settings"
-              subtitle="Set chunking and model controls."
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <FieldLabel>Chunk Size</FieldLabel>
-                  <select
-                    className={theme.input}
-                    value={state.chunkSeconds}
-                    onChange={(e) =>
-                      actions.setChunkSeconds(Number(e.target.value))
-                    }
-                    disabled={locked}
-                  >
-                    {[1, 2, 3, 5, 10, 12, 15, 20, 25, 30, 40].map((min) => {
-                      const seconds = min * 60;
-                      return (
-                        <option key={seconds} value={seconds}>
-                          {min} minute{min === 1 ? "" : "s"}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-                <div>
-                  <FieldLabel>Overlap</FieldLabel>
-                  <select
-                    className={theme.input}
-                    value={state.chunkOverlap}
-                    onChange={(e) =>
-                      actions.setChunkOverlap(Number(e.target.value))
-                    }
-                    disabled={locked}
-                  >
-                    {[0, 1, 2, 3, 4, 5, 6, 8, 10].map((ov) => (
-                      <option key={ov} value={ov}>
-                        {ov} cue{ov === 1 ? "" : "s"}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <FieldLabel>Concurrency</FieldLabel>
-                  <select
-                    className={theme.input}
-                    value={state.concurrency}
-                    onChange={(e) =>
-                      actions.setConcurrency(Number(e.target.value))
-                    }
-                    disabled={locked}
-                  >
-                    {Array.from(
-                      { length: MAX_CONCURRENCY },
-                      (_, idx) => idx + 1,
-                    ).map((c) => {
-                      const label = c === 1 ? "Single task" : `${c} parallel`;
-                      return (
-                        <option key={c} value={c}>
-                          {label}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <p className={theme.helperText}>
-                    Capped at {MAX_CONCURRENCY} to respect free-tier RPM.
-                  </p>
-                </div>
-              </div>
-            </SectionCard>
-          )}
-
-          <div className="flex justify-end items-center mt-8 mb-12 gap-3 flex-wrap">
-            {statusText && (
-              <span
-                className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-xs font-semibold ${theme.well.info}`}
-                title="Current workflow phase"
-              >
-                <span className="text-[11px] uppercase tracking-wide">Status</span>
-                <span className="text-sm">{statusText}</span>
-              </span>
-            )}
-            {state.workflowMode === "translation" ? (
-              <>
-                <Button
-                  type="button"
-                  tone="secondary"
-                  onClick={state.paused ? actions.resume : actions.pause}
-                  disabled={!running}
-                  title="Pause stops starting new chunks/retries; in-flight calls continue."
-                >
-                  {state.paused ? "Resume" : "Pause"}
-                </Button>
-                <Button
-                  type="button"
-                  tone="secondary"
-                  onClick={actions.resetWorkflow}
-                  disabled={!running && !state.paused && !state.translationResult}
-                  title="Reset clears progress, drops queued work, and keeps uploaded media. Enabled when running, paused, or after results."
-                >
-                  Reset
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  tone="secondary"
-                  onClick={state.transcriptionPaused ? actions.resumeTranscription : actions.pauseTranscription}
-                  disabled={!state.transcriptionRunning}
-                  title="Pause stops starting new transcription chunks."
-                >
-                  {state.transcriptionPaused ? "Resume" : "Pause"}
-                </Button>
-                <Button
-                  type="button"
-                  tone="secondary"
-                  onClick={actions.cancelTranscription}
-                  disabled={!state.transcriptionRunning}
-                  title="Cancel current transcription run."
-                >
-                  Reset
-                </Button>
-              </>
-            )}
+          <ProviderApiLog />
+          <div className="flex justify-end">
             <Button
-              type="submit"
-              tone="upload"
-              disabled={
-                state.submitting ||
-                locked ||
-                (state.workflowMode === "translation"
-                  ? (!state.vttFile || (state.selectedProvider !== "ollama" && !state.apiKey))
-                  : (
-                    !state.apiKey ||
-                    (
-                      state.selectedProvider === "gemini"
-                        ? (!state.videoRef && !(state.useInlineChunks && state.mediaFile))
-                        : state.selectedProvider === "openai"
-                        ? !state.mediaFile
-                        : true
-                    )
-                  ))
-              }
+              type="button"
+              tone="secondary"
+              onClick={actions.clearPreferences}
+              disabled={locked}
+              title="Restore defaults for models/prompts/settings; keeps summary/glossary text. Does not affect files or API key."
+              className="text-xs"
             >
-              {state.submitting ? (
-                <span className="animate-pulse">{startButtonLabel}</span>
-              ) : (
-                startButtonLabel
-              )}
+              Restore defaults
             </Button>
           </div>
-        </form>
-
-        {state.workflowMode === "translation" ? (
-          <TranslationProgress
-            progress={state.translationProgress}
-            result={state.translationResult}
-          />
-        ) : (
-          <TranscriptionProgress
-            progress={state.transcriptionProgress}
-            result={state.transcriptionResult}
-          />
-        )}
-
-        {state.workflowMode === "translation" ? (
-          <ResultView
-            result={state.translationResult}
-            handleRetryChunk={actions.handleRetryChunk}
-            handleManualChunkEdit={actions.handleManualChunkEdit}
-            retryingChunks={state.retryingChunks}
-            retryQueueIds={state.retryQueueIds}
-          />
-        ) : (
-          <TranscriptionResultView
-            result={state.transcriptionResult}
-            onRetryChunk={actions.handleRetryTranscriptionChunk}
-          />
-        )}
-
-        {state.error && (
-          <div className={`p-4 rounded ${theme.well.error}`}>
-            <p className="font-bold">Error</p>
-            <p>{state.error}</p>
-          </div>
-        )}
-
-        <ProviderApiLog />
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            tone="secondary"
-            onClick={actions.clearPreferences}
-            disabled={locked}
-            title="Restore defaults for models/prompts/settings; keeps summary/glossary text. Does not affect files or API key."
-            className="text-xs"
-          >
-            Restore defaults
-          </Button>
-        </div>
         </main>
       </RuntimeErrorBoundary>
       <footer

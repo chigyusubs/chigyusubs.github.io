@@ -8,7 +8,7 @@ import type {
     ProviderTrace,
     UsageInfo,
 } from "./types";
-import { addProviderLog } from "../providerLog";
+import { addProviderLog, updateProviderLog } from "../providerLog";
 
 const API_ROOT = "https://generativelanguage.googleapis.com/v1beta";
 const UPLOAD_ROOT = "https://generativelanguage.googleapis.com/upload/v1beta";
@@ -142,8 +142,11 @@ export class GeminiProvider extends BaseProvider {
             }
         }
 
-        if (typeof temperature === "number") {
-            body.generationConfig = { temperature };
+        if (typeof temperature === "number" || request.responseMimeType) {
+            body.generationConfig = {
+                temperature,
+                responseMimeType: request.responseMimeType,
+            };
         }
 
         if (safetyOff) {
@@ -156,6 +159,19 @@ export class GeminiProvider extends BaseProvider {
         }
 
         const callApi = async (): Promise<GenerateResponse> => {
+            // Log request immediately with pending status
+            const logId = addProviderLog({
+                provider: "gemini",
+                purpose: trace?.purpose || "generateContent",
+                status: "pending",
+                model: normalized,
+                temperature,
+                safetyOff: !!safetyOff,
+                chunkIdx: trace?.chunkIdx,
+                runId: trace?.runId,
+                message: "Request sent...",
+            });
+
             try {
                 const data = await this.requestJson(url, {
                     method: "POST",
@@ -175,31 +191,21 @@ export class GeminiProvider extends BaseProvider {
                 }
 
                 const usage = this.extractUsage(data);
-                addProviderLog({
-                    provider: "gemini",
-                    purpose: trace?.purpose || "generateContent",
+
+                // Update log with success status
+                updateProviderLog(logId, {
                     status: "ok",
-                    model: normalized,
-                    temperature,
-                    safetyOff: !!safetyOff,
                     durationMs: Date.now() - startedAt,
-                    chunkIdx: trace?.chunkIdx,
-                    runId: trace?.runId,
                     tokens: usage,
+                    message: undefined, // Clear "Request sent..." message
                 });
 
                 return { text, usage };
             } catch (err) {
-                addProviderLog({
-                    provider: "gemini",
-                    purpose: trace?.purpose || "generateContent",
+                // Update log with error status
+                updateProviderLog(logId, {
                     status: "error",
-                    model: normalized,
-                    temperature,
-                    safetyOff: !!safetyOff,
                     durationMs: Date.now() - startedAt,
-                    chunkIdx: trace?.chunkIdx,
-                    runId: trace?.runId,
                     message:
                         err instanceof Error ? err.message : "Gemini generateContent failed",
                 });

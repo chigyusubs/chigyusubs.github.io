@@ -116,11 +116,27 @@ export const DEFAULT_SYSTEM_PROMPT_TEXT =
   "- If unsure, choose the most natural target-language phrasing without adding content.\n" +
   "- Return ONLY the WebVTT cues. No explanations, no headers unless present in input.\n\n";
 
+export const STRUCTURED_SYSTEM_PROMPT =
+  "You are a subtitle translator tool. Your task is to translate subtitles into <target>.\n" +
+  "\n" +
+  "Rules:\n" +
+  "1. Output a JSON object with a \"translations\" array.\n" +
+  "2. Each item must have \"ids\" (array of numbers) and \"text\" (translated string).\n" +
+  "3. You MAY merge adjacent cues if they are marked (Short) and form a complete phrase.\n" +
+  "4. Do NOT merge cues marked (Long) unless absolutely necessary.\n" +
+  "5. You strictly CANNOT split a single ID into multiple output items.\n" +
+  "6. Every Input ID must appear exactly once in the Output IDs.";
 
 export const PROMPT_PRESETS = {
   general: {
-    name: "General Purpose",
+    name: "General Purpose (VTT)",
     systemText: DEFAULT_SYSTEM_PROMPT_TEXT,
+    summary: DEFAULT_SUMMARY_PROMPT,
+    glossary: DEFAULT_GLOSSARY_PROMPT,
+  },
+  structured: {
+    name: "Structured JSON",
+    systemText: STRUCTURED_SYSTEM_PROMPT,
     summary: DEFAULT_SUMMARY_PROMPT,
     glossary: DEFAULT_GLOSSARY_PROMPT,
   },

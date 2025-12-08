@@ -47,6 +47,7 @@ export type UserPrefs = {
   useGlossaryInSummary?: boolean;
   useTranscriptionForSummary?: boolean;
   safetyOff?: boolean;
+  useStructuredOutput?: boolean;
 };
 
 const PREFS_KEY = "chigyusubs_prefs";

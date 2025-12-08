@@ -1,3 +1,4 @@
+import pThrottle from "p-throttle";
 import type {
     ProviderCapabilities,
     ProviderConfig,
@@ -5,6 +6,14 @@ import type {
     TranslationProvider,
 } from "./types";
 type RequestInit = globalThis.RequestInit;
+
+// Safety failsafe: 10 requests per second max
+const throttler = pThrottle({
+    limit: 10,
+    interval: 1000
+});
+
+const throttledFetch = throttler(fetch);
 
 /**
  * Base error class for provider errors
@@ -69,7 +78,7 @@ export function parseRetryAfter(err: unknown): number | undefined {
  */
 export async function withRetry<T>(
     fn: () => Promise<T>,
-    attempts = 2,
+    attempts = 1, // Default to 1 (no retry) per user request for strict manual control
 ): Promise<T> {
     let lastError: unknown;
     for (let i = 0; i < attempts; i += 1) {
@@ -140,7 +149,8 @@ export abstract class BaseProvider implements TranslationProvider {
         url: string,
         init: RequestInit,
     ): Promise<unknown> {
-        const resp = await fetch(url, init);
+        // Use throttled fetch for safety
+        const resp = await throttledFetch(url, init);
         const rawText = await resp.text().catch(() => "");
         let data: unknown = {};
         try {

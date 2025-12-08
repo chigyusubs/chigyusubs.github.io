@@ -109,24 +109,24 @@ export function ProviderSettings({
 
     const providerDescriptions: Record<ProviderType, string> = transcriptionMode
         ? {
-              gemini: "Video/audio transcription with File API or inline chunking",
-              openai: "Whisper (VTT) or GPT-4o (text) transcription",
-              anthropic: "Not available for transcription",
-              ollama: "Not available for transcription",
-          }
+            gemini: "Video/audio transcription with File API or inline chunking",
+            openai: "Whisper (VTT) or GPT-4o (text) transcription",
+            anthropic: "Not available for transcription",
+            ollama: "Not available for transcription",
+        }
         : {
-              gemini: "Best for video context and media-rich content",
-              openai: "GPT-4 and GPT-3.5 models for high-quality translation",
-              anthropic: "Claude models for nuanced and creative translation",
-              ollama: "Local models for privacy and offline use",
-          };
+            gemini: "Best for video context and media-rich content",
+            openai: "GPT-4 and GPT-3.5 models for high-quality translation",
+            anthropic: "Claude models for nuanced and creative translation",
+            ollama: "Local models for privacy and offline use",
+        };
 
     const filteredModels =
         transcriptionMode && selectedProvider === "openai"
             ? models.filter((name) => {
-                  const lower = name.toLowerCase();
-                  return lower.includes("whisper") || lower.includes("transcribe");
-              })
+                const lower = name.toLowerCase();
+                return lower.includes("whisper") || lower.includes("transcribe");
+            })
             : models;
     const modelsToDisplay = filteredModels.length ? filteredModels : models;
     const filteredFallback =

@@ -16,7 +16,7 @@ export type ProviderLogEntry = {
     temperature?: number;
     safetyOff?: boolean;
     durationMs?: number;
-    status: "ok" | "error";
+    status: "pending" | "ok" | "error";
     message?: string;
     chunkIdx?: number;
     runId?: number;
@@ -47,6 +47,27 @@ export function addProviderLog(
     };
     entries = [next, ...entries].slice(0, MAX_ENTRIES);
     notify();
+    return next.id; // Return ID for later updates
+}
+
+/**
+ * Update an existing log entry by ID
+ * Useful for updating pending requests with final status
+ */
+export function updateProviderLog(
+    id: string,
+    updates: Partial<Omit<ProviderLogEntry, "id" | "timestamp">>,
+) {
+    const index = entries.findIndex(e => e.id === id);
+    if (index !== -1) {
+        entries[index] = {
+            ...entries[index],
+            ...updates,
+        };
+        notify();
+        return true;
+    }
+    return false;
 }
 
 export function clearProviderLog() {

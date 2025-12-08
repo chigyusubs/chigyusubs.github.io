@@ -4,6 +4,12 @@ import { OpenAIProvider } from "./OpenAIProvider";
 import { AnthropicProvider } from "./AnthropicProvider";
 import { OllamaProvider } from "./OllamaProvider";
 
+// ============================================================================
+// MOCK MODE INTEGRATION (can be removed by deleting this block + src/lib/mock/)
+// ============================================================================
+import { MockProvider, isMockMode } from "../mock/MockProvider";
+// ============================================================================
+
 /**
  * Provider registry and factory
  */
@@ -17,11 +23,23 @@ export class ProviderFactory {
 
     /**
      * Create a provider instance
+     *
+     * When mock mode is enabled (VITE_MOCK=1 or ?mock=1), returns MockProvider
+     * regardless of requested type. This allows testing UX flows without API calls.
      */
     static create(
         type: ProviderType,
         config: ProviderConfig,
     ): TranslationProvider {
+        // ============================================================================
+        // MOCK MODE: Return MockProvider when enabled (DELETE THIS BLOCK TO REMOVE MOCK)
+        // ============================================================================
+        if (isMockMode()) {
+            console.log(`[ProviderFactory] Mock mode enabled, using MockProvider`);
+            return new MockProvider(config);
+        }
+        // ============================================================================
+
         const ProviderClass = this.providers.get(type);
         if (!ProviderClass) {
             throw new Error(`Unknown provider type: ${type}`);

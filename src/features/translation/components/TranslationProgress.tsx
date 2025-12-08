@@ -16,7 +16,7 @@ export function TranslationProgress({ progress, result }: Props) {
   const chunkProgress = result
     ? {
         completed: result.chunks.filter(
-          (c) => c.status === "ok" || c.status === "failed",
+          (c) => c.status === "ok",
         ).length,
         total: result.chunks.length,
       }
