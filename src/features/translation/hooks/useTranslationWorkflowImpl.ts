@@ -38,6 +38,10 @@ import { ProviderFactory } from "../../../lib/providers/ProviderFactory";
 import type { GenerateRequest, ProviderType } from "../../../lib/providers/types";
 import type { Cue } from "../../../lib/vtt";
 import type { ChunkStatus } from "../../../lib/translation";
+import {
+  DEFAULT_STRUCTURED_CUE_HINT_MODE,
+  type StructuredCueHintMode,
+} from "../../../lib/structured/StructuredPrompt";
 
 type SavedPrefs = {
   targetLang?: string;
@@ -55,6 +59,7 @@ type SavedPrefs = {
   useGlossaryInSummary?: boolean;
   useStructuredOutput?: boolean;
   customPresets?: CustomPreset[];
+  structuredCueHintMode?: StructuredCueHintMode;
 };
 
 export function useTranslationWorkflow(saved?: SavedPrefs) {
@@ -108,6 +113,11 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
   );
   const [useStructuredOutput, setUseStructuredOutput] = useState(
     saved?.useStructuredOutput ?? false,
+  );
+  const [structuredCueHintMode, setStructuredCueHintMode] = useState<StructuredCueHintMode>(
+    saved?.structuredCueHintMode === "short-tag"
+      ? "short-tag"
+      : DEFAULT_STRUCTURED_CUE_HINT_MODE,
   );
   const [promptPreview, setPromptPreview] = useState("");
   const [customPresets, setCustomPresets] = useState<CustomPreset[]>(() => {
@@ -327,6 +337,7 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
     videoRef: string | null;
     safetyOff: boolean;
     useStructuredOutput: boolean;
+    structuredCueHintMode?: StructuredCueHintMode;
   }) => {
     await runnerActions.runTranslation(opts);
   };
@@ -390,6 +401,7 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
       videoRef,
       safetyOff,
       useStructuredOutput,
+      structuredCueHintMode,
     });
 
     return parsed.warnings;
@@ -445,6 +457,7 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
       concurrency: retryConcurrency,
       baseUrl: resolvedProvider.baseUrlForProvider,
       useStructuredOutput,
+      structuredCueHintMode,
     });
   };
 
@@ -465,6 +478,7 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
     concurrency: number;
     runToken?: number;
     useStructuredOutput: boolean;
+    structuredCueHintMode?: StructuredCueHintMode;
   }) => {
     await runnerActions.retryChunk(opts);
   };
@@ -763,6 +777,7 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
       customPresets,
       allPresets,
       useStructuredOutput,
+      structuredCueHintMode,
     },
     actions: {
       setTargetLang,
@@ -804,6 +819,7 @@ export function useTranslationWorkflow(saved?: SavedPrefs) {
       generateGlossary,
       generateSummary,
       setUseStructuredOutput,
+      setStructuredCueHintMode,
     },
   };
 }

@@ -5,6 +5,7 @@
 > **Status**: Living document - reflects design decisions and future direction  
 > **Related**: See [prompt-engineering.md](./prompt-engineering.md) for technical implementation details  
 > **Related**: See [providers.md](./providers.md) for multi-provider API support
+> **Note**: Transcription is now structured-first via Gemini File API. Structured translation is WIP and will supersede parts of the legacy VTT prompt path described here.
 
 ## Table of Contents
 

@@ -14,7 +14,11 @@ import { parseVtt, serializeVtt, type Cue } from "./vtt";
 import { MAX_CONCURRENCY } from "../config/defaults";
 import type { ProviderType } from "./providers/types";
 import { ProviderFactory } from "./providers/ProviderFactory";
-import { buildStructuredUserPrompt } from "./structured/StructuredPrompt";
+import {
+  DEFAULT_STRUCTURED_CUE_HINT_MODE,
+  buildStructuredUserPrompt,
+  type StructuredCueHintMode,
+} from "./structured/StructuredPrompt";
 import { validateStructuredOutput } from "./structured/StructuredOutput";
 import { reconstructVtt } from "./structured/VttReconstructor";
 
@@ -99,6 +103,7 @@ type TranslateOptions = {
   shouldPause?: () => boolean;
   runId?: number;
   useStructuredOutput?: boolean;
+  structuredCueHintMode?: StructuredCueHintMode;
 };
 
 type ChunkRetryOptions = {
@@ -118,6 +123,7 @@ type ChunkRetryOptions = {
   safetyOff?: boolean;
   runId?: number;
   useStructuredOutput?: boolean;
+  structuredCueHintMode?: StructuredCueHintMode;
 };
 
 function tokensEstimate(text: string): number {
@@ -190,6 +196,7 @@ async function translateChunk(
       safetyOff: opts.safetyOff,
       runId: opts.runId,
       useStructuredOutput: true,
+      structuredCueHintMode: opts.structuredCueHintMode,
     });
   }
 
@@ -265,6 +272,7 @@ export async function translateChunkFromText(
     summaryText,
     useGlossary,
     safetyOff,
+    structuredCueHintMode,
   } = opts;
   const startedAt = Date.now();
   let parsedChunk: Cue[];
@@ -521,6 +529,7 @@ export async function translateCues(
     temperature,
     safetyOff,
     useStructuredOutput,
+    structuredCueHintMode = DEFAULT_STRUCTURED_CUE_HINT_MODE,
   } = opts;
   const effectiveTarget = targetSeconds;
   const effectiveOverlap = (overlap ?? 2);
@@ -563,6 +572,7 @@ export async function translateCues(
         shouldPause: opts.shouldPause,
         shouldCancel: opts.shouldCancel,
         useStructuredOutput,
+        structuredCueHintMode,
       });
       results.push(res);
       onChunkUpdate?.(res);
@@ -611,6 +621,7 @@ export async function translateCues(
           shouldCancel: opts.shouldCancel,
           runId: opts.runId,
           useStructuredOutput,
+          structuredCueHintMode,
         });
       },
       (chunkResult) => onChunkUpdate?.(chunkResult),
@@ -672,6 +683,7 @@ export async function translateChunkStructured(
     summaryText,
     useGlossary,
     safetyOff,
+    structuredCueHintMode = DEFAULT_STRUCTURED_CUE_HINT_MODE,
   } = opts;
   const startedAt = Date.now();
 
@@ -694,7 +706,8 @@ export async function translateChunkStructured(
     targetLang,
     useGlossary ? glossary : undefined,
     contextVtt,
-    summaryText
+    summaryText,
+    structuredCueHintMode,
   );
 
   // Create provider

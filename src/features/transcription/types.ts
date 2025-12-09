@@ -6,6 +6,7 @@
 export type TranscriptionChunk = {
   idx: number;
   status: "ok" | "failed" | "processing" | "waiting" | "paused";
+  requiresResume?: boolean; // when true, run is auto-paused and needs manual resume after review
 
   // Time range (always present for transcription)
   timeRange: {

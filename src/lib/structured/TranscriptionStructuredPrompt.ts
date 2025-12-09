@@ -57,6 +57,13 @@ TEXT FORMAT RULES:
 
 3. Keep sentences together in one cue when possible
    - Don't break mid-sentence unless speaker changes
+   - Typical cue length: 1.2s–6s. Avoid <1s unless it is an SFX or single short reaction.
+   - Limit total cues in this chunk to 120. Merge tiny interjections into surrounding speech.
+   - Keep each cue under ~200 Japanese characters. Do NOT pad with filler. If a speaker drags a filler (まあまあまあ...), collapse to 1–2 natural repeats; never loop or spam the same token inside a cue.
+
+4. Timing bounds:
+   - All start/end times must stay within ${context.videoStart} - ${context.videoEnd}.
+   - If a timestamp would be outside this window, drop or adjust the cue to fit inside.
 
 Include sound effects in parentheses: (音楽), (拍手), (笑い)
 
@@ -123,6 +130,13 @@ TEXT FORMAT RULES:
 
 3. Keep sentences together in one cue when possible
    - Don't break mid-sentence unless speaker changes
+   - Typical cue length: 1.2s–6s. Avoid <1s unless it is an SFX or single short reaction.
+   - Limit total cues in this chunk to 120. Merge tiny interjections into surrounding speech.
+   - Keep each cue under ~200 Japanese characters. Do NOT pad with filler. If a speaker drags a filler (まあまあまあ...), collapse to 1–2 natural repeats; never loop or spam the same token inside a cue.
+
+4. Timing bounds:
+   - All start/end times must stay within ${context.videoStart} - ${context.videoEnd}.
+   - If a timestamp would be outside this window, drop or adjust the cue to fit inside.
 
 Include sound effects in parentheses: (音楽), (拍手), (笑い)
 

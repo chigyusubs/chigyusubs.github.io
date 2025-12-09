@@ -34,6 +34,7 @@ import {
   enableDebugEvents,
   setDebugWriter,
 } from "./lib/debugState";
+import type { StructuredCueHintMode } from "./lib/structured/StructuredPrompt";
 // ============================================================================
 // MOCK MODE UI (can be removed with src/lib/mock/)
 // ============================================================================
@@ -813,12 +814,37 @@ function App() {
                       disabled={locked}
                     />
                     <span>
-                      Use Structured Output (JSON){" "}
+                      Structured translation (JSON, merge-aware){" "}
                       <span className={theme.subtext}>
-                        — Experimental. Reduces syntax errors and verifies timing.
+                        — Uses cue timestamps; allows merging short cues. Best with Gemini 2.5/3 or GPT-4+.
                       </span>
                     </span>
                   </label>
+                  {state.useStructuredOutput && (
+                    <div className="mt-3 flex flex-col gap-1">
+                      <FieldLabel>Structured cue hinting</FieldLabel>
+                      <select
+                        className={theme.input}
+                        value={state.structuredCueHintMode}
+                        onChange={(e) =>
+                          actions.setStructuredCueHintMode(
+                            e.target.value as StructuredCueHintMode,
+                          )
+                        }
+                        disabled={locked}
+                      >
+                        <option value="duration">
+                          Duration hints (seconds per cue)
+                        </option>
+                        <option value="short-tag">
+                          [SHORT] tags for sub-1.5s cues
+                        </option>
+                      </select>
+                      <p className={theme.helperText}>
+                        Use [SHORT] tags to reduce clutter and nudge merges; keep durations if you want exact lengths visible.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </SectionCard>
             )}
@@ -943,6 +969,7 @@ function App() {
             <TranscriptionResultView
               result={state.transcriptionResult}
               onRetryChunk={actions.handleRetryTranscriptionChunk}
+              onResume={actions.resumeTranscription}
             />
           )}
 

@@ -66,14 +66,43 @@ export function formatTimestamp(seconds: number): string {
  * Validates timing consistency and collects warnings for problematic cues.
  *
  * @param output - Structured transcription output from Gemini
- * @returns VTT string and array of warnings
+ * @returns VTT string, array of warnings, and critical error flag
  */
+type ReconstructionLimits = {
+  expectedStartSeconds?: number;
+  expectedEndSeconds?: number;
+  maxCues?: number;
+  minCueDurationSeconds?: number;
+  maxCueDurationSeconds?: number;
+  maxCueTextLength?: number;
+};
+
 export function reconstructTranscriptionVtt(
-  output: StructuredTranscriptionOutput
-): { vtt: string; warnings: string[] } {
+  output: StructuredTranscriptionOutput,
+  limits: ReconstructionLimits = {}
+): { vtt: string; warnings: string[]; hasCriticalError: boolean } {
   const warnings: string[] = [];
   const cues: Cue[] = [];
   let lowPrecisionCount = 0;
+  let hasCriticalError = false;
+  const shortCueNumbers: number[] = [];
+  const shortCueDurations: number[] = [];
+  const {
+    expectedStartSeconds,
+    expectedEndSeconds,
+    maxCues,
+    minCueDurationSeconds,
+    maxCueDurationSeconds,
+    maxCueTextLength,
+  } = limits;
+  const effectiveMaxCueTextLength = maxCueTextLength ?? 220;
+
+  if (maxCues && output.cues.length > maxCues) {
+    warnings.push(
+      `CRITICAL: Cue count ${output.cues.length} exceeds limit ${maxCues} for this chunk`
+    );
+    hasCriticalError = true;
+  }
 
   // Convert structured cues to VTT cues
   for (const cue of output.cues) {
@@ -99,13 +128,75 @@ export function reconstructTranscriptionVtt(
       // Validate timing
       if (end <= start) {
         warnings.push(`Cue ${cue.number}: end time (${cue.endTime}) must be after start time (${cue.startTime})`);
+        hasCriticalError = true;
         continue;  // Skip this cue
+      }
+
+      if (
+        typeof expectedStartSeconds === "number" &&
+        start < expectedStartSeconds - 0.1
+      ) {
+        warnings.push(
+          `Cue ${cue.number}: starts before chunk (${start.toFixed(3)}s < ${expectedStartSeconds.toFixed(3)}s)`
+        );
+        hasCriticalError = true;
+      }
+
+      if (
+        typeof expectedEndSeconds === "number" &&
+        end > expectedEndSeconds + 0.1
+      ) {
+        warnings.push(
+          `Cue ${cue.number}: ends after chunk (${end.toFixed(3)}s > ${expectedEndSeconds.toFixed(3)}s)`
+        );
+        hasCriticalError = true;
       }
 
       // Duration sanity check (warn if suspiciously long)
       const duration = end - start;
       if (duration > 60) {  // More than 1 minute per cue is unusual
         warnings.push(`Cue ${cue.number}: unusually long duration (${duration.toFixed(1)}s)`);
+      }
+
+      if (minCueDurationSeconds && duration < minCueDurationSeconds) {
+        shortCueNumbers.push(cue.number);
+        shortCueDurations.push(duration);
+      }
+
+      if (maxCueDurationSeconds && duration > maxCueDurationSeconds) {
+        warnings.push(
+          `Cue ${cue.number}: long duration (${duration.toFixed(2)}s); consider splitting`
+        );
+      }
+
+      // Intra-cue quality checks
+      const textLength = cue.text.length;
+      if (effectiveMaxCueTextLength && textLength > effectiveMaxCueTextLength) {
+        warnings.push(
+          `CRITICAL: Cue ${cue.number}: text length ${textLength} chars exceeds limit ${effectiveMaxCueTextLength}; possible loop or overlong sentence`
+        );
+        hasCriticalError = true;
+      }
+
+      const normalizedText = cue.text.replace(/[\s。、,.!?！？]/g, "");
+      if (normalizedText.length >= 40) {
+        const repeatMatch = normalizedText.match(/(.{1,6})\1{7,}/);
+        if (repeatMatch) {
+          const repeatedSegment = repeatMatch[1];
+          const repeatCount = Math.floor(repeatMatch[0].length / repeatedSegment.length);
+          warnings.push(
+            `CRITICAL: Cue ${cue.number}: detected repeated segment "${repeatedSegment}" ${repeatCount} times in one cue (possible hallucination loop)`
+          );
+          hasCriticalError = true;
+        }
+
+        const uniqueRatio = new Set(normalizedText).size / normalizedText.length;
+        if (uniqueRatio < 0.2) {
+          warnings.push(
+            `CRITICAL: Cue ${cue.number}: text has extremely low variation (unique/total ratio ${uniqueRatio.toFixed(2)}); possible repetition loop`
+          );
+          hasCriticalError = true;
+        }
       }
 
       cues.push({
@@ -126,6 +217,14 @@ export function reconstructTranscriptionVtt(
     );
   }
 
+  if (shortCueNumbers.length > 0 && minCueDurationSeconds) {
+    const sample = shortCueNumbers.slice(0, 3).join(", ");
+    const shortest = Math.min(...shortCueDurations);
+    warnings.push(
+      `Short cues detected: ${shortCueNumbers.length} cues below ${minCueDurationSeconds.toFixed(2)}s (shortest ${shortest.toFixed(2)}s; e.g., cues ${sample}); merge tiny reactions into neighbors if needed`
+    );
+  }
+
   // Validate chronological order and check for overlaps
   for (let i = 1; i < cues.length; i++) {
     if (cues[i].start < cues[i - 1].start) {
@@ -141,9 +240,30 @@ export function reconstructTranscriptionVtt(
     }
   }
 
+  // Check for looping/repeated text (only flag when it looks like a loop)
+  const LOOP_REPEAT_THRESHOLD = 10;
+  let repeatRunLength = 1;
+  for (let i = 1; i < output.cues.length; i++) {
+    const currentText = output.cues[i].text.trim();
+    const previousText = output.cues[i - 1].text.trim();
+
+    if (currentText.length > 0 && currentText === previousText) {
+      repeatRunLength += 1;
+      if (repeatRunLength === LOOP_REPEAT_THRESHOLD) {
+        warnings.push(
+          `CRITICAL: Detected ${LOOP_REPEAT_THRESHOLD} identical consecutive cues (possible hallucination loop). Sample: "${currentText.substring(0, 50)}${currentText.length > 50 ? '...' : ''}"`
+        );
+        hasCriticalError = true;
+      }
+    } else {
+      repeatRunLength = 1;
+    }
+  }
+
   // Generate VTT using existing serializer
   return {
     vtt: serializeVtt(cues),
-    warnings
+    warnings,
+    hasCriticalError
   };
 }

@@ -1,18 +1,17 @@
 # ChigyuSubs
 
-Browser-only subtitle translator for VTT or SRT files powered by AI. Supports Gemini, OpenAI, Anthropic, and Ollama local models. Upload subtitles, optionally provide media context, and translate to your target language directly from the page. Chunking, validation, and API calls all run in the client with your API key.
+Browser-only subtitle tool with **transcription-first** workflow. Uses the Gemini File API in structured mode to transcribe media, then lets you translate any VTT (from our transcription or Whisper/other tools) via a structured JSON pipeline and rebuild VTT. Everything runs client-side with your API key.
 
 Live app: https://chigyusubs.github.io (built from `main` via GitHub Actions)
 
 ## Key Features
 
-- 🌐 **Browser-only translation** — No backend required; everything runs client-side
-- 📝 **VTT/SRT support** — Works with standard subtitle formats
-- 🎬 **Optional media context** — Upload media for AI-generated summaries to improve translation accuracy
-- 📚 **Smart glossary generation** — Automatically extract terms from subtitles or create custom glossaries
-- 🎨 **Customizable prompts** — Edit system/user prompts and import/export preset configurations
-- ⚡ **Concurrent processing** — Configurable chunk size and parallel requests for faster translation
-- 🔒 **Privacy-first** — Your API key and files stay in your browser, never persisted or sent elsewhere
+- 🎥 **Structured transcription (primary)** — Gemini File API only, 1-minute chunking tuned for accuracy; outputs structured JSON and VTT.
+- 🌐 **Browser-only** — No backend required; all processing stays client-side.
+- 📝 **VTT/SRT input** — Translate any VTT/SRT (ours or Whisper/others) by converting to compact JSON, invoking a structured-output LLM, and rebuilding VTT.
+- 🎨 **Customizable prompts** — Edit system/user prompts and import/export preset configurations.
+- ⚡ **Concurrent processing** — Configurable chunk size and parallel requests for faster runs.
+- 🔒 **Privacy-first** — API keys and files stay in-memory in your browser, never persisted.
 
 ## Prerequisites
 
@@ -50,15 +49,18 @@ Open http://localhost:5173, paste your Gemini API key, and translate. You can bu
 
 ### For Users
 - **[Mission & Scope](./docs/MISSION.md)** — Why this tool exists, what it's for, and what to expect
-- **[Usage Guide](./docs/usage.md)** — Detailed documentation on features, controls, and workflows
-- **[API Provider Setup](./docs/providers.md)** — Multi-provider support: Gemini, OpenAI, Anthropic, Ollama
-- **[Gemini API Setup](./docs/gemini.md)** — How to get and use your Gemini API key  
-- **[Legal](./docs/legal.md)** — Terms and privacy information
+- **[Translation Guide](./docs/user/translation-guide.md)** — How to translate subtitles with glossary and summary
+- **[Transcription Guide](./docs/user/transcription-guide.md)** — How to generate subtitles from media (experimental)
+- **[Provider Setup](./docs/reference/providers.md)** — Multi-provider overview with links to Gemini/OpenAI/Anthropic/Ollama guides
+- **[Legal](./docs/reference/legal.md)** — Terms and privacy information
 
 ### For Developers & Agents
 - **[Agent Instructions](./AGENTS.md)** — Guidelines for AI agents working with this codebase
-- **[Design Guide](./docs/design.md)** — Architecture decisions, constraints, and future enhancements
-- **[Prompt Engineering](./docs/prompt-engineering.md)** — Technical details of the translation prompt system
+- **[Documentation Index](./docs/DOCUMENTATION.md)** — Single entry point for user, developer, and reference docs
+- **[Prompt Architecture](./docs/developer/architecture.md)** — Prompt design decisions and rationale
+- **[Prompt Engineering](./docs/developer/prompt-engineering.md)** — Technical details of the translation prompt system
+- **[Provider Abstraction](./docs/developer/provider-abstraction.md)** — Multi-provider system design
+- **[Doc Style & Placement](./docs/developer/doc-style.md)** — Folder conventions, required front matter, and doc upkeep
 
 ### Quick Overview
 
@@ -73,9 +75,9 @@ This repo uses GitHub Pages with GitHub Actions. See `.github/workflows/deploy.y
 
 ## How it uses Gemini
 
-- **Subtitles**: Sent to Gemini only when you click "Translate" (chunked according to your settings).
-- **Media**: Sent only when you explicitly click "Upload media," and used solely for summary generation (never embedded in translation prompts).
-- **Prompts**: System, glossary, summary, and chunk prompts are fully customizable and share the default scaffolding (the `<target>` and new `<file>` placeholders resolve to the selected target language and whether the request uses media or transcript context). You can import/export custom prompt presets as JSON to share configurations.
+- **Transcription (primary path)**: Uses Gemini File API in structured mode; media is uploaded only for transcription and stays tied to that request.
+- **Translation**: Accepts VTT/SRT, converts to compact JSON, and calls a structured-output model (Gemini 2.5/3 or GPT-4+); media is not sent with translation chunks.
+- **Prompts**: System/summary/glossary/chunk prompts are customizable; structured translation uses a minimal JSON schema to avoid token waste.
 - **API costs**: Usage may incur costs per your Google billing/quotas. You control the key and model selection.
 
 ## Project structure

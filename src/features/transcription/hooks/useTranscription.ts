@@ -116,6 +116,20 @@ export function useTranscription() {
         });
       }
 
+      // Auto-pause if the chunk requires manual review
+      if (chunk.requiresResume) {
+        pausedRef.current = true;
+        setIsPaused(true);
+        setProgress(`Paused after chunk ${chunk.idx + 1} for review (critical warning).`);
+        if (isDebugEnabled()) {
+          logDebugEvent({
+            kind: "transcription-paused-for-review",
+            runId,
+            chunkIdx: chunk.idx,
+          });
+        }
+      }
+
       // Update result incrementally
       setResult((prev) => {
         const chunks = prev?.chunks || [];
@@ -144,11 +158,11 @@ export function useTranscription() {
       });
     };
 
-    try {
-      let transcriptionResult: TranscriptionResult;
+   try {
+     let transcriptionResult: TranscriptionResult;
 
-      // Dispatch to the correct provider
-      if (config.provider === "openai") {
+     // Dispatch to the correct provider
+     if (config.provider === "openai") {
         transcriptionResult = await transcribeOpenAI(
           config as OpenAITranscriptionConfig,
           onChunkUpdate,
@@ -156,7 +170,7 @@ export function useTranscription() {
           shouldPause,
           runId
         );
-      } else {
+     } else {
         // Gemini
         transcriptionResult = await transcribeGemini(
           config as GeminiTranscriptionConfig,
@@ -194,8 +208,12 @@ export function useTranscription() {
       }
     } finally {
       setIsRunning(false);
-      setIsPaused(false);
-      pausedRef.current = false;
+      // Preserve paused state if we paused for review
+      const wasPaused = pausedRef.current;
+      if (!wasPaused) {
+        setIsPaused(false);
+        pausedRef.current = false;
+      }
     }
   };
 

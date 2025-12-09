@@ -12,6 +12,7 @@ import { serializeVtt, type Cue } from "../lib/vtt";
 import { logDebugEvent } from "../lib/debugState";
 import { isDebugEnabled } from "../lib/debugToggle";
 import type { ProviderType } from "../lib/providers/types";
+import type { StructuredCueHintMode } from "../lib/structured/StructuredPrompt";
 
 export type RunnerProgress = {
   progress: string;
@@ -41,6 +42,7 @@ type RunOptions = {
   videoRef: string | null;
   safetyOff: boolean;
   useStructuredOutput?: boolean;
+  structuredCueHintMode?: StructuredCueHintMode;
 };
 
 type RetryOptions = {
@@ -61,6 +63,7 @@ type RetryOptions = {
   runId?: number;
   cancelVersion?: number;
   useStructuredOutput?: boolean;
+  structuredCueHintMode?: StructuredCueHintMode;
 };
 
 export function useTranslationRunner() {
@@ -197,6 +200,7 @@ export function useTranslationRunner() {
           : undefined,
       safetyOff: opts.safetyOff,
       useStructuredOutput: opts.useStructuredOutput,
+      structuredCueHintMode: opts.structuredCueHintMode ?? "duration",
       shouldCancel: () => cancelVersionRef.current !== cancelVersion,
       shouldPause: () => pausedRef.current || autoPauseRef.current,
       runId,
@@ -338,6 +342,7 @@ export function useTranslationRunner() {
             ? opts.summaryText.trim()
             : undefined,
         safetyOff: opts.safetyOff,
+        structuredCueHintMode: opts.structuredCueHintMode ?? "duration",
         runId,
       });
       if (cancelVersionRef.current === cancelVersion) {

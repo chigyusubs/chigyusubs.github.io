@@ -14,12 +14,13 @@ This tool aims to produce better-than-Whisper subtitles by using multimodal AI t
 ## What It Does
 
 **Input:** Japanese comedy video
-**Output:** Subtitle file
+**Output:** Subtitle file (structured transcription is primary)
 
 **How it's better than Whisper alone:**
 - Sees on-screen text (name cards, captions)
 - Includes visual context (reactions, scene changes)
 - Can be prompted for comedy-specific awareness
+- Structured output via Gemini File API makes it easy to post-process and translate without manual chat prompts
 
 **What you still need to do:**
 - Review and edit the output
@@ -42,7 +43,8 @@ This tool aims to produce better-than-Whisper subtitles by using multimodal AI t
 
 **In scope:**
 - Japanese comedy (漫才, バラエティ, コント, 落語)
-- Features that improve transcription/translation quality
+- Structured transcription using Gemini File API (primary)
+- Structured translation that rebuilds VTT from compact JSON (secondary)
 - Comedy-aware processing
 
 **Out of scope:**

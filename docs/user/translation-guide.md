@@ -1,44 +1,37 @@
-# Usage Guide
+# Translation Guide
 
-Detailed documentation for ChigyuSubs features and workflows.
+> **Type**: Guide | **Status**: WIP (structured translation) | **Last Updated**: 2025-12-09 | **Owner**: Product  
+> **Source of truth**: App UI + [Structured Output](../developer/structured-output.md)
 
-## Optional media prep tips
+Translation is secondary to transcription. It converts VTT/SRT into a compact JSON schema, calls a structured-output LLM, then rebuilds VTT.
 
-- For text-only runs, you can skip media upload entirely.
-- If you upload media for context and want to keep it small, a lightweight video is fine; if you choose audio-only, the video codec doesn't matter. A practical downscale command:
-  ```bash
-  ffmpeg -i input.mp4 \
-    -vf "scale='min(640,iw)':-2,fps=1" \
-    -c:v libx264 -profile:v baseline -preset veryfast -crf 30 \
-    -c:a aac -ac 1 -ar 16000 -b:a 48k \
-    -movflags +faststart \
-    output_llm.mp4
-  ```
-  For audio-only context: `ffmpeg -i input.mp4 -vn -ac 1 -ar 16000 -c:a aac -b:a 48k output.m4a`
+## What you need
+- **Input**: VTT/SRT from the transcription workflow or any other source (e.g., Whisper).
+- **Provider**: Structured-output models only. Target models: **Gemini 2.5/3** and **OpenAI GPT-4+**. Claude is untested; Ollama support depends on model capabilities (low priority).
+- **Output**: Reconstructed WebVTT file.
 
-## UI basics
+## Pipeline (at a glance)
+1. Upload/import VTT or SRT.
+2. App converts cues to a **compact JSON** array (start, end, text, speaker? if present). We keep input minimal so LLMs aren’t distracted by verbose metadata.
+3. Call the selected model with structured output enabled (JSON schema).
+4. Receive translated cues in the same minimal shape: one entry per cue with `id`, `text`, and optional `merge_with_next` to merge short cues.
+5. Rebuild and download VTT with original timestamps preserved (merges reuse min start/max end across merged cues).
 
-- **Inputs**: VTT or SRT subtitles; optional media for context summary only (not sent with chunk prompts).
-- **Context**: you can generate a media summary (optional) and a glossary from subtitles; both are editable and can be toggled on/off.
-- **Prompts**: the system prompt holds the guardrails (editable). Summary, glossary, and chunk prompts pull from shared scaffolding in the defaults so `<target>` and the new `<file>` placeholder resolve to the selected language and the context (media video vs. transcript). The user prompt still combines glossary/context cues before the chunked cues, but there is no dedicated style input anymore; edits happen via the prompt sections.
-- **Controls**: concurrency, chunk length, temperature, summary/glossary toggles, and the new “Use glossary in summary generation” checkbox. Defaults are tuned for Gemini 2.5 Pro (10m chunks, concurrency 2). Concurrency is capped at 10 even if you enter a higher number (to respect Gemini 2.5 Flash free-tier RPM). Overlap pulls prior cues (default 2) as context; raise if you see continuity issues.
+## Steps in the app
+1. Select a structured-capable provider/model (Gemini 2.5/3 or GPT-4+).
+2. Import your VTT/SRT.
+3. (Optional) Enable glossary/summary if you need extra consistency.
+4. Choose cue hinting: durations (default) or `[SHORT]` tags for sub-1.5s cues (helps the model merge quick interjections).
+4. Run translation. The app handles JSON conversion, schema, and VTT rebuild.
+5. Download the translated `.vtt`.
 
-## Guidance for glossary & summary
+## Provider notes
+- **Gemini 2.5/3**: Use JSON schema via `response_mime_type/response_schema`.
+- **OpenAI GPT-4+**: Use JSON mode/JSON schema.
+- **Claude**: Not tested yet.
+- **Ollama**: Model-dependent; expect limited structured support (low priority).
 
-- Generate both to save time, but plan to skim and edit before large runs for best consistency.
-- Keep glossary entries canonical (names/terms in one form). If the summary paraphrases names, tighten it up or keep names in the source language to avoid nudging variants.
-- The model prioritizes the glossary for term consistency; the summary is secondary context. Differences between them typically don't break translation, but cleaning them up reduces variance.
-
-## Buttons & behaviors
-
-- **Translate**: validates subtitles + API key, parses/chunks, and sends only the subtitle text to Gemini for translation. It does not upload or extract media; media is ignored unless you have already uploaded it for summary generation.
-- **Upload media to Gemini**: uploads the selected media file solely for summary generation. If "Upload audio-only" is checked and you chose a video, it first extracts audio to a small mono OGG and uploads that smaller file.
-- **Delete uploaded media**: removes the previously uploaded media from Gemini and clears local refs.
-- **Refresh models**: lists available Gemini models using your API key and updates the dropdown.
-- **Generate summary from media**: runs a summary request against the uploaded media; fills the summary text field.
-- **Generate from subtitles (glossary)**: builds a glossary from your subtitles (local heuristic if no API key; Gemini call if key is present).
-- **Use glossary in summary generation**: tick the checkbox next to “Generate summary…” to prepend the glossary (with the `### GLOSSARY ###` header) to the summary prompt so Gemini sees the glossary plus the selected media/subtitle source before producing bullets.
-- **Toggles**: "Upload audio-only" controls extraction during upload; "Use summary in translation" and "Use glossary in translation" decide whether those optional contexts are included in the prompt payload.
-- **Pause**: stops starting new chunks/retries (in-flight calls continue). Designed to avoid wasting RPM/TPM/cost on stale runs.
-- **Reset**: clears progress and drops queued work while keeping uploaded media.
-- **Restore defaults**: per-field restore buttons reset prompts; the footer "Restore defaults" resets saved preferences but keeps summary/glossary text. It does not affect files or API key.
+## Known gaps
+- Structured translation implementation is still in progress; legacy non-structured flows may remain in UI until replaced.
+- Provider capabilities for strict JSON vary; expect tighter behavior from Gemini/OpenAI than from others.
+- Media is never sent for translation; only text cues are used.

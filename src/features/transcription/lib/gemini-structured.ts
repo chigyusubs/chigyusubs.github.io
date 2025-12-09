@@ -171,19 +171,27 @@ async function transcribeChunkStructured(
     }
 
     const validated = validateTranscriptionOutput(json);
-    const { vtt, warnings } = reconstructTranscriptionVtt(validated);
+    const { vtt, warnings, hasCriticalError } = reconstructTranscriptionVtt(validated, {
+      expectedStartSeconds: videoStart,
+      expectedEndSeconds: videoEnd,
+      maxCues: 120,
+      minCueDurationSeconds: 1.0,
+      maxCueDurationSeconds: 12,
+      maxCueTextLength: 200,
+    });
 
     if (isDebugEnabled()) {
       logDebugEvent({
         kind: "transcription-structured-chunk-complete",
         runId,
         chunkIdx,
-        message: `Chunk ${chunkIdx} completed successfully`,
+        message: `Chunk ${chunkIdx} completed ${hasCriticalError ? 'with CRITICAL errors' : 'successfully'}`,
         data: {
           cueCount: validated.cues.length,
           suggestedBreak: validated.suggestedNextBreak,
           breakReason: validated.breakReason,
-          warnings: warnings.length
+          warnings: warnings.length,
+          hasCriticalError
         }
       });
     }
@@ -192,6 +200,7 @@ async function transcribeChunkStructured(
       chunk: {
         idx: chunkIdx,
         status: "ok",
+        requiresResume: hasCriticalError,
         timeRange: { start: videoStart, end: videoEnd },
         vtt,
         raw_model_output: response.text,
@@ -334,15 +343,13 @@ export async function transcribeGeminiStructured(
       onChunkUpdate(chunk);
     }
 
-    // If chunk failed or we're at the end, stop
-    if (chunk.status === "failed" || !structuredOutput) {
+    // If no structured output, stop
+    if (!structuredOutput) {
       if (isDebugEnabled()) {
         logDebugEvent({
           kind: "transcription-structured-stopped",
           runId,
-          message: chunk.status === "failed"
-            ? `Stopping due to chunk ${chunkIdx} failure`
-            : `Stopping due to missing structured output`,
+          message: `Stopping due to missing structured output`,
           data: { chunkIdx }
         });
       }

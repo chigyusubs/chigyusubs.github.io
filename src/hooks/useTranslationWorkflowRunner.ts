@@ -244,6 +244,7 @@ export function useTranslationWorkflowRunner() {
       maxOutputTokens,
       topP,
       useStructuredOutput: tState.useStructuredOutput,
+      structuredCueHintMode: tState.structuredCueHintMode,
     };
     savePrefs(prefs);
   }, [
@@ -277,6 +278,7 @@ export function useTranslationWorkflowRunner() {
     maxOutputTokens,
     topP,
     tState.useStructuredOutput,
+    tState.structuredCueHintMode,
   ]);
 
   const handleMediaChange = async (file: File | null) => {
@@ -820,7 +822,22 @@ export function useTranslationWorkflowRunner() {
 
   const resetWorkflow = () => {
     if (workflowMode === "transcription") {
+      // Preserve uploaded media so user doesn't need to re-upload
+      const keepVideoRef = videoRef;
+      const keepMediaFile = mediaFile;
+      const keepVideoName = videoName;
+      const keepVideoDuration = videoDuration;
+      const keepVideoSize = videoSizeMb;
+      const keepUploadState = videoUploadState;
+      const keepUploadMessage = videoUploadMessage;
       resetTranscription();
+      setMediaFile(keepMediaFile);
+      setVideoRef(keepVideoRef);
+      setVideoName(keepVideoName);
+      setVideoDuration(keepVideoDuration);
+      setVideoSizeMb(keepVideoSize);
+      setVideoUploadState(keepUploadState);
+      setVideoUploadMessage(keepUploadMessage);
     } else {
       resetTranslation();
     }
@@ -945,6 +962,7 @@ export function useTranslationWorkflowRunner() {
       maxOutputTokens,
       topP,
       useStructuredOutput: tState.useStructuredOutput,
+      structuredCueHintMode: tState.structuredCueHintMode,
     },
     actions: {
       // Provider actions
@@ -1007,6 +1025,7 @@ export function useTranslationWorkflowRunner() {
       clearCustomPresets: tActions.clearCustomPresets,
       setUseGlossaryInSummary: tActions.setUseGlossaryInSummary,
       setUseStructuredOutput: tActions.setUseStructuredOutput,
+      setStructuredCueHintMode: tActions.setStructuredCueHintMode,
     },
   };
 }

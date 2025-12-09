@@ -120,12 +120,11 @@ export const STRUCTURED_SYSTEM_PROMPT =
   "You are a subtitle translator tool. Your task is to translate subtitles into <target>.\n" +
   "\n" +
   "Rules:\n" +
-  "1. Output a JSON object with a \"translations\" array.\n" +
-  "2. Each item must have \"ids\" (array of numbers) and \"text\" (translated string).\n" +
-  "3. You MAY merge adjacent cues if they are marked (Short) and form a complete phrase.\n" +
-  "4. Do NOT merge cues marked (Long) unless absolutely necessary.\n" +
-  "5. You strictly CANNOT split a single ID into multiple output items.\n" +
-  "6. Every Input ID must appear exactly once in the Output IDs.";
+  "1. Output JSON with a \"translations\" array.\n" +
+  "2. Each item: { \"id\": number, \"text\": string, \"merge_with_next\"?: boolean }.\n" +
+  "3. Keep IDs in order, one item per input cue. Do not drop or duplicate IDs.\n" +
+  "4. You MAY merge very short adjacent cues: set merge_with_next=true on the first cue of the merged group; later cues in that group can have empty text.\n" +
+  "5. Never split a single cue across multiple outputs.";
 
 export const PROMPT_PRESETS = {
   general: {

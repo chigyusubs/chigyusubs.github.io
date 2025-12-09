@@ -98,7 +98,13 @@ export class OpenAIProvider extends BaseProvider {
         request: GenerateRequest,
         trace?: ProviderTrace,
     ): Promise<GenerateResponse> {
-        const { systemPrompt, userPrompt, temperature } = request;
+        const {
+            systemPrompt,
+            userPrompt,
+            temperature,
+            responseMimeType,
+            responseJsonSchema,
+        } = request;
         const url = `${API_ROOT}/chat/completions`;
         const startedAt = Date.now();
 
@@ -111,6 +117,21 @@ export class OpenAIProvider extends BaseProvider {
             model: this.config.modelName,
             messages,
         };
+
+        // Enable JSON mode when requested
+        if (responseMimeType === "application/json" || responseJsonSchema) {
+            if (responseJsonSchema) {
+                body.response_format = {
+                    type: "json_schema",
+                    json_schema: {
+                        name: "structured_output",
+                        schema: responseJsonSchema,
+                    },
+                };
+            } else {
+                body.response_format = { type: "json_object" };
+            }
+        }
 
         if (typeof temperature === "number") {
             body.temperature = temperature;

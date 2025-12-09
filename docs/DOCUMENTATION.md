@@ -1,29 +1,33 @@
 # ChigyuSubs Documentation
 
-> **Project Mission**: Build a browser-only subtitle translation tool focused on Japanese comedy content. See [MISSION.md](./MISSION.md) for scope and goals.
+> **Type**: Index | **Status**: Stable | **Last Updated**: 2025-12-09 | **Owner**: Documentation  
+> **Source of truth**: Keep this index aligned with the docs tree and changelog.
+
+> **Project Mission**: Build a browser-only subtitle transcription tool (primary) with optional structured translation, focused on Japanese comedy content. See [MISSION.md](./MISSION.md) for scope and goals.
 
 ## For Users
 
 ### Usage Guides
-- **[Translation Guide](./user/translation-guide.md)** - How to translate subtitles with glossary and summary
-- **[Transcription Guide](./user/transcription-guide.md)** - How to transcribe videos to subtitles *(coming soon)*
+- **[Transcription Guide](./user/transcription-guide.md)** - Primary workflow: Gemini File API, structured mode
+- **[Translation Guide](./user/translation-guide.md)** - Translate VTT/SRT via compact JSON → structured output → VTT rebuild
 
 ---
 
 ## For Developers
 
 ### Architecture & Design
-- **[Architecture](./developer/architecture.md)** - System design decisions and rationale
+- **[Prompt Architecture](./developer/architecture.md)** - Prompt design decisions and rationale
 - **[Prompt Engineering](./developer/prompt-engineering.md)** - How prompts are structured and why
 - **[Provider Abstraction](./developer/provider-abstraction.md)** - Multi-provider system design
 - **[Provider UI Architecture](./developer/provider-ui-architecture.md)** - Dynamic UI based on provider capabilities
+- **[Doc Style & Placement](./developer/doc-style.md)** - Folder conventions, required front matter, and doc upkeep
 
 ### Experimental Features
 - **[Structured Output](./developer/structured-output.md)** - JSON-based transcription workflow (experimental branch)
 
 ### Testing & Development
 - **[Mock Mode](./developer/mock-mode.md)** - Testing UX flows without consuming API quota
-- **[Testing Guide](./developer/testing.md)** - How to test, fixtures *(coming soon)*
+- **[Testing Guide](./developer/testing.md)** - How to run tests and use mock tooling
 
 ---
 
@@ -44,6 +48,12 @@ Technical specifications and details:
 - **[Transcription Workflow](./reference/transcription-workflow.md)** - Technical details of chunking and processing
 - **[File Structure](./reference/file-structure.md)** - Quick reference for finding code
 - **[Legal](./reference/legal.md)** - Copyright, licensing, and usage terms
+
+---
+
+## Changelog
+
+- See [docs/CHANGELOG.md](./CHANGELOG.md) for recent documentation updates.
 
 ---
 
@@ -68,8 +78,9 @@ Historical documents (completed migrations, old plans):
 ## Contributing to Docs
 
 When adding or updating documentation:
-1. **User docs** go in `user/` - focus on "how to use"
-2. **Developer docs** go in `developer/` - focus on "how it works"
-3. **Reference docs** go in `reference/` - technical specifications
-4. **Archive** completed work - preserve history but keep main docs clean
-5. Update DOCUMENTATION.md (this file) with links to new docs
+1. Add the required front matter (see [Doc Style & Placement](./developer/doc-style.md)).
+2. **User docs** go in `user/` - focus on "how to use".
+3. **Developer docs** go in `developer/` - focus on "how it works".
+4. **Reference docs** go in `reference/` - technical specifications.
+5. **Archive** completed work - preserve history but keep main docs clean.
+6. Update this index and the changelog when links or structure change.

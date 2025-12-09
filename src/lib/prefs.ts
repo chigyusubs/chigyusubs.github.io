@@ -1,4 +1,5 @@
 import type { ProviderType } from "./providers/types";
+import type { StructuredCueHintMode } from "./structured/StructuredPrompt";
 import type { WorkflowMode } from "../config/defaults";
 
 export type ProviderConfig = {
@@ -50,6 +51,7 @@ export type UserPrefs = {
   useTranscriptionForSummary?: boolean;
   safetyOff?: boolean;
   useStructuredOutput?: boolean;
+  structuredCueHintMode?: StructuredCueHintMode;
 };
 
 const PREFS_KEY = "chigyusubs_prefs";

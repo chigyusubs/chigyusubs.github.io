@@ -7,6 +7,7 @@ import { useTheme } from "../../../lib/themeContext";
 type Props = {
   result: TranscriptionResult | null;
   onRetryChunk?: (chunk: TranscriptionChunk) => void;
+  onResume?: () => void;
 };
 
 function downloadText(filename: string, content: string, type = "text/plain") {
@@ -29,7 +30,7 @@ function formatTime(seconds: number): string {
   return parts;
 }
 
-export function TranscriptionResultView({ result, onRetryChunk }: Props) {
+export function TranscriptionResultView({ result, onRetryChunk, onResume }: Props) {
   const theme = useTheme();
 
   if (!result) return null;
@@ -110,6 +111,15 @@ export function TranscriptionResultView({ result, onRetryChunk }: Props) {
                       )}
                     </div>
                   )}
+                {chunk.requiresResume && onResume && (
+                  <Button
+                    className="text-xs px-2 py-1"
+                    tone="primary"
+                    onClick={() => onResume()}
+                  >
+                    Resume
+                  </Button>
+                )}
                 {chunk.status === "failed" && onRetryChunk && (
                   <Button
                     className="text-xs px-2 py-1"

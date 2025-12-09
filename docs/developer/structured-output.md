@@ -1,18 +1,17 @@
 # Structured Output Design
 
-> **Status**: Experimental (not yet implemented)  
-> **Branch**: `structured-output`  
-> **Related**: [MISSION.md](./MISSION.md), [design.md](./design.md)
+> **Type**: Spec | **Status**: Transcription stable, Translation WIP | **Last Updated**: 2025-12-09 | **Owner**: Engineering  
+> **Source of truth**: App implementation + this doc
 
 ## Scope & Constraints
 
 This is a solo hobby project. See [MISSION.md](./MISSION.md).
 
 **Key constraints:**
-- Prompts tested with Japanese comedy content
-- "Good enough to share" quality target
-- Gemini-only initially (only provider with media upload for visual comedy)
-- Other providers added only if validated
+- Transcription is the primary feature; Gemini File API only (structured mode).
+- Translation is structured-only and WIP; targets Gemini 2.5/3 and OpenAI GPT-4+. Claude untested; Ollama model-dependent and low priority.
+- Prompts and tuning focus on Japanese comedy content.
+- "Good enough to share" quality target.
 
 ## Overview
 
@@ -36,22 +35,20 @@ Structured JSON output enables comedy-specific features (speaker tracking, visua
 
 ## Evolution Strategy
 
-**Current** (`main` branch): VTT-only workflow
+**Current (transcription)**: Structured JSON via Gemini File API is the default path.
 ```
-Audio → Whisper → VTT → Translate → VTT
-```
-
-**Experimental** (`structured-output` branch): Structured JSON workflow
-```
-Video → Gemini → JSON → Translate → JSON → Convert to VTT
+Video → Gemini (structured) → JSON → VTT
 ```
 
-**Migration path:**
-1. Validate structured output works (this branch)
-2. If successful: structured becomes default
-3. VTT mode becomes "legacy/compatibility" option
+**Current (translation)**: Structured translation is being rolled out; legacy VTT-only translation exists but will be replaced.
+```
+VTT/SRT → compact JSON → structured LLM → JSON → VTT
+```
 
-**Not planned**: Indefinite parallel development of both paths.
+**Plan:**
+1. Keep structured transcription as default (Gemini only).
+2. Ship structured translation adapters for Gemini 2.5/3 and OpenAI GPT-4+.
+3. Deprecate non-structured translation once adapters are stable.
 
 ## Core Schema
 ```typescript
@@ -80,32 +77,36 @@ interface StructuredTranscription {
 **Start minimal. Add fields only when needed.**
 
 ## Translation Schema
-```typescript
-interface TranslationCue extends TranscriptionCue {
-  english_text: string;       // Translated text
-  translation_notes?: string; // Wordplay explanations, cultural notes
-}
 
-interface StructuredTranslation {
-  cues: TranslationCue[];
-  metadata: {
-    source_language: string;
-    target_language: string;
-    api: string;              // "gemini" | "claude" | "openai" | "ollama"
-  };
-}
+LLM-facing schema stays minimal: one item per cue with an optional merge flag. Input to the LLM is compact (cue number, timing, text). The LLM returns the same order with a merge hint so we can rebuild VTT timings.
+
+```typescript
+type StructuredTranslationItem = {
+  id: number;                // 1-based cue number
+  text: string;              // translated text (can be empty when merged)
+  merge_with_next?: boolean; // optional flag to merge with the next cue
+};
+
+type StructuredTranslationOutput = {
+  translations: StructuredTranslationItem[];
+};
 ```
+
+Reconstruction walks cues in order, merges adjacent cues when `merge_with_next` is true, and uses the original timings (min start, max end across the merged group).
+
+Cue hinting options (UI):
+- **Duration hints**: include per-cue duration to guide merges.
+- **[SHORT] tags**: mark sub-1.5s cues with `[SHORT]` and omit duration text to reduce clutter; prompts require merges only on tagged cues.
 
 ## API Support
 
-**Initial implementation**: Gemini only
-- Only provider with media upload (essential for visual comedy context)
-- Structured output via `response_mime_type: "application/json"` + `response_schema`
+**Transcription**: Gemini File API only (structured mode).
 
-**Future consideration** (only if Gemini validated):
-- OpenAI: `response_format: {"type": "json_schema"}`
-- Claude: `output_format` + beta header
-- Ollama: `format` parameter
+**Translation targets** (structured output):
+- **Gemini 2.5 / 3**: `response_mime_type: "application/json"` + `response_schema`.
+- **OpenAI GPT-4+**: `response_format: { type: "json_schema" }` / JSON mode.
+- **Claude**: Not tested yet; evaluate `output_format` when ready.
+- **Ollama**: Model-dependent structured support; low priority.
 
 ## File Structure
 ```
@@ -263,9 +264,9 @@ Gemini has correct text but timing drifts on longer clips.
 
 ```
 Video → FFmpeg split (1-min chunks with overlap)
-      → Gemini transcribe each chunk
+      → Gemini transcribe each chunk (structured)
       → Offset timestamps + merge overlapping cues
-      → Translate (preserving speaker/notes)
+      → Translate (structured) via Gemini 2.5/3 or GPT-4+
       → Convert to VTT
 ```
 
