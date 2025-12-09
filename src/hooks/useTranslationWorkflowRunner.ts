@@ -101,6 +101,13 @@ export function useTranslationWorkflowRunner() {
   const tState = translationWorkflow.state;
   const tActions = translationWorkflow.actions;
 
+  // Force Gemini provider in transcription mode
+  useEffect(() => {
+    if (workflowMode === "transcription" && selectedProvider !== "gemini") {
+      setSelectedProvider("gemini");
+    }
+  }, [workflowMode, selectedProvider, setSelectedProvider]);
+
   // Video/media state
   const [videoName, setVideoName] = useState<string | null>(null);
   const [videoRef, setVideoRef] = useState<string | null>(null);

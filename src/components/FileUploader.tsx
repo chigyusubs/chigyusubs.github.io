@@ -1,11 +1,7 @@
 import React from "react";
 import { LABELS } from "../config/ui";
 import { useTheme } from "../lib/themeContext";
-import {
-  AUDIO_TOKENS_PER_SEC,
-  VIDEO_TOKENS_PER_SEC_DEFAULT,
-  VIDEO_TOKENS_PER_SEC_LOW,
-} from "../config/defaults";
+import { VIDEO_TOKENS_PER_SEC_DEFAULT, VIDEO_TOKENS_PER_SEC_LOW } from "../config/defaults";
 import { Button } from "./ui/Button";
 import { SectionCard } from "./ui/SectionCard";
 import { FilePicker, TextArea } from "./ui/Field";
@@ -128,7 +124,7 @@ export function FileUploader({
   return (
     <SectionCard
       title="Files"
-      subtitle={isTranscriptionMode ? "Upload media to transcribe." : "Upload subtitles (required) and optional context media to improve summaries."}
+      subtitle={isTranscriptionMode ? "Upload video to transcribe (Gemini File API, max 2GB)." : "Upload subtitles (required) and optional context media to improve summaries."}
     >
       <div className={`grid grid-cols-1 gap-4 ${gridColsMd}`}>
         {/* Subtitle File Upload */}
@@ -154,13 +150,13 @@ export function FileUploader({
         {/* Audio/Media File Upload (for Transcription) */}
         {supportsMediaUpload && (
           <FilePicker
-            label={isTranscriptionMode ? "Media to Transcribe (required)" : "Context media (optional)"}
+            label={isTranscriptionMode ? "Video to Transcribe (required)" : "Context media (optional)"}
             description={
               isTranscriptionMode
-                ? "Upload video or audio for Gemini transcription"
-                : "Video or audio, used only for summary (keep small to reduce tokens)"
+                ? "Upload video for Gemini transcription. Max 2GB (File API)."
+                : "Video, used only for summary (keep small to reduce tokens)"
             }
-            accept="video/mp4,video/*,audio/*"
+            accept="video/mp4,video/*"
             onChange={(e) => void setMediaFile(e.target.files?.[0] || null)}
             fileName={mediaFile?.name || null}
             fileMeta={
