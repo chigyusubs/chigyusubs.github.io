@@ -652,10 +652,10 @@ export function useTranslationWorkflowRunner() {
     const hasVttFile = Boolean(vttFile);
     const hasTranscription = Boolean(useTranscriptionEnabled && transcriptionText);
     let resolvedProvider = resolveProviderConfig();
-    const isTranscriptionCapable = resolvedProvider.providerType === "gemini" || resolvedProvider.providerType === "openai";
+    const isTranscriptionCapable = resolvedProvider.providerType === "gemini";
 
     if (workflowMode === "transcription" && !isTranscriptionCapable) {
-      setError(`Transcription mode requires Gemini or OpenAI provider (current: ${resolvedProvider.providerLabel})`);
+      setError(`Transcription mode requires Gemini (current: ${resolvedProvider.providerLabel})`);
       return;
     }
     if (workflowMode === "transcription" && !mediaFile) {

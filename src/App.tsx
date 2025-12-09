@@ -301,8 +301,6 @@ function App() {
               setVttFile={actions.setVttFile}
               mediaFile={state.mediaFile}
               setMediaFile={actions.setMediaFile}
-              useAudioOnly={state.useAudioOnly}
-              setUseAudioOnly={actions.setUseAudioOnly}
               supportsMediaUpload={providerCapability.supportsMediaUpload}
               videoRef={state.videoRef}
               videoUploadState={state.videoUploadState}
@@ -319,10 +317,8 @@ function App() {
               mode={state.workflowMode}
               showSubtitles={state.workflowMode !== "transcription"}
 
-              // Transcription props
-              showAudioUpload={
-                state.workflowMode === "transcription" && state.selectedProvider === "openai"
-              }
+              // Transcription props (Gemini only)
+              showAudioUpload={false}
               audioFile={state.audioFile}
               setAudioFile={actions.setAudioFile}
               transcriptionText={state.transcriptionText}
@@ -591,15 +587,11 @@ function App() {
               <SectionCard
                 title="Transcription settings"
                 subtitle={
-                  state.selectedProvider === "gemini"
-                    ? "Chunking and parallelism for Gemini transcription."
-                    : state.selectedProvider === "openai"
-                      ? "Processing options for OpenAI transcription."
-                      : "Provider-specific transcription settings."
+                  "Chunking and parallelism for Gemini transcription."
                 }
               >
                 <TranscriptionSettings
-                  provider={state.selectedProvider}
+                  provider="gemini"
                   locked={locked}
                   openaiConfig={state.providerConfigs.openai}
                   onUpdateOpenaiConfig={(cfg) => actions.updateProviderConfig("openai", cfg)}

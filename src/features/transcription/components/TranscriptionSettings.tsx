@@ -33,57 +33,13 @@ export function TranscriptionSettings({
   setTranscriptionOverlapSeconds,
 }: Props) {
   const theme = useTheme();
-  const isGemini = provider === "gemini";
-  const isOpenAI = provider === "openai";
+  const isGemini = true;
+  const isOpenAI = false;
 
   return (
     <div className="space-y-4">
-      {/* OpenAI-specific toggles */}
-      {isOpenAI && (
-        <div className="space-y-4">
-          <div>
-            <FieldLabel>Force whisper-1 (legacy VTT, slower)</FieldLabel>
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={openaiConfig.transcriptionModel === "whisper-1"}
-                onChange={(e) =>
-                  onUpdateOpenaiConfig({
-                    ...openaiConfig,
-                    transcriptionModel: e.target.checked ? "whisper-1" : "gpt-4o-mini-transcribe",
-                  })
-                }
-                disabled={locked}
-              />
-              <span>Use Whisper even if not listed</span>
-            </label>
-            <p className="text-xs mt-1 opacity-70">
-              Whisper may not appear in the model list; toggle to force VTT subtitles.
-            </p>
-          </div>
-          <div>
-            <FieldLabel>Source Language (optional)</FieldLabel>
-            <TextInput
-              type="text"
-              value={openaiConfig.transcriptionLanguage || ""}
-              onChange={(e) =>
-                onUpdateOpenaiConfig({
-                  ...openaiConfig,
-                  transcriptionLanguage: e.target.value,
-                })
-              }
-              placeholder="e.g., ja for Japanese"
-              disabled={locked}
-            />
-            <p className="text-xs mt-1 opacity-70">
-              ISO-639-1 code. Leave empty for auto-detection.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Common settings */}
-      <div className={`grid grid-cols-1 gap-4 ${isOpenAI ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+      {/* Gemini settings */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <FieldLabel>Chunk Length</FieldLabel>
           <select

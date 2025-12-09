@@ -15,8 +15,6 @@ type Props = {
   setVttFile: (file: File | null) => void;
   mediaFile: File | null;
   setMediaFile: (file: File | null) => void;
-  useAudioOnly: boolean;
-  setUseAudioOnly: (use: boolean) => void;
   videoRef: string | null;
   videoUploadState: "idle" | "uploading" | "ready" | "error";
   videoUploadMessage: string;
@@ -65,8 +63,6 @@ export function FileUploader({
   setVttFile,
   mediaFile,
   setMediaFile,
-  useAudioOnly,
-  setUseAudioOnly,
   videoRef,
   videoUploadState,
   videoUploadMessage,
@@ -113,19 +109,12 @@ export function FileUploader({
   const estimateTokens = (): string | null => {
     if (!durationInfo) return null;
     const { seconds } = durationInfo;
-    const isAudioFile = mediaFile?.type.startsWith("audio/");
     const rate =
-      isAudioFile || useAudioOnly
-        ? AUDIO_TOKENS_PER_SEC
-        : mediaResolution === "low"
-          ? VIDEO_TOKENS_PER_SEC_LOW
-          : VIDEO_TOKENS_PER_SEC_DEFAULT;
+      mediaResolution === "low"
+        ? VIDEO_TOKENS_PER_SEC_LOW
+        : VIDEO_TOKENS_PER_SEC_DEFAULT;
     const est = Math.round(seconds * rate);
-    const modeLabel = isAudioFile
-      ? "audio file"
-      : useAudioOnly
-        ? "audio-only"
-        : `${mediaResolution} video`;
+    const modeLabel = `${mediaResolution} video`;
     return `Est. tokens: ~${est.toLocaleString()} (${modeLabel})`;
   };
   const isLocked = locked;
@@ -263,26 +252,6 @@ export function FileUploader({
 
       {supportsMediaUpload && (
         <>
-          <div className="flex flex-col gap-2">
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={useAudioOnly}
-                onChange={(e) => setUseAudioOnly(e.target.checked)}
-                disabled={isLocked}
-                title="Extract mono audio from video before upload to reduce size and token cost."
-              />
-              <span>
-                Upload audio-only (smaller upload; recommended for free tier)
-              </span>
-            </label>
-            <p className={theme.helperText}>
-              {isTranscriptionMode
-                ? "For transcription, audio-only reduces upload size and improves speed."
-                : "Media is only used to generate the optional summary; translation uses the text + summary."}
-            </p>
-          </div>
-
           {true ? (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
