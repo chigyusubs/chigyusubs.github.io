@@ -247,80 +247,61 @@ export function FileUploader({
       )}
 
       {supportsMediaUpload && (
-        <>
-          {true ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  tone="upload"
-                  onClick={handleUploadVideo}
-                  disabled={
-                    !mediaFile ||
-                    !apiKey ||
-                    submitting ||
-                    videoUploadState === "uploading"
-                  }
-                >
-                  {videoUploadState === "uploading"
-                    ? LABELS.uploadMediaUploading
-                    : LABELS.uploadMedia}
-                </Button>
-                {videoRef && videoUploadState === "ready" && (
-                  <span className={`text-xs ${theme.successText}`}>Ready</span>
-                )}
-                {videoRef && (
-                  <Button
-                    type="button"
-                    tone="danger"
-                    onClick={handleDeleteVideo}
-                    disabled={submitting || videoUploadState === "uploading"}
-                  >
-                    Delete uploaded media
-                  </Button>
-                )}
-              </div>
-              <div className={`h-2 rounded overflow-hidden ${theme.progressTrack}`}>
-                <div
-                  className={`h-2 ${videoUploadState === "error" ? theme.progressError : videoUploadState === "ready" ? theme.progressOk : theme.progressBar} ${videoUploadState === "uploading" ? "animate-pulse" : ""}`}
-                  style={{ width: `${videoProgress}%` }}
-                />
-              </div>
-              <p className={theme.helperText}>
-                {videoUploadMessage || "Upload to verify Gemini processed the video."}
-              </p>
-              {mediaTooLargeWarning && (
-                <p className={`${theme.warningText} text-xs`}>
-                  Selected media exceeds the 2&nbsp;GB Gemini/ffmpeg limit and cannot
-                  be uploaded.
-                </p>
-              )}
-              {mediaFile && (
-                <div className={`${theme.helperText} space-y-1`}>
-                  <p>
-                    Size:{" "}
-                    {videoSizeMb !== null ? `${videoSizeMb.toFixed(2)} MB` : "n/a"}
-                  </p>
-                  <p>
-                    Duration:{" "}
-                    {durationInfo ? formatDuration(durationInfo.seconds) : "n/a"}
-                  </p>
-                  <p>{estimateTokens() ?? "Est. tokens: n/a"}</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            mediaFile && (
-              <div className={`${theme.helperText} space-y-1`}>
-                <p>
-                  Size: {videoSizeMb !== null ? `${videoSizeMb.toFixed(2)} MB` : "n/a"}
-                </p>
-                <p>Duration: {durationInfo ? formatDuration(durationInfo.seconds) : "n/a"}</p>
-                <p>{estimateTokens() ?? "Est. tokens: n/a"}</p>
-              </div>
-            )
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              tone="upload"
+              onClick={handleUploadVideo}
+              disabled={
+                !mediaFile ||
+                !apiKey ||
+                submitting ||
+                videoUploadState === "uploading"
+              }
+            >
+              {videoUploadState === "uploading"
+                ? LABELS.uploadMediaUploading
+                : LABELS.uploadMedia}
+            </Button>
+            {videoRef && videoUploadState === "ready" && (
+              <span className={`text-xs ${theme.successText}`}>Ready</span>
+            )}
+            {videoRef && (
+              <Button
+                type="button"
+                tone="danger"
+                onClick={handleDeleteVideo}
+                disabled={submitting || videoUploadState === "uploading"}
+              >
+                Delete uploaded media
+              </Button>
+            )}
+          </div>
+          <div className={`h-2 rounded overflow-hidden ${theme.progressTrack}`}>
+            <div
+              className={`h-2 ${videoUploadState === "error" ? theme.progressError : videoUploadState === "ready" ? theme.progressOk : theme.progressBar} ${videoUploadState === "uploading" ? "animate-pulse" : ""}`}
+              style={{ width: `${videoProgress}%` }}
+            />
+          </div>
+          <p className={theme.helperText}>
+            {videoUploadMessage || "Upload to verify Gemini processed the video."}
+          </p>
+          {mediaTooLargeWarning && (
+            <p className={`${theme.warningText} text-xs`}>
+              Selected media exceeds the 2&nbsp;GB Gemini/ffmpeg limit and cannot be uploaded.
+            </p>
           )}
-        </>
+          {mediaFile && (
+            <div className={`${theme.helperText} space-y-1`}>
+              <p>
+                Size: {videoSizeMb !== null ? `${videoSizeMb.toFixed(2)} MB` : "n/a"}
+              </p>
+              <p>Duration: {durationInfo ? formatDuration(durationInfo.seconds) : "n/a"}</p>
+              <p>{estimateTokens() ?? "Est. tokens: n/a"}</p>
+            </div>
+          )}
+        </div>
       )}
     </SectionCard>
   );

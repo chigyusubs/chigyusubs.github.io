@@ -678,7 +678,7 @@ export async function translateChunkStructured(
   let cues: Cue[] = [];
   try {
     cues = parseVtt(chunkVtt);
-  } catch (err) {
+  } catch {
     return {
       idx: opts.idx,
       status: "failed",
@@ -739,7 +739,7 @@ export async function translateChunkStructured(
       }
     }
 
-    let json: any;
+    let json: unknown;
     try {
       json = JSON.parse(rawModelOutput);
     } catch {

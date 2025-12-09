@@ -1,6 +1,5 @@
 
 import type { Cue } from "../vtt";
-import { DEFAULT_SUMMARY_PROMPT, DEFAULT_GLOSSARY_PROMPT } from "../../config/defaults";
 
 /**
  * Generates the user prompt for Structured JSON Translation.

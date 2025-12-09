@@ -18,6 +18,7 @@ import {
 } from "../../../lib/structured/TranscriptionStructuredOutput";
 import { buildTranscriptionPrompt } from "../../../lib/structured/TranscriptionStructuredPrompt";
 import { reconstructTranscriptionVtt, parseTimestamp, formatTimestamp } from "../../../lib/structured/TranscriptionVttReconstructor";
+import type { GenerateRequest } from "../../../lib/providers/types";
 
 const FALLBACK_CHUNK_DURATION = 120; // 2 minutes
 const FALLBACK_BREAK_WINDOW = 20;    // Last 20 seconds
@@ -82,7 +83,7 @@ async function transcribeChunkStructured(
       modelName: config.modelName
     });
 
-    const request: any = {
+    const request: GenerateRequest = {
       systemPrompt,
       userPrompt: augmentedUserPrompt,
       temperature: config.temperature ?? 0,
@@ -118,8 +119,8 @@ async function transcribeChunkStructured(
             message: `Chunk ${chunkIdx} retrying without thinkingConfig due to API rejection`
           });
         }
-        const fallbackRequest = { ...request };
-        delete (fallbackRequest as any).thinkingConfig;
+        const fallbackRequest: GenerateRequest = { ...request };
+        delete fallbackRequest.thinkingConfig;
         response = await provider.generateContent(fallbackRequest, {
           purpose: "transcription-structured",
           chunkIdx,
@@ -151,7 +152,7 @@ async function transcribeChunkStructured(
     rawResponseText = response.text;
 
     // Parse and validate JSON
-    let json: any;
+    let json: unknown;
     try {
       json = JSON.parse(response.text);
     } catch (parseErr) {

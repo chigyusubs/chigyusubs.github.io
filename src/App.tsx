@@ -18,6 +18,7 @@ import {
   DEFAULT_SYSTEM_PROMPT_TEXT,
   MAX_CONCURRENCY,
   PROMPT_PRESETS,
+  TRANSCRIPTION_DEFAULT_CHUNK_SECONDS,
   TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS,
 } from "./config/defaults";
 import { buildTranscriptionPrompt } from "./lib/structured/TranscriptionStructuredPrompt";

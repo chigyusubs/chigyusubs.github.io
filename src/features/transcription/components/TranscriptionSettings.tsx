@@ -1,9 +1,7 @@
 import React from "react";
-import type { ProviderType } from "../../../lib/providers/types";
-import { FieldLabel, TextInput } from "../../../components/ui/Field";
+import { FieldLabel } from "../../../components/ui/Field";
 import { useTheme } from "../../../lib/themeContext";
 import {
-  TRANSCRIPTION_DEFAULT_CONCURRENCY,
   TRANSCRIPTION_DEFAULT_CHUNK_SECONDS,
   TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS,
 } from "../../../config/defaults";
@@ -16,7 +14,6 @@ type OpenAIConfig = {
 };
 
 type Props = {
-  provider: ProviderType;
   locked: boolean;
   openaiConfig: OpenAIConfig;
   onUpdateOpenaiConfig: (config: OpenAIConfig) => void;
@@ -25,7 +22,6 @@ type Props = {
 };
 
 export function TranscriptionSettings({
-  provider,
   locked,
   openaiConfig,
   onUpdateOpenaiConfig,
@@ -33,8 +29,6 @@ export function TranscriptionSettings({
   setTranscriptionOverlapSeconds,
 }: Props) {
   const theme = useTheme();
-  const isGemini = true;
-  const isOpenAI = false;
 
   return (
     <div className="space-y-4">
@@ -60,13 +54,11 @@ export function TranscriptionSettings({
             ))}
           </select>
           <p className="text-xs mt-1 opacity-70">
-            {isGemini
-              ? "Max duration per chunk. Sequential mode may suggest earlier breaks; 2 minutes recommended to avoid looping."
-              : "Duration of each audio segment for OpenAI transcription API."}
+            Max duration per chunk. Sequential mode may suggest earlier breaks; 2 minutes recommended to avoid looping.
           </p>
         </div>
         <div>
-          <FieldLabel>{isGemini ? "Break Window" : "Chunk Overlap / Break Window"}</FieldLabel>
+          <FieldLabel>Break Window</FieldLabel>
           <select
             className={theme.input}
             value={transcriptionOverlapSeconds ?? TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS}
@@ -82,38 +74,9 @@ export function TranscriptionSettings({
             ))}
           </select>
           <p className="text-xs mt-1 opacity-70">
-            {isGemini
-              ? "Window (in the final seconds of a chunk) where Gemini should pick the next natural break. Also reused as overlap for legacy mode."
-              : "Overlap between consecutive chunks for OpenAI. For Gemini sequential mode, this controls the end-of-chunk break window (e.g., last 20s)."}
+            Window (in the final seconds of a chunk) where Gemini should pick the next natural break. Also reused as overlap for legacy mode.
           </p>
         </div>
-
-        {/* Concurrency (OpenAI only) */}
-        {isOpenAI && (
-          <div>
-            <FieldLabel>Concurrency</FieldLabel>
-            <select
-              className={theme.input}
-              value={openaiConfig.transcriptionConcurrency ?? TRANSCRIPTION_DEFAULT_CONCURRENCY}
-              onChange={(e) =>
-                onUpdateOpenaiConfig({
-                  ...openaiConfig,
-                  transcriptionConcurrency: Number(e.target.value),
-                })
-              }
-              disabled={locked}
-            >
-              {[1, 2, 3, 4, 5, 6, 8, 10].map((c) => (
-                <option key={c} value={c}>
-                  {c} parallel
-                </option>
-              ))}
-            </select>
-            <p className="text-xs mt-1 opacity-70">
-              Max parallel OpenAI transcription requests when media is chunked.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

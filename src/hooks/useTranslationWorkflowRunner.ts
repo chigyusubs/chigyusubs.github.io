@@ -19,7 +19,6 @@ import {
   TRANSCRIPTION_MAX_CONCURRENCY,
   TRANSCRIPTION_MIN_CHUNK_SECONDS,
   TRANSCRIPTION_MIN_CONCURRENCY,
-  DEFAULT_TRANSCRIPTION_PROMPT,
   TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS,
   DEFAULT_WORKFLOW_MODE,
   type WorkflowMode,
@@ -781,8 +780,7 @@ export function useTranslationWorkflowRunner() {
     const chunkLength = providerConfigs.openai.transcriptionChunkSeconds ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS;
     const overlapSeconds = Math.max(0, transcriptionOverlapSeconds ?? 0);
     const totalDuration =
-      preparedMedia?.duration ??
-      (videoDuration && Number.isFinite(videoDuration) ? videoDuration : null);
+      videoDuration && Number.isFinite(videoDuration) ? videoDuration : null;
 
     try {
       await transcriptionActions.retryChunk(chunk, {

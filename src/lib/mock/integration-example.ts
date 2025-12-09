@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, no-undef, @typescript-eslint/no-require-imports */
 /**
  * Example: How to integrate mock provider with existing translation runner
  *
