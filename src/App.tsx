@@ -20,6 +20,8 @@ import {
   PROMPT_PRESETS,
   TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS,
 } from "./config/defaults";
+import { buildTranscriptionPrompt } from "./lib/structured/TranscriptionStructuredPrompt";
+import { formatTimestamp } from "./lib/structured/TranscriptionVttReconstructor";
 import { RestoreButton } from "./components/RestoreButton";
 import { getProviderCapability } from "./lib/providers/capabilities";
 import { TranscriptionSettings } from "./features/transcription/components/TranscriptionSettings";
@@ -40,6 +42,7 @@ function App() {
   const { state, actions } = useTranslationWorkflowRunner();
   const theme = useTheme();
   const { name: themeName, toggleTheme } = useThemeControl();
+  const [showTranscriptionPromptModal, setShowTranscriptionPromptModal] = React.useState(false);
   const debugOn = isDebugEnabled();
   React.useEffect(() => {
     if (debugOn) {
@@ -66,6 +69,25 @@ function App() {
   const running = state.isRunning;
   const locked = state.submitting || running;
   const providerCapability = getProviderCapability(state.selectedProvider);
+  const chunkSeconds =
+    state.providerConfigs.openai.transcriptionChunkSeconds ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS;
+  const breakWindow = Math.min(
+    Math.max(state.transcriptionOverlapSeconds ?? TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS, 0),
+    chunkSeconds,
+  );
+  const structuredPromptPreview = React.useMemo(
+    () =>
+      buildTranscriptionPrompt({
+        isFirstChunk: true,
+        videoStart: formatTimestamp(0),
+        videoEnd: formatTimestamp(chunkSeconds),
+        breakWindowStart: formatTimestamp(Math.max(0, chunkSeconds - breakWindow)),
+        breakWindowEnd: formatTimestamp(chunkSeconds),
+        lastTwoCues: undefined,
+        nextCueNumber: 1,
+      }),
+    [breakWindow, chunkSeconds],
+  );
   const summaryButtonLabel =
     state.summaryStatus === "loading"
       ? "Generating..."
@@ -262,8 +284,6 @@ function App() {
               setMediaResolution={actions.setMediaResolution}
               useInlineChunks={state.useInlineChunks}
               setUseInlineChunks={actions.setUseInlineChunks}
-              useStructuredTranscription={state.useStructuredTranscription}
-              setUseStructuredTranscription={actions.setUseStructuredTranscription}
               thinkingBudget={state.thinkingBudget}
               setThinkingBudget={actions.setThinkingBudget}
               maxOutputTokens={state.maxOutputTokens}
@@ -546,14 +566,26 @@ function App() {
             {state.workflowMode === "transcription" && (
               <SectionCard
                 title="Transcription Prompt"
-                subtitle="Optional prompt to steer Gemini transcription."
+                subtitle="Optional extra instructions appended to the structured Gemini prompt."
               >
+                <div className="flex justify-between items-center mb-2">
+                  <p className={`text-sm ${theme.subtext}`}>Appends after the structured prompt.</p>
+                  <Button
+                    tone="secondary"
+                    size="sm"
+                    onClick={() => setShowTranscriptionPromptModal(true)}
+                    disabled={locked}
+                  >
+                    View structured prompt
+                  </Button>
+                </div>
                 <TextArea
                   variant="code"
                   className="h-32"
                   value={state.transcriptionPrompt}
                   onChange={(e) => actions.setTranscriptionPrompt(e.target.value)}
                   disabled={locked}
+                  placeholder="Additional instructions (optional)..."
                 />
               </SectionCard>
             )}
@@ -933,6 +965,63 @@ function App() {
             </Button>
           </div>
         </main>
+        {showTranscriptionPromptModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60"
+            onClick={() => setShowTranscriptionPromptModal(false)}
+          >
+            <div
+              className="bg-white dark:bg-stone-900 rounded-lg shadow-xl max-w-5xl w-full mx-4 max-h-[90vh] flex flex-col border"
+              onClick={(e) => e.stopPropagation()}
+              style={{ borderColor: theme.borderColor }}
+            >
+              <div className="px-6 py-4 border-b" style={{ borderColor: theme.borderColor }}>
+                <h2 className="text-xl font-semibold" style={{ color: theme.text }}>
+                  Structured Transcription Prompt
+                </h2>
+                <p className="text-sm mt-1" style={{ color: theme.mutedText }}>
+                  System + user prompt shown below. Your additional instructions are appended at the end.
+                </p>
+              </div>
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                <div>
+                  <div className="font-semibold mb-1" style={{ color: theme.text }}>System prompt</div>
+                  <pre
+                    className="whitespace-pre-wrap break-words bg-black/40 p-3 rounded text-xs overflow-auto"
+                    style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor, borderWidth: 1 }}
+                  >
+                    {structuredPromptPreview.systemPrompt}
+                  </pre>
+                </div>
+                <div>
+                  <div className="font-semibold mb-1" style={{ color: theme.text }}>User prompt (first chunk)</div>
+                  <pre
+                    className="whitespace-pre-wrap break-words bg-black/40 p-3 rounded text-xs overflow-auto"
+                    style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor, borderWidth: 1 }}
+                  >
+                    {structuredPromptPreview.userPrompt}
+                  </pre>
+                </div>
+                <div>
+                  <div className="font-semibold mb-1" style={{ color: theme.text }}>Your additional instructions</div>
+                  <TextArea
+                    variant="code"
+                    className="h-32"
+                    value={state.transcriptionPrompt}
+                    onChange={(e) => actions.setTranscriptionPrompt(e.target.value)}
+                    disabled={locked}
+                    placeholder="Optional: appended after the structured prompt"
+                  />
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t flex justify-end gap-3" style={{ borderColor: theme.borderColor }}>
+                <Button tone="secondary" onClick={() => setShowTranscriptionPromptModal(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </RuntimeErrorBoundary>
       <footer
         className={`${theme.header} text-center text-sm ${theme.subtext}`}

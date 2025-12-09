@@ -59,7 +59,7 @@ export type GeminiTranscriptionConfig = BaseTranscriptionConfig & {
   provider: "gemini";
   modelName: string;
   useInlineChunks?: boolean; // If true, extract and send audio chunks inline
-  useStructuredOutput?: boolean; // If true, use sequential workflow with adaptive breaks
+  useStructuredOutput?: boolean; // Structured mode is the default path
   thinkingBudget?: number; // Thinking tokens to allow; 0 disables thinking by default
   maxOutputTokens?: number;
   topP?: number;

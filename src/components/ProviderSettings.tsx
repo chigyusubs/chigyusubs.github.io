@@ -57,8 +57,6 @@ type Props = {
     setMediaResolution: (v: "low" | "standard") => void;
     useInlineChunks: boolean;
     setUseInlineChunks: (use: boolean) => void;
-    useStructuredTranscription?: boolean;
-    setUseStructuredTranscription?: (use: boolean) => void;
     thinkingBudget?: number;
     setThinkingBudget?: (budget: number) => void;
     maxOutputTokens?: number;
@@ -94,8 +92,6 @@ export function ProviderSettings({
     setMediaResolution,
     useInlineChunks,
     setUseInlineChunks,
-    useStructuredTranscription,
-    setUseStructuredTranscription,
     thinkingBudget,
     setThinkingBudget,
     maxOutputTokens,
@@ -333,25 +329,6 @@ export function ProviderSettings({
                         </select>
                         <p className={theme.helperText}>
                             File API uploads media then uses offsets per chunk. Inline extracts audio chunks locally and skips provider upload (token-accurate, slower client-side).
-                        </p>
-                    </div>
-                )}
-
-                {/* Gemini transcription mode (sequential structured vs legacy) */}
-                {transcriptionMode && selectedProvider === "gemini" && setUseStructuredTranscription && (
-                    <div className="space-y-2 md:col-span-2">
-                        <FieldLabel>Transcription Mode</FieldLabel>
-                        <select
-                            className={theme.input}
-                            value={useStructuredTranscription ? "structured" : "legacy"}
-                            onChange={(e) => setUseStructuredTranscription(e.target.value === "structured")}
-                            disabled={locked}
-                        >
-                            <option value="structured">Sequential with context (adaptive breaks, continuous numbering)</option>
-                            <option value="legacy">Parallel fixed chunks (legacy)</option>
-                        </select>
-                        <p className={theme.helperText}>
-                            Sequential mode: Model determines natural break points and passes context between chunks. Slower but more coherent. Enabled by default.
                         </p>
                     </div>
                 )}

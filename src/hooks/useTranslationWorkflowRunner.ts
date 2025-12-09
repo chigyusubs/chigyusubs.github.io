@@ -87,9 +87,6 @@ export function useTranslationWorkflowRunner() {
   const [useInlineChunks, setUseInlineChunks] = useState(
     saved?.useInlineChunks ?? false,
   );
-  const [useStructuredTranscription, setUseStructuredTranscription] = useState(
-    saved?.useStructuredTranscription ?? true, // Default to true for new sequential workflow
-  );
   const [thinkingBudget, setThinkingBudget] = useState<number>(
     typeof saved?.thinkingBudget === "number"
       ? saved.thinkingBudget
@@ -241,7 +238,6 @@ export function useTranslationWorkflowRunner() {
       transcriptionPrompt,
       transcriptionOverlapSeconds,
       useInlineChunks,
-      useStructuredTranscription,
       thinkingBudget,
       maxOutputTokens,
       topP,
@@ -276,7 +272,6 @@ export function useTranslationWorkflowRunner() {
     transcriptionPrompt,
     transcriptionOverlapSeconds,
     useInlineChunks,
-    useStructuredTranscription,
     thinkingBudget,
     maxOutputTokens,
     topP,
@@ -643,7 +638,7 @@ export function useTranslationWorkflowRunner() {
           provider: "gemini",
           modelName: resolvedProvider.modelForProvider,
           useInlineChunks,
-          useStructuredOutput: useStructuredTranscription,
+          useStructuredOutput: true,
           thinkingBudget,
           prompt: transcriptionPrompt,
           temperature: tState.temperature,
@@ -977,7 +972,6 @@ export function useTranslationWorkflowRunner() {
       transcriptionPrompt,
       transcriptionOverlapSeconds,
       useInlineChunks,
-      useStructuredTranscription,
       thinkingBudget,
       maxOutputTokens,
       topP,
@@ -999,7 +993,6 @@ export function useTranslationWorkflowRunner() {
       setTranscriptionPrompt,
       setTranscriptionOverlapSeconds,
       setUseInlineChunks,
-      setUseStructuredTranscription,
       setThinkingBudget,
       setMaxOutputTokens,
       setTopP,

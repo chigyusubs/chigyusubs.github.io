@@ -78,6 +78,9 @@ async function transcribeChunkStructured(
   };
 
   const { systemPrompt, userPrompt } = buildTranscriptionPrompt(promptContext);
+  const augmentedUserPrompt = config.prompt
+    ? `${userPrompt}\n\nADDITIONAL INSTRUCTIONS:\n${config.prompt}`
+    : userPrompt;
 
   if (isDebugEnabled()) {
     logDebugEvent({
@@ -99,7 +102,7 @@ async function transcribeChunkStructured(
 
     const request: any = {
       systemPrompt,
-      userPrompt,
+      userPrompt: augmentedUserPrompt,
       temperature: config.temperature ?? 0,
       safetyOff: config.safetyOff,
       responseMimeType: "application/json",
@@ -235,7 +238,7 @@ async function transcribeChunkStructured(
         raw_model_output: response.text,
         raw_vtt: vtt,
         warnings,
-        prompt: userPrompt,
+        prompt: augmentedUserPrompt,
         system_prompt: systemPrompt,
         started_at: startedAt,
         finished_at: Date.now(),
@@ -268,7 +271,7 @@ async function transcribeChunkStructured(
         raw_model_output: rawResponseText,
         raw_vtt: "",
         warnings: [errorMessage],
-        prompt: userPrompt,
+        prompt: augmentedUserPrompt,
         system_prompt: systemPrompt,
         started_at: startedAt,
         finished_at: Date.now(),
