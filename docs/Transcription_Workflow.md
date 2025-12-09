@@ -1,7 +1,7 @@
 ## ChiguyuSubs Transcription Workflow
 
 ### Architecture Overview
-- **Sequential processing**: Process 2-minute video chunks with context handoff
+- **Sequential processing**: Process 2-minute video chunks with context handoff (Gemini-only)
 - **Model**: `gemini-2.5-flash` with thinking mode OFF
 - **Validation**: `gemini-2.5-flash-lite` for automated sanity checking
 - **Output**: Structured JSON → VTT format
@@ -234,5 +234,4 @@ Return your assessment.`,
 - Comedian names correctly identified
 - Story/jokes comprehensible
 - Context flows between chunks
-
 

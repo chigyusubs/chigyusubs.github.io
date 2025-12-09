@@ -61,7 +61,7 @@ export function TranscriptionSettings({
           </select>
           <p className="text-xs mt-1 opacity-70">
             {isGemini
-              ? "Max duration per chunk. In sequential mode, model may suggest earlier break points at natural boundaries (scene changes, pauses)."
+              ? "Max duration per chunk. Sequential mode may suggest earlier breaks; 2 minutes recommended to avoid looping."
               : "Duration of each audio segment for OpenAI transcription API."}
           </p>
         </div>
