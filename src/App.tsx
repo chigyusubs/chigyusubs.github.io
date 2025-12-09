@@ -22,6 +22,7 @@ import {
 } from "./config/defaults";
 import { buildTranscriptionPrompt } from "./lib/structured/TranscriptionStructuredPrompt";
 import { formatTimestamp } from "./lib/structured/TranscriptionVttReconstructor";
+import { TRANSCRIPTION_JSON_SCHEMA } from "./lib/structured/TranscriptionStructuredOutput";
 import { RestoreButton } from "./components/RestoreButton";
 import { getProviderCapability } from "./lib/providers/capabilities";
 import { TranscriptionSettings } from "./features/transcription/components/TranscriptionSettings";
@@ -87,6 +88,10 @@ function App() {
         nextCueNumber: 1,
       }),
     [breakWindow, chunkSeconds],
+  );
+  const schemaPretty = React.useMemo(
+    () => JSON.stringify(TRANSCRIPTION_JSON_SCHEMA, null, 2),
+    [],
   );
   const summaryButtonLabel =
     state.summaryStatus === "loading"
@@ -282,16 +287,12 @@ function App() {
               locked={locked}
               mediaResolution={state.mediaResolution}
               setMediaResolution={actions.setMediaResolution}
-              useInlineChunks={state.useInlineChunks}
-              setUseInlineChunks={actions.setUseInlineChunks}
               thinkingBudget={state.thinkingBudget}
               setThinkingBudget={actions.setThinkingBudget}
               maxOutputTokens={state.maxOutputTokens}
               setMaxOutputTokens={actions.setMaxOutputTokens}
               topP={state.topP}
               setTopP={actions.setTopP}
-              chunkLengthSeconds={state.providerConfigs.openai.transcriptionChunkSeconds}
-              breakWindowSeconds={state.transcriptionOverlapSeconds}
               workflowMode={state.workflowMode}
             />
 
@@ -316,11 +317,7 @@ function App() {
               locked={locked}
               mediaTooLargeWarning={state.mediaTooLargeWarning}
               mode={state.workflowMode}
-              skipProviderUpload={
-                state.workflowMode === "transcription" &&
-                state.selectedProvider === "gemini" &&
-                state.useInlineChunks
-              }
+              showSubtitles={state.workflowMode !== "transcription"}
 
               // Transcription props
               showAudioUpload={
@@ -893,7 +890,7 @@ function App() {
                       !state.apiKey ||
                       (
                         state.selectedProvider === "gemini"
-                          ? (!state.videoRef && !(state.useInlineChunks && state.mediaFile))
+                          ? (!state.videoRef)
                           : state.selectedProvider === "openai"
                             ? !state.mediaFile
                             : true
@@ -1012,6 +1009,15 @@ function App() {
                     disabled={locked}
                     placeholder="Optional: appended after the structured prompt"
                   />
+                </div>
+                <div>
+                  <div className="font-semibold mb-1" style={{ color: theme.text }}>Structured output schema</div>
+                  <pre
+                    className="whitespace-pre bg-black/40 p-3 rounded text-xs overflow-auto"
+                    style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor, borderWidth: 1 }}
+                  >
+                    {schemaPretty}
+                  </pre>
                 </div>
               </div>
               <div className="px-6 py-4 border-t flex justify-end gap-3" style={{ borderColor: theme.borderColor }}>

@@ -5,7 +5,6 @@ import { autoRepairVtt } from "../../../lib/validator";
 import type { TranscriptionChunk, GeminiTranscriptionConfig, TranscriptionResult } from "../types";
 import { logDebugEvent } from "../../../lib/debugState";
 import { isDebugEnabled } from "../../../lib/debugToggle";
-import { extractAudioChunk } from "../../../lib/ffmpeg";
 import { validateCueIntegrity, mergeVttChunks, calculateTimeRanges } from "./shared";
 import { transcribeGeminiStructured } from "./gemini-structured";
 
@@ -14,23 +13,6 @@ const DEFAULT_SYSTEM_PROMPT =
 
 const DEFAULT_USER_PROMPT =
   "Transcribe the attached media to WebVTT. Preserve original language and timing with accurate timestamps. Return ONLY WebVTT text.";
-
-/**
- * Convert a File to base64 string
- */
-async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // Remove data URL prefix (data:audio/ogg;base64,)
-      const base64 = result.split(',')[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 type ParseResult = {
   cues: ReturnType<typeof parseVtt> | null;
@@ -85,63 +67,10 @@ export async function transcribeGeminiChunk(
       safetyOff: config.safetyOff,
     };
 
-    // Use inline chunking if enabled and video file is available
-    if (config.useInlineChunks && config.videoFile) {
-      if (isDebugEnabled()) {
-        logDebugEvent({
-          kind: "transcription-chunk-extract-audio",
-          runId,
-          chunkIdx,
-          message: `Chunk ${chunkIdx} extracting audio (${timeRange.start}s - ${timeRange.end ?? "end"}s)`,
-        });
-      }
-
-      // Extract audio chunk using ffmpeg
-      const audioChunk = await extractAudioChunk(
-        config.videoFile,
-        timeRange.start,
-        timeRange.end
-      );
-
-      if (isDebugEnabled()) {
-        logDebugEvent({
-          kind: "transcription-chunk-encode-audio",
-          runId,
-          chunkIdx,
-          message: `Chunk ${chunkIdx} encoding audio to base64`,
-          data: {
-            audioSize: audioChunk.size,
-            audioType: audioChunk.type,
-          },
-        });
-      }
-
-      // Convert to base64
-      const base64Data = await fileToBase64(audioChunk);
-
-      request.mediaInlineData = {
-        mimeType: audioChunk.type,
-        data: base64Data,
-      };
-
-      if (isDebugEnabled()) {
-        logDebugEvent({
-          kind: "transcription-chunk-inline-ready",
-          runId,
-          chunkIdx,
-          message: `Chunk ${chunkIdx} inline data ready`,
-          data: {
-            base64Length: base64Data.length,
-            estimatedMB: (base64Data.length / 1024 / 1024).toFixed(2),
-          },
-        });
-      }
-    } else {
-      // Use File API with time offsets (original approach)
-      request.mediaUri = config.videoRef;
-      request.mediaStartSeconds = timeRange.start;
-      request.mediaEndSeconds = timeRange.end;
-    }
+    // Use File API with time offsets (preferred)
+    request.mediaUri = config.videoRef;
+    request.mediaStartSeconds = timeRange.start;
+    request.mediaEndSeconds = timeRange.end;
 
     if (isDebugEnabled()) {
       logDebugEvent({
@@ -324,7 +253,7 @@ export async function transcribeGemini(
   shouldPause?: () => Promise<void>,
   runId?: number
 ): Promise<TranscriptionResult> {
-  // Use structured output workflow if enabled (default: true for new sequential approach)
+  // Use structured output workflow by default
   if (config.useStructuredOutput !== false) {
     return transcribeGeminiStructured(
       config,

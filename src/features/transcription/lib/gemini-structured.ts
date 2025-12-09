@@ -7,7 +7,6 @@
 
 import { ProviderFactory } from "../../../lib/providers/ProviderFactory";
 import type { GeminiTranscriptionConfig, TranscriptionChunk, TranscriptionResult } from "../types";
-import { extractAudioChunk } from "../../../lib/ffmpeg";
 import { logDebugEvent } from "../../../lib/debugState";
 import { isDebugEnabled } from "../../../lib/debugToggle";
 import { mergeVttChunks } from "./shared";
@@ -22,23 +21,6 @@ import { reconstructTranscriptionVtt, parseTimestamp, formatTimestamp } from "..
 
 const FALLBACK_CHUNK_DURATION = 120; // 2 minutes
 const FALLBACK_BREAK_WINDOW = 20;    // Last 20 seconds
-
-/**
- * Convert a File to base64 string
- */
-async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // Remove data URL prefix (data:audio/ogg;base64,)
-      const base64 = result.split(',')[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 /**
  * Transcribe a single chunk with structured output
@@ -112,34 +94,10 @@ async function transcribeChunkStructured(
       topP: config.topP
     };
 
-    // Use inline chunking if enabled
-    if (config.useInlineChunks && config.videoFile) {
-      if (isDebugEnabled()) {
-        logDebugEvent({
-          kind: "transcription-chunk-extract-audio",
-          runId,
-          chunkIdx,
-          message: `Chunk ${chunkIdx} extracting audio (${videoStart}s - ${videoEnd}s)`
-        });
-      }
-
-      const audioChunk = await extractAudioChunk(
-        config.videoFile,
-        videoStart,
-        videoEnd
-      );
-
-      const base64Data = await fileToBase64(audioChunk);
-      request.mediaInlineData = {
-        mimeType: audioChunk.type,
-        data: base64Data
-      };
-    } else {
-      // Use File API with time offsets
-      request.mediaUri = config.videoRef;
-      request.mediaStartSeconds = videoStart;
-      request.mediaEndSeconds = videoEnd;
-    }
+    // Use File API with time offsets
+    request.mediaUri = config.videoRef;
+    request.mediaStartSeconds = videoStart;
+    request.mediaEndSeconds = videoEnd;
 
     // Call Gemini API (structured output enforced)
     let response;
@@ -330,8 +288,7 @@ export async function transcribeGeminiStructured(
       message: `Starting structured transcription`,
       data: {
         videoDuration,
-        modelName: config.modelName,
-        useInlineChunks: config.useInlineChunks
+        modelName: config.modelName
       }
     });
   }

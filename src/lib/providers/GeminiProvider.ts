@@ -102,6 +102,7 @@ export class GeminiProvider extends BaseProvider {
 
         // Prefer inline data over file URI for better chunking
         if (mediaInlineData) {
+            // Note: docs recommend placing media before text in contents; we push media part first intentionally.
             parts.push({
                 inlineData: {
                     mimeType: mediaInlineData.mimeType,

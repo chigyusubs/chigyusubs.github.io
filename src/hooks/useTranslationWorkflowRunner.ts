@@ -84,9 +84,6 @@ export function useTranslationWorkflowRunner() {
   const [transcriptionOverlapSeconds, setTranscriptionOverlapSeconds] = useState(
     saved?.transcriptionOverlapSeconds ?? TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS,
   );
-  const [useInlineChunks, setUseInlineChunks] = useState(
-    saved?.useInlineChunks ?? false,
-  );
   const [thinkingBudget, setThinkingBudget] = useState<number>(
     typeof saved?.thinkingBudget === "number"
       ? saved.thinkingBudget
@@ -237,7 +234,6 @@ export function useTranslationWorkflowRunner() {
       useTranscriptionForSummary,
       transcriptionPrompt,
       transcriptionOverlapSeconds,
-      useInlineChunks,
       thinkingBudget,
       maxOutputTokens,
       topP,
@@ -271,7 +267,6 @@ export function useTranslationWorkflowRunner() {
     useTranscriptionForSummary,
     transcriptionPrompt,
     transcriptionOverlapSeconds,
-    useInlineChunks,
     thinkingBudget,
     maxOutputTokens,
     topP,
@@ -325,10 +320,6 @@ export function useTranslationWorkflowRunner() {
     }
     if (selectedProvider !== "ollama" && !apiKey) {
       setError(`${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key is required to upload video`);
-      return;
-    }
-    if (workflowMode === "transcription" && selectedProvider === "gemini" && useInlineChunks) {
-      setError("Inline mode selected; no upload needed.");
       return;
     }
     setError("");
@@ -566,12 +557,10 @@ export function useTranslationWorkflowRunner() {
     }
 
     // For OpenAI, we need videoFile; for Gemini we need videoRef
-    if (resolvedProvider.providerType === "gemini" && !videoRef) {
-      if (!(useInlineChunks && mediaFile)) {
+      if (resolvedProvider.providerType === "gemini" && !videoRef) {
         setError("Upload media to transcribe with Gemini");
         return;
       }
-    }
     if (resolvedProvider.providerType === "openai" && !mediaFile) {
       setError("Select media file to transcribe with OpenAI");
       return;
@@ -585,13 +574,9 @@ export function useTranslationWorkflowRunner() {
     const chunkLength = providerConfigs.openai.transcriptionChunkSeconds ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS;
     const overlapSeconds = Math.max(0, transcriptionOverlapSeconds ?? 0);
 
-    const shouldPrepareInline =
-      mediaFile &&
-      (resolvedProvider.providerType === "openai" ||
-        (resolvedProvider.providerType === "gemini" && useInlineChunks));
     let preparedMedia: Awaited<ReturnType<typeof prepareMediaFile>> | null = null;
 
-    if (shouldPrepareInline && mediaFile) {
+    if (mediaFile) {
       try {
         preparedMedia = await prepareMediaFile(mediaFile, {
           useAudioOnly,
@@ -608,8 +593,7 @@ export function useTranslationWorkflowRunner() {
     }
 
     const totalDuration =
-      preparedMedia?.duration ??
-      (videoDuration && Number.isFinite(videoDuration) ? videoDuration : null);
+      videoDuration && Number.isFinite(videoDuration) ? videoDuration : null;
 
     setSubmitting(true);
     transcriptionPausedRef.current = false;
@@ -637,7 +621,6 @@ export function useTranslationWorkflowRunner() {
           ...baseConfig,
           provider: "gemini",
           modelName: resolvedProvider.modelForProvider,
-          useInlineChunks,
           useStructuredOutput: true,
           thinkingBudget,
           prompt: transcriptionPrompt,
@@ -783,26 +766,9 @@ export function useTranslationWorkflowRunner() {
       setError(`${resolvedProvider.providerLabel} API key is required for transcription retry`);
       return;
     }
-    if (!videoRef && !(useInlineChunks && mediaFile)) {
-      setError("No media file available for transcription retry");
+    if (!videoRef) {
+      setError("No uploaded media available for transcription retry");
       return;
-    }
-
-    let preparedMedia: Awaited<ReturnType<typeof prepareMediaFile>> | null = null;
-    if (useInlineChunks && mediaFile) {
-      try {
-        preparedMedia = await prepareMediaFile(mediaFile, {
-          useAudioOnly,
-          getMediaDuration,
-          extractAudioToOggMono,
-        });
-        setVideoDuration(preparedMedia.duration);
-        setVideoSizeMb(preparedMedia.sizeMb);
-        setVideoName((prev) => prev || preparedMedia?.name || null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unable to prepare media for retry");
-        return;
-      }
     }
 
     const chunkLength = providerConfigs.openai.transcriptionChunkSeconds ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS;
@@ -815,8 +781,7 @@ export function useTranslationWorkflowRunner() {
       await transcriptionActions.retryChunk(chunk, {
         provider: "gemini",
         videoRef: videoRef ?? "",
-        videoFile: preparedMedia?.file ?? mediaFile ?? undefined,
-        useInlineChunks,
+        videoFile: mediaFile ?? undefined,
         apiKey: resolvedProvider.apiKeyForProvider,
         modelName: resolvedProvider.modelForProvider,
         chunkLength,
@@ -971,7 +936,6 @@ export function useTranslationWorkflowRunner() {
       useTranscriptionForSummary,
       transcriptionPrompt,
       transcriptionOverlapSeconds,
-      useInlineChunks,
       thinkingBudget,
       maxOutputTokens,
       topP,
@@ -992,7 +956,6 @@ export function useTranslationWorkflowRunner() {
       setUseTranscriptionForSummary,
       setTranscriptionPrompt,
       setTranscriptionOverlapSeconds,
-      setUseInlineChunks,
       setThinkingBudget,
       setMaxOutputTokens,
       setTopP,

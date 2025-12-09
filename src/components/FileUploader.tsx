@@ -30,7 +30,7 @@ type Props = {
   locked: boolean;
   mediaTooLargeWarning: boolean;
   supportsMediaUpload: boolean;
-  skipProviderUpload?: boolean;
+  showSubtitles?: boolean;
 
   // Audio Transcription Props
   showAudioUpload?: boolean;
@@ -80,7 +80,7 @@ export function FileUploader({
   locked,
   mediaTooLargeWarning,
   supportsMediaUpload,
-  skipProviderUpload = false,
+  showSubtitles = true,
 
   showAudioUpload = false,
   audioFile,
@@ -139,26 +139,28 @@ export function FileUploader({
   return (
     <SectionCard
       title="Files"
-      subtitle="Upload subtitles (required) and optional context media to improve summaries."
+      subtitle={isTranscriptionMode ? "Upload media to transcribe." : "Upload subtitles (required) and optional context media to improve summaries."}
     >
       <div className={`grid grid-cols-1 gap-4 ${gridColsMd}`}>
         {/* Subtitle File Upload */}
-        <FilePicker
-          label={isTranscriptionMode ? "Subtitles (optional)" : "Subtitles (VTT or SRT, required)"}
-          description={
-            isTranscriptionMode
-              ? "Optional: provide subtitles to compare against transcription"
-              : "Click or drop your subtitle file"
-          }
-          accept=".vtt,.srt,text/vtt,text/srt"
-          onChange={(e) => setVttFile(e.target.files?.[0] || null)}
-          required={!isTranscriptionMode && !useTranscription} // Not required if using transcription
-          fileName={vttFile?.name || null}
-          fileMeta={
-            vttFile ? `${(vttFile.size / 1024 / 1024).toFixed(2)} MB` : null
-          }
-          disabled={isLocked || useTranscription}
-        />
+        {showSubtitles && (
+          <FilePicker
+            label={isTranscriptionMode ? "Subtitles (optional)" : "Subtitles (VTT or SRT, required)"}
+            description={
+              isTranscriptionMode
+                ? "Optional: provide subtitles to compare against transcription"
+                : "Click or drop your subtitle file"
+            }
+            accept=".vtt,.srt,text/vtt,text/srt"
+            onChange={(e) => setVttFile(e.target.files?.[0] || null)}
+            required={!isTranscriptionMode && !useTranscription} // Not required if using transcription
+            fileName={vttFile?.name || null}
+            fileMeta={
+              vttFile ? `${(vttFile.size / 1024 / 1024).toFixed(2)} MB` : null
+            }
+            disabled={isLocked || useTranscription}
+          />
+        )}
 
         {/* Audio/Media File Upload (for Transcription) */}
         {supportsMediaUpload && (
@@ -166,9 +168,7 @@ export function FileUploader({
             label={isTranscriptionMode ? "Media to Transcribe (required)" : "Context media (optional)"}
             description={
               isTranscriptionMode
-                ? skipProviderUpload
-                  ? "Select video or audio for Gemini inline transcription (no provider upload)"
-                  : "Upload video or audio for Gemini transcription"
+                ? "Upload video or audio for Gemini transcription"
                 : "Video or audio, used only for summary (keep small to reduce tokens)"
             }
             accept="video/mp4,video/*,audio/*"
@@ -283,7 +283,7 @@ export function FileUploader({
             </p>
           </div>
 
-          {!skipProviderUpload ? (
+          {true ? (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Button

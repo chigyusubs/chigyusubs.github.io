@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect } from "react";
 import type { ProviderType } from "../lib/providers/types";
 import { useTheme } from "../lib/themeContext";
 import { getProviderCapability } from "../lib/providers/capabilities";
@@ -6,9 +6,6 @@ import { Button } from "./ui/Button";
 import { SectionCard } from "./ui/SectionCard";
 import { FieldLabel, TextInput } from "./ui/Field";
 import { ProviderSpecificSettings } from "./providers/ProviderSpecificSettings";
-import { buildTranscriptionPrompt } from "../lib/structured/TranscriptionStructuredPrompt";
-import { formatTimestamp } from "../lib/structured/TranscriptionVttReconstructor";
-import { TRANSCRIPTION_JSON_SCHEMA } from "../lib/structured/TranscriptionStructuredOutput";
 
 type Props = {
     // Provider selection
@@ -55,16 +52,12 @@ type Props = {
     setSafetyOff: (v: boolean) => void;
     mediaResolution: "low" | "standard";
     setMediaResolution: (v: "low" | "standard") => void;
-    useInlineChunks: boolean;
-    setUseInlineChunks: (use: boolean) => void;
     thinkingBudget?: number;
     setThinkingBudget?: (budget: number) => void;
     maxOutputTokens?: number;
     setMaxOutputTokens?: (tokens?: number) => void;
     topP?: number;
     setTopP?: (p?: number) => void;
-    chunkLengthSeconds?: number;
-    breakWindowSeconds?: number;
 
     locked?: boolean;
 };
@@ -90,40 +83,16 @@ export function ProviderSettings({
     setSafetyOff,
     mediaResolution,
     setMediaResolution,
-    useInlineChunks,
-    setUseInlineChunks,
     thinkingBudget,
     setThinkingBudget,
     maxOutputTokens,
     setMaxOutputTokens,
     topP,
     setTopP,
-    chunkLengthSeconds,
-    breakWindowSeconds,
     workflowMode = "translation",
     locked = false,
 }: Props) {
     const theme = useTheme();
-    const chunkSeconds = chunkLengthSeconds ?? 120;
-    const breakWindow = Math.min(Math.max(breakWindowSeconds ?? 20, 0), chunkSeconds);
-
-    const promptPreview = useMemo(() => {
-        const { systemPrompt, userPrompt } = buildTranscriptionPrompt({
-            isFirstChunk: true,
-            videoStart: formatTimestamp(0),
-            videoEnd: formatTimestamp(chunkSeconds),
-            breakWindowStart: formatTimestamp(Math.max(0, chunkSeconds - breakWindow)),
-            breakWindowEnd: formatTimestamp(chunkSeconds),
-            lastTwoCues: undefined,
-            nextCueNumber: 1,
-        });
-        return { systemPrompt, userPrompt };
-    }, [breakWindow, chunkSeconds]);
-
-    const schemaPretty = useMemo(
-        () => JSON.stringify(TRANSCRIPTION_JSON_SCHEMA, null, 2),
-        [],
-    );
     const topPEnabled = typeof topP === "number";
 
     const currentApiKey = apiKeys[selectedProvider] || "";
@@ -314,25 +283,6 @@ export function ProviderSettings({
                     )}
                 </div>
 
-                {/* Gemini transcription chunking mode (inline vs File API) */}
-                {transcriptionMode && selectedProvider === "gemini" && (
-                    <div className="space-y-2 md:col-span-2">
-                        <FieldLabel>Gemini Media Mode</FieldLabel>
-                        <select
-                            className={theme.input}
-                            value={useInlineChunks ? "inline" : "fileapi"}
-                            onChange={(e) => setUseInlineChunks(e.target.value === "inline")}
-                            disabled={locked}
-                        >
-                            <option value="fileapi">File API (upload then reference with time offsets)</option>
-                            <option value="inline">Inline audio chunks (no upload; extract locally)</option>
-                        </select>
-                        <p className={theme.helperText}>
-                            File API uploads media then uses offsets per chunk. Inline extracts audio chunks locally and skips provider upload (token-accurate, slower client-side).
-                        </p>
-                    </div>
-                )}
-
                 {/* Gemini thinking budget */}
                 {transcriptionMode && selectedProvider === "gemini" && setThinkingBudget && (
                     <div className="space-y-2 md:col-span-2">
@@ -428,44 +378,6 @@ export function ProviderSettings({
                             </p>
                         </div>
                     </>
-                )}
-
-                {/* Transcription summary and previews */}
-                {transcriptionMode && selectedProvider === "gemini" && (
-                    <div className="md:col-span-2 space-y-3">
-                        <div className="rounded-lg border border-neutral-700/50 bg-neutral-900/40 p-3 text-sm space-y-1">
-                            <div className="font-semibold">Transcription settings overview</div>
-                            <div>Chunk length: {chunkSeconds}s</div>
-                            <div>Break window: last {breakWindow}s</div>
-                            <div>Thinking budget: {thinkingBudget ?? 0}</div>
-                            <div>Temperature: {temperature}</div>
-                            <div>Top-p: {typeof topP === "number" ? topP.toFixed(2) : "model default"}</div>
-                            <div>Max output tokens: {typeof maxOutputTokens === "number" ? maxOutputTokens.toLocaleString() : "model default"}</div>
-                        </div>
-                        <details className="rounded-lg border border-neutral-700/50 bg-neutral-900/40 p-3">
-                            <summary className="cursor-pointer font-semibold">Prompt & Schema Preview</summary>
-                            <div className="mt-3 space-y-2 text-sm">
-                                <div>
-                                    <div className="font-semibold mb-1">System prompt</div>
-                                    <pre className="whitespace-pre-wrap break-words bg-black/40 p-2 rounded text-xs overflow-auto">
-{promptPreview.systemPrompt}
-                                    </pre>
-                                </div>
-                                <div>
-                                    <div className="font-semibold mb-1">User prompt (first chunk)</div>
-                                    <pre className="whitespace-pre-wrap break-words bg-black/40 p-2 rounded text-xs overflow-auto">
-{promptPreview.userPrompt}
-                                    </pre>
-                                </div>
-                                <div>
-                                    <div className="font-semibold mb-1">Structured output schema</div>
-                                    <pre className="whitespace-pre bg-black/40 p-2 rounded text-xs overflow-auto">
-{schemaPretty}
-                                    </pre>
-                                </div>
-                            </div>
-                        </details>
-                    </div>
                 )}
 
                 {/* Temperature */}
