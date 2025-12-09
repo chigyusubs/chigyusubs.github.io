@@ -45,6 +45,7 @@ function App() {
   const { state, actions } = useTranslationWorkflowRunner();
   const theme = useTheme();
   const { name: themeName, toggleTheme } = useThemeControl();
+  const isDarkTheme = themeName === "dark";
   const [showTranscriptionPromptModal, setShowTranscriptionPromptModal] = React.useState(false);
   const debugOn = isDebugEnabled();
   React.useEffect(() => {
@@ -181,7 +182,7 @@ function App() {
             <div>
               <h1 className="text-2xl font-bold">ChigyuSubs</h1>
               <p className={`text-sm ${theme.subtext}`}>
-                Translate subtitles (VTT or SRT) using AI translation.
+                Browser-only subs for Japanese comedy (お笑い) & beyond.
               </p>
             </div>
           </div>
@@ -237,27 +238,72 @@ function App() {
               title="Mode"
               subtitle="Switch between translation and transcription."
             >
-              <div className="flex flex-wrap items-center gap-4">
-                <label className="inline-flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    value="translation"
-                    checked={state.workflowMode === "translation"}
-                    onChange={() => actions.setWorkflowMode("translation")}
-                    disabled={locked}
-                  />
-                  <span>Translation</span>
-                </label>
-                <label className="inline-flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    value="transcription"
-                    checked={state.workflowMode === "transcription"}
-                    onChange={() => actions.setWorkflowMode("transcription")}
-                    disabled={locked}
-                  />
-                  <span>Transcription (Gemini/OpenAI)</span>
-                </label>
+              <div className="space-y-2">
+                <div
+                  className={`inline-flex w-full flex-col gap-2 rounded-xl p-1 sm:w-auto ${
+                    isDarkTheme
+                      ? "border border-white/5 bg-white/[0.03] shadow-inner shadow-black/30"
+                      : "border border-orange-100 bg-white shadow-inner shadow-orange-100/60"
+                  }`}
+                >
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {[
+                      {
+                        key: "translation",
+                        label: "Translation",
+                        icon: "🌐",
+                        description: "VTT/SRT → translated subtitles",
+                      },
+                      {
+                        key: "transcription",
+                        label: "Transcription",
+                        icon: "🎙️",
+                        description: "Media → VTT (Gemini only)",
+                      },
+                    ].map((option) => {
+                      const active = state.workflowMode === option.key;
+                      return (
+                        <button
+                          key={option.key}
+                          type="button"
+                          disabled={locked}
+                          onClick={() =>
+                            option.key === "translation"
+                              ? actions.setWorkflowMode("translation")
+                              : actions.setWorkflowMode("transcription")
+                          }
+                          className={`relative flex min-w-[200px] flex-col items-start gap-1 rounded-lg px-4 py-3 text-left transition ${
+                            active
+                              ? isDarkTheme
+                                ? "bg-white/10 text-white shadow-lg shadow-black/40"
+                                : "bg-white text-slate-900 shadow-lg shadow-orange-100 border border-orange-100"
+                              : isDarkTheme
+                                ? "bg-transparent text-white/80 hover:text-white hover:bg-white/5"
+                                : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-orange-50"
+                          } ${locked ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}`}
+                          aria-pressed={active}
+                        >
+                          <div className="flex items-center gap-2 text-sm font-semibold">
+                            <span className="text-base">{option.icon}</span>
+                            <span>{option.label}</span>
+                          </div>
+                          <div
+                            className={`text-xs ${
+                              isDarkTheme ? "text-white/60" : "text-slate-600"
+                            }`}
+                          >
+                            {option.description}
+                          </div>
+                          <span
+                            className={`absolute left-3 right-3 bottom-1.5 h-[3px] rounded-full transition ${
+                              active ? "bg-orange-400" : "bg-transparent"
+                            }`}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
                 {state.workflowMode === "transcription" &&
                   !["gemini", "openai"].includes(state.selectedProvider) && (
                     <span className={`text-xs ${theme.dangerText}`}>
@@ -1065,7 +1111,10 @@ function App() {
         className={`${theme.header} text-center text-sm ${theme.subtext}`}
       >
         <p className={theme.text}>
-          ChigyuSubs — AI-powered subtitle translation ·{" "}
+          ChigyuSubs runs entirely in your browser: no accounts, no server, and no key storage.
+          {" "}
+          Your subtitles and media are sent only to the AI providers you configure (Google,
+          OpenAI, etc.), under their data policies. ·{" "}
           <a
             href="https://github.com/chigyusubs/chigyusubs.github.io"
             className="underline"

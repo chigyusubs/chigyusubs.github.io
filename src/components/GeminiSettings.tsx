@@ -99,7 +99,7 @@ export function GeminiSettings({
                 step={0.05}
                 value={temperature}
                 onChange={(e) => setTemperature(Number(e.target.value))}
-                className="range-input flex-1 max-w-xs"
+                className="range-input flex-1 max-w-xs accent-orange-500"
                 disabled={locked}
               />
               <span className="w-12 text-right text-sm">

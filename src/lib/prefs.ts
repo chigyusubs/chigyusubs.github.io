@@ -3,7 +3,6 @@ import type { StructuredCueHintMode } from "./structured/StructuredPrompt";
 import type { WorkflowMode } from "../config/defaults";
 
 export type ProviderConfig = {
-  apiKey?: string;
   baseUrl?: string; // For Ollama
 };
 
@@ -64,6 +63,16 @@ export function loadPrefs(): UserPrefs | null {
     const prefs = JSON.parse(raw) as UserPrefs;
 
     // Migration: If old format (no selectedProvider), migrate to new format
+    // Strip any persisted API keys (we do not store keys)
+    if (prefs.providerConfigs) {
+      Object.keys(prefs.providerConfigs).forEach((key) => {
+        const cfg = prefs.providerConfigs?.[key as ProviderType];
+        if (cfg && "apiKey" in cfg) {
+          delete (cfg as Record<string, unknown>).apiKey;
+        }
+      });
+    }
+
     if (!prefs.selectedProvider) {
       prefs.selectedProvider = "gemini"; // Default to Gemini for existing users
       prefs.providerConfigs = prefs.providerConfigs || {

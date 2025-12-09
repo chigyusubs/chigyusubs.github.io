@@ -202,10 +202,10 @@ export function useTranslationWorkflowRunner() {
 
   useEffect(() => {
     const providerKeyConfigs: Record<ProviderType, import("../lib/prefs").ProviderConfig> = {
-      gemini: { apiKey: apiKeys.gemini },
-      openai: { apiKey: apiKeys.openai },
-      anthropic: { apiKey: apiKeys.anthropic },
-      ollama: { apiKey: apiKeys.ollama, baseUrl: ollamaBaseUrl },
+      gemini: {},
+      openai: {},
+      anthropic: {},
+      ollama: { baseUrl: ollamaBaseUrl },
     };
     const prefs: UserPrefs = {
       selectedProvider,

@@ -24,21 +24,11 @@ export function useProviderState(saved?: UserPrefs) {
     saved?.selectedProvider ?? "gemini",
   );
 
-  const [apiKeys, setApiKeys] = useState<Record<ProviderType, string>>(() => {
-    const defaultKeys: Record<ProviderType, string> = {
-      gemini: "",
-      openai: "",
-      anthropic: "",
-      ollama: "",
-    };
-    if (saved?.providerConfigs) {
-      Object.entries(saved.providerConfigs).forEach(([provider, config]) => {
-        if (config.apiKey) {
-          defaultKeys[provider as ProviderType] = config.apiKey;
-        }
-      });
-    }
-    return defaultKeys;
+  const [apiKeys, setApiKeys] = useState<Record<ProviderType, string>>({
+    gemini: "",
+    openai: "",
+    anthropic: "",
+    ollama: "",
   });
 
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState(

@@ -1,0 +1,137 @@
+8:52:23 PM	GEM	transcription-structured #22	1	models/gemini-2.5-pro	0	On	tot 8508 / in 4677 / out 3309	38.7s	ok	—
+8:51:41 PM	GEM	transcription-structured #21	1	models/gemini-2.5-pro	0	On	tot 8844 / in 4707 / out 3739	42.6s	ok	—
+8:51:00 PM	GEM	transcription-structured #20	1	models/gemini-2.5-pro	0	On	tot 9378 / in 4699 / out 3825	40.9s	ok	—
+8:50:08 PM	GEM	transcription-structured #19	1	models/gemini-2.5-pro	0	On	tot 10891 / in 4702 / out 5552	52.1s	ok	—
+8:49:22 PM	GEM	transcription-structured #18	1	models/gemini-2.5-pro	0	On	tot 9615 / in 4718 / out 3799	45.8s	ok	—
+8:48:42 PM	GEM	transcription-structured #17	1	models/gemini-2.5-pro	0	On	tot 7981 / in 4693 / out 2847	39.7s	ok	—
+8:48:04 PM	GEM	transcription-structured #16	1	models/gemini-2.5-pro	0	On	tot 8829 / in 4705 / out 3674	38.3s	ok	—
+8:47:28 PM	GEM	transcription-structured #15	1	models/gemini-2.5-pro	0	On	tot 8388 / in 4696 / out 3149	36.2s	ok	—
+8:46:51 PM	GEM	transcription-structured #14	1	models/gemini-2.5-pro	0	On	tot 8194 / in 4709 / out 2977	36.8s	ok	—
+8:45:55 PM	GEM	transcription-structured #13	1	models/gemini-2.5-pro	0	On	tot 11537 / in 4706 / out 6242	56.3s	ok	—
+8:45:23 PM	GEM	transcription-structured #12	1	models/gemini-2.5-pro	0	On	tot 7547 / in 4698 / out 2318	31.5s	ok	—
+8:44:45 PM	GEM	transcription-structured #11	1	models/gemini-2.5-pro	0	On	tot 8940 / in 4737 / out 3524	38.7s	ok	—
+8:44:16 PM	GEM	transcription-structured #10	1	models/gemini-2.5-pro	0	On	tot 7343 / in 4702 / out 2256	28.9s	ok	—
+8:43:40 PM	GEM	transcription-structured #9	1	models/gemini-2.5-pro	0	On	tot 8270 / in 4704 / out 2901	36.1s	ok	—
+8:43:04 PM	GEM	transcription-structured #8	1	models/gemini-2.5-pro	0	On	tot 8304 / in 4743 / out 2794	35.2s	ok	—
+8:42:30 PM	GEM	transcription-structured #7	1	models/gemini-2.5-pro	0	On	tot 8071 / in 4709 / out 2544	34.2s	ok	—
+8:41:42 PM	GEM	transcription-structured #6	1	models/gemini-2.5-pro	0	On	tot 9430 / in 4708 / out 2934	48.2s	ok	—
+8:41:06 PM	GEM	transcription-structured #5	1	models/gemini-2.5-pro	0	On	tot 8523 / in 4710 / out 3322	36.5s	ok	—
+8:40:33 PM	GEM	transcription-structured #4	1	models/gemini-2.5-pro	0	On	tot 7657 / in 4708 / out 2556	32.7s	ok	—
+8:39:52 PM	GEM	transcription-structured #3	1	models/gemini-2.5-pro	0	On	tot 9256 / in 4713 / out 3836	40.8s	ok	—
+8:39:12 PM	GEM	transcription-structured #2	1	models/gemini-2.5-pro	0	On	tot 8752 / in 4716 / out 3368	39.9s	ok	—
+8:37:36 PM	GEM	transcription-structured #1	1	models/gemini-2.5-pro	0	On	tot 11705 / in 9700 / out 1598	24.0s	ok	—
+8:37:10 PM	GEM	transcription-structured #0	1	models/gemini-2.5-pro	0	On	tot 38513 / in 36133 / out 2005	26.5s	ok	—
+
+
+Gemini 3 Pro Preview
+gemini-3-pro-preview
+Try it in Google AI Studio
+
+The best model in the world for multimodal understanding, and our most powerful agentic and vibe-coding model yet.
+
+Standard
+Batch
+Free Tier	Paid Tier, per 1M tokens in USD
+Input price	Not available	$2.00, prompts <= 200k tokens
+$4.00, prompts > 200k tokens
+Output price (including thinking tokens)	Not available	$12.00, prompts <= 200k tokens
+$18.00, prompts > 200k
+Context caching price	Not available	$0.20, prompts <= 200k tokens
+$0.40, prompts > 200k
+$4.50 / 1,000,000 tokens per hour (storage price)
+Grounding with Google Search*	Not available	5,000 prompts per month (free), then (Coming soon**) $14 / 1,000 search queries
+Grounding with Google Maps	Not available	Not available
+Used to improve our products	Yes	No
+* A customer-submitted request to Gemini may result in one or more queries to Google Search. You will be charged for each individual search query performed.
+
+** Gemini 3 billing for Grounding with Google Search will start January 5, 2026.
+
+Gemini 2.5 Pro
+gemini-2.5-pro
+Try it in Google AI Studio
+
+Our state-of-the-art multipurpose model, which excels at coding and complex reasoning tasks.
+
+Standard
+Batch
+Free Tier	Paid Tier, per 1M tokens in USD
+Input price	Free of charge	$1.25, prompts <= 200k tokens
+$2.50, prompts > 200k tokens
+Output price (including thinking tokens)	Free of charge	$10.00, prompts <= 200k tokens
+$15.00, prompts > 200k
+Context caching price	Not available	$0.125, prompts <= 200k tokens
+$0.25, prompts > 200k
+$4.50 / 1,000,000 tokens per hour (storage price)
+Grounding with Google Search	Not available	1,500 RPD (free), then $35 / 1,000 grounded prompts
+Grounding with Google Maps	Not available	10,000 RPD (free), then $25 / 1,000 grounded prompts
+Used to improve our products	Yes	No
+
+Gemini 2.5 Flash
+gemini-2.5-flash
+Try it in Google AI Studio
+
+Our first hybrid reasoning model which supports a 1M token context window and has thinking budgets.
+
+Standard
+Batch
+Free Tier	Paid Tier, per 1M tokens in USD
+Input price	Free of charge	$0.30 (text / image / video)
+$1.00 (audio)
+Output price (including thinking tokens)	Free of charge	$2.50
+Context caching price	Not available	$0.03 (text / image / video)
+$0.1 (audio)
+$1.00 / 1,000,000 tokens per hour (storage price)
+Grounding with Google Search	Free of charge, up to 500 RPD (limit shared with Flash-Lite RPD)	1,500 RPD (free, limit shared with Flash-Lite RPD), then $35 / 1,000 grounded prompts
+Grounding with Google Maps	500 RPD	1,500 RPD (free), then $25 / 1,000 grounded prompts
+Used to improve our products	Yes	No
+
+Gemini 2.5 Flash-Lite
+gemini-2.5-flash-lite
+Try it in Google AI Studio
+
+Our smallest and most cost effective model, built for at scale usage.
+
+Standard
+Batch
+Free Tier	Paid Tier, per 1M tokens in USD
+Input price (text, image, video)	Free of charge	$0.10 (text / image / video)
+$0.30 (audio)
+Output price (including thinking tokens)	Free of charge	$0.40
+Context caching price	Not available	$0.01 (text / image / video)
+$0.03 (audio)
+$1.00 / 1,000,000 tokens per hour (storage price)
+Grounding with Google Search	Free of charge, up to 500 RPD (limit shared with Flash RPD)	1,500 RPD (free, limit shared with Flash RPD), then $35 / 1,000 grounded prompts
+Grounding with Google Maps	500 RPD	1,500 RPD (free), then $25 / 1,000 grounded prompts
+Used to improve our products	Yes	No
+
+
+Cost estimates (Gemini 2.5 Pro paid tier; $1.25/M input, $10/M output):
+- #0  in 36133 / out 2005  -> $0.0652
+- #1  in 9700 / out 1598   -> $0.0281
+- #2  in 4716 / out 3368   -> $0.0396
+- #3  in 4713 / out 3836   -> $0.0443
+- #4  in 4708 / out 2556   -> $0.0314
+- #5  in 4710 / out 3322   -> $0.0391
+- #6  in 4708 / out 2934   -> $0.0352
+- #7  in 4709 / out 2544   -> $0.0313
+- #8  in 4743 / out 2794   -> $0.0339
+- #9  in 4704 / out 2901   -> $0.0349
+- #10 in 4702 / out 2256   -> $0.0284
+- #11 in 4737 / out 3524   -> $0.0412
+- #12 in 4698 / out 2318   -> $0.0291
+- #13 in 4706 / out 6242   -> $0.0683
+- #14 in 4709 / out 2977   -> $0.0357
+- #15 in 4696 / out 3149   -> $0.0374
+- #16 in 4705 / out 3674   -> $0.0426
+- #17 in 4693 / out 2847   -> $0.0343
+- #18 in 4718 / out 3799   -> $0.0439
+- #19 in 4702 / out 5552   -> $0.0614
+- #20 in 4699 / out 3825   -> $0.0441
+- #21 in 4707 / out 3739   -> $0.0433
+- #22 in 4677 / out 3309   -> $0.0389
+Total (all runs above): $0.9316
+
+If the same runs used other Gemini models (paid tier rates, prompts <=200k tokens):
+- Gemini 3 Pro Preview: $1.1902
+- Gemini 2.5 Flash: $0.2311
+- Gemini 2.5 Flash-Lite: $0.0445

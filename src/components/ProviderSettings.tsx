@@ -111,7 +111,7 @@ export function ProviderSettings({
 
     const transcriptionCapable: Record<ProviderType, boolean> = {
         gemini: true,
-        openai: true,
+        openai: false,
         anthropic: false,
         ollama: false,
     };
@@ -119,7 +119,7 @@ export function ProviderSettings({
     const providerDescriptions: Record<ProviderType, string> = transcriptionMode
         ? {
             gemini: "Video/audio transcription with File API or inline chunking",
-            openai: "Whisper (VTT) or GPT-4o (text) transcription",
+            openai: "Not available for transcription",
             anthropic: "Not available for transcription",
             ollama: "Not available for transcription",
         }
@@ -201,15 +201,26 @@ export function ProviderSettings({
                 {requiresApiKey && (
                     <div className="space-y-2 md:col-span-2">
                         <FieldLabel>API Key</FieldLabel>
+                        {/* Hidden username field so password managers can pair keys per provider */}
+                        <input
+                            type="text"
+                            value={providerLabels[selectedProvider]}
+                            readOnly
+                            aria-hidden="true"
+                            tabIndex={-1}
+                            autoComplete="username"
+                            style={{ position: "absolute", left: "-10000px", opacity: 0, height: 0, width: 0 }}
+                        />
                         <TextInput
                             type="password"
                             value={currentApiKey}
                             onChange={(e) => setApiKey(selectedProvider, e.target.value)}
                             placeholder={`Enter your ${providerLabels[selectedProvider]} API Key`}
+                            autoComplete="current-password"
                             disabled={locked}
                         />
                         <p className={theme.helperText}>
-                            Your key is stored locally in your browser.
+                            Keys are not stored; they stay in this tab. Use your browser's password manager if you want it remembered.
                         </p>
                     </div>
                 )}
@@ -349,7 +360,7 @@ export function ProviderSettings({
                                 value={topPEnabled ? topP : 0.9}
                                 onChange={(e) => setTopP?.(Number(e.target.value))}
                                 disabled={locked || !topPEnabled}
-                                className="w-full"
+                                className="w-full accent-orange-500"
                             />
                             <div className="flex items-center justify-between text-xs opacity-70">
                                 <span>More diverse (1.0)</span>
@@ -390,7 +401,7 @@ export function ProviderSettings({
                         step="0.1"
                         value={temperature}
                         onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                        className="w-full"
+                        className="w-full accent-orange-500"
                         disabled={locked}
                     />
                     <p className={theme.helperText}>
