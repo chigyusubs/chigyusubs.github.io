@@ -25,7 +25,6 @@ type Props = {
   mediaTooLargeWarning: boolean;
   supportsMediaUpload: boolean;
   showSubtitles?: boolean;
-  supportsWebCodecs?: boolean;
 
   // Audio Transcription Props
   showAudioUpload?: boolean;
@@ -74,7 +73,6 @@ export function FileUploader({
   mediaTooLargeWarning,
   supportsMediaUpload,
   showSubtitles = true,
-  supportsWebCodecs = false,
 
   showAudioUpload = false,
   audioFile,
@@ -122,7 +120,6 @@ export function FileUploader({
       : videoUploadState === "uploading"
         ? 70
         : 0;
-  const showCompressionHint = mediaTooLargeWarning;
 
   return (
     <SectionCard
@@ -130,21 +127,6 @@ export function FileUploader({
       subtitle={isTranscriptionMode ? "Upload video to transcribe (Gemini File API, max 2GB)." : "Upload subtitles (required) and optional context media to improve summaries."}
     >
       <div className={`grid grid-cols-1 gap-4 ${gridColsMd}`}>
-        {showCompressionHint && (
-          <div className="rounded border p-3 text-sm" style={{ borderColor: theme.borderColor }}>
-            {supportsWebCodecs ? (
-              <span>
-                File exceeds 2GB. WebCodecs is available; compression will be needed before upload
-                (beta, not yet automatic). Please compress offline to proceed.
-              </span>
-            ) : (
-              <span>
-                File exceeds 2GB limit. WebCodecs is not available; please compress the video offline
-                (e.g., reduce resolution/FPS) before uploading.
-              </span>
-            )}
-          </div>
-        )}
         {/* Subtitle File Upload */}
         {showSubtitles && (
           <FilePicker
