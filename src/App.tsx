@@ -562,7 +562,7 @@ function App() {
                 subtitle="Optional extra instructions appended to the structured Gemini prompt."
               >
                 <div className="flex justify-between items-center mb-2">
-                  <p className={`text-sm ${theme.subtext}`}>Appends after the structured prompt.</p>
+                  <p className={`text-sm ${theme.subtext}`}>Appends after the structured prompt (leave empty for default behavior).</p>
                   <Button
                     tone="secondary"
                     size="sm"
@@ -580,6 +580,18 @@ function App() {
                   disabled={locked}
                   placeholder="Additional instructions (optional)..."
                 />
+                {state.transcriptionPrompt && (
+                  <div className="mt-2 flex justify-end">
+                    <Button
+                      tone="secondary"
+                      size="sm"
+                      onClick={() => actions.setTranscriptionPrompt("")}
+                      disabled={locked}
+                    >
+                      Clear prompt
+                    </Button>
+                  </div>
+                )}
               </SectionCard>
             )}
 

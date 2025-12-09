@@ -79,7 +79,7 @@ export function useTranslationWorkflowRunner() {
     saved?.workflowMode ?? DEFAULT_WORKFLOW_MODE,
   );
   const [transcriptionPrompt, setTranscriptionPrompt] = useState(
-    saved?.transcriptionPrompt ?? DEFAULT_TRANSCRIPTION_PROMPT,
+    saved?.transcriptionPrompt ?? "",
   );
   const [transcriptionOverlapSeconds, setTranscriptionOverlapSeconds] = useState(
     saved?.transcriptionOverlapSeconds ?? TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS,
