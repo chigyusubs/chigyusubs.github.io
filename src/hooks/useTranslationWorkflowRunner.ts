@@ -39,7 +39,6 @@ import { extractAudioToOggMono } from "../lib/ffmpeg";
 import {
   MAX_UPLOAD_BYTES,
   detectWebCodecsSupport,
-  compressVideoToWebm,
   prepareMediaFile,
   uploadMediaToProvider,
 } from "../lib/mediaUpload";
@@ -289,50 +288,17 @@ export function useTranslationWorkflowRunner() {
   const handleMediaChange = async (file: File | null) => {
     const probeId = ++mediaProbeIdRef.current;
     if (file && file.size > MAX_UPLOAD_BYTES) {
-      if (!supportsWebCodecs) {
-        setMediaFile(null);
-        setVideoUploadState("error");
-        setVideoUploadMessage(
-          "File exceeds 2GB limit; please compress offline (WebCodecs not available).",
-        );
-        setVideoName(null);
-        setVideoDuration(null);
-        setVideoSizeMb(null);
-        setMediaTooLargeWarning(true);
-        return;
-      }
-      // Attempt browser-side compression to WebM
-      setVideoUploadState("uploading");
-      setVideoUploadMessage("Compressing video for upload (beta)...");
-      setMediaTooLargeWarning(false);
-      try {
-        const compressed = await compressVideoToWebm(file, {
-          targetFps: 5,
-          onProgress: (p) => {
-            setVideoUploadMessage(`Compressing video… ${(p * 100).toFixed(0)}%`);
-          },
-        });
-        setVideoUploadMessage(
-          `Compressed from ${(file.size / 1024 / 1024).toFixed(1)}MB to ${(compressed.size / 1024 / 1024).toFixed(1)}MB.`,
-        );
-        setMediaFile(compressed);
-        setVideoName(compressed.name);
-        setVideoSizeMb(compressed.size / (1024 * 1024));
-        const duration = await getMediaDuration(compressed);
-        setVideoDuration(duration);
-        setVideoUploadState("idle");
-      } catch (err) {
-        setMediaFile(null);
-        setVideoUploadState("error");
-        setVideoUploadMessage(
-          err instanceof Error ? err.message : "Compression failed; please compress offline.",
-        );
-        setVideoName(null);
-        setVideoDuration(null);
-        setVideoSizeMb(null);
-        setMediaTooLargeWarning(true);
-        return;
-      }
+      setMediaFile(null);
+      setVideoUploadState("error");
+      setVideoUploadMessage(
+        supportsWebCodecs
+          ? "File exceeds 2GB limit; compression needed (WebCodecs available)."
+          : "File exceeds 2GB limit; please compress offline (WebCodecs not available).",
+      );
+      setVideoName(null);
+      setVideoDuration(null);
+      setVideoSizeMb(null);
+      setMediaTooLargeWarning(true);
       return;
     }
 
@@ -937,10 +903,10 @@ export function useTranslationWorkflowRunner() {
       videoRef,
       videoUploadState,
       videoUploadMessage,
-  mediaTooLargeWarning,
-  supportsWebCodecs,
-  videoSizeMb,
-  videoDuration,
+      mediaTooLargeWarning,
+      supportsWebCodecs,
+      videoSizeMb,
+      videoDuration,
       temperature: tState.temperature,
       paused:
         workflowMode === "translation"
