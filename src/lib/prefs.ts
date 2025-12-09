@@ -39,6 +39,10 @@ export type UserPrefs = {
   transcriptionPrompt?: string;
   transcriptionOverlapSeconds?: number;
   useInlineChunks?: boolean;
+  useStructuredTranscription?: boolean;
+  thinkingBudget?: number;
+  maxOutputTokens?: number;
+  topP?: number;
   summaryText?: string;
   summaryPrompt?: string;
   glossaryPrompt?: string;

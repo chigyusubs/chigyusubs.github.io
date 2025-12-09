@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import type { ProviderType } from "../lib/providers/types";
 import { useTheme } from "../lib/themeContext";
 import { getProviderCapability } from "../lib/providers/capabilities";
@@ -6,6 +6,9 @@ import { Button } from "./ui/Button";
 import { SectionCard } from "./ui/SectionCard";
 import { FieldLabel, TextInput } from "./ui/Field";
 import { ProviderSpecificSettings } from "./providers/ProviderSpecificSettings";
+import { buildTranscriptionPrompt } from "../lib/structured/TranscriptionStructuredPrompt";
+import { formatTimestamp } from "../lib/structured/TranscriptionVttReconstructor";
+import { TRANSCRIPTION_JSON_SCHEMA } from "../lib/structured/TranscriptionStructuredOutput";
 
 type Props = {
     // Provider selection
@@ -54,6 +57,16 @@ type Props = {
     setMediaResolution: (v: "low" | "standard") => void;
     useInlineChunks: boolean;
     setUseInlineChunks: (use: boolean) => void;
+    useStructuredTranscription?: boolean;
+    setUseStructuredTranscription?: (use: boolean) => void;
+    thinkingBudget?: number;
+    setThinkingBudget?: (budget: number) => void;
+    maxOutputTokens?: number;
+    setMaxOutputTokens?: (tokens?: number) => void;
+    topP?: number;
+    setTopP?: (p?: number) => void;
+    chunkLengthSeconds?: number;
+    breakWindowSeconds?: number;
 
     locked?: boolean;
 };
@@ -81,10 +94,41 @@ export function ProviderSettings({
     setMediaResolution,
     useInlineChunks,
     setUseInlineChunks,
+    useStructuredTranscription,
+    setUseStructuredTranscription,
+    thinkingBudget,
+    setThinkingBudget,
+    maxOutputTokens,
+    setMaxOutputTokens,
+    topP,
+    setTopP,
+    chunkLengthSeconds,
+    breakWindowSeconds,
     workflowMode = "translation",
     locked = false,
 }: Props) {
     const theme = useTheme();
+    const chunkSeconds = chunkLengthSeconds ?? 120;
+    const breakWindow = Math.min(Math.max(breakWindowSeconds ?? 20, 0), chunkSeconds);
+
+    const promptPreview = useMemo(() => {
+        const { systemPrompt, userPrompt } = buildTranscriptionPrompt({
+            isFirstChunk: true,
+            videoStart: formatTimestamp(0),
+            videoEnd: formatTimestamp(chunkSeconds),
+            breakWindowStart: formatTimestamp(Math.max(0, chunkSeconds - breakWindow)),
+            breakWindowEnd: formatTimestamp(chunkSeconds),
+            lastTwoCues: undefined,
+            nextCueNumber: 1,
+        });
+        return { systemPrompt, userPrompt };
+    }, [breakWindow, chunkSeconds]);
+
+    const schemaPretty = useMemo(
+        () => JSON.stringify(TRANSCRIPTION_JSON_SCHEMA, null, 2),
+        [],
+    );
+    const topPEnabled = typeof topP === "number";
 
     const currentApiKey = apiKeys[selectedProvider] || "";
     const capability = getProviderCapability(selectedProvider);
@@ -290,6 +334,160 @@ export function ProviderSettings({
                         <p className={theme.helperText}>
                             File API uploads media then uses offsets per chunk. Inline extracts audio chunks locally and skips provider upload (token-accurate, slower client-side).
                         </p>
+                    </div>
+                )}
+
+                {/* Gemini transcription mode (sequential structured vs legacy) */}
+                {transcriptionMode && selectedProvider === "gemini" && setUseStructuredTranscription && (
+                    <div className="space-y-2 md:col-span-2">
+                        <FieldLabel>Transcription Mode</FieldLabel>
+                        <select
+                            className={theme.input}
+                            value={useStructuredTranscription ? "structured" : "legacy"}
+                            onChange={(e) => setUseStructuredTranscription(e.target.value === "structured")}
+                            disabled={locked}
+                        >
+                            <option value="structured">Sequential with context (adaptive breaks, continuous numbering)</option>
+                            <option value="legacy">Parallel fixed chunks (legacy)</option>
+                        </select>
+                        <p className={theme.helperText}>
+                            Sequential mode: Model determines natural break points and passes context between chunks. Slower but more coherent. Enabled by default.
+                        </p>
+                    </div>
+                )}
+
+                {/* Gemini thinking budget */}
+                {transcriptionMode && selectedProvider === "gemini" && setThinkingBudget && (
+                    <div className="space-y-2 md:col-span-2">
+                        <FieldLabel>Thinking Budget (tokens)</FieldLabel>
+                        <select
+                            className={theme.input}
+                            value={typeof thinkingBudget === "number" ? thinkingBudget : 0}
+                            onChange={(e) => setThinkingBudget(Number(e.target.value))}
+                            disabled={locked}
+                        >
+                            {[0, 512, 1024, 2048, 4096, 8192, -1].map((budget) => (
+                                <option key={budget} value={budget}>
+                                    {budget === 0
+                                        ? "0 (disable thinking)"
+                                        : budget === -1
+                                            ? "-1 (dynamic / model decides)"
+                                            : `${budget.toLocaleString()} tokens`}
+                                </option>
+                            ))}
+                        </select>
+                        <p className={theme.helperText}>
+                            Controls Gemini thinking tokens for structured transcription. 0 disables thinking to minimize cost; -1 lets the model choose dynamically.
+                        </p>
+                    </div>
+                )}
+
+                {/* Gemini sampling/output controls */}
+                {transcriptionMode && selectedProvider === "gemini" && (
+                    <>
+                        <div className="space-y-2">
+                            <FieldLabel>Max Output Tokens</FieldLabel>
+                            <select
+                                className={theme.input}
+                                value={typeof maxOutputTokens === "number" ? maxOutputTokens : ""}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (!val) {
+                                        setMaxOutputTokens?.(undefined);
+                                    } else {
+                                        setMaxOutputTokens?.(Number(val));
+                                    }
+                                }}
+                                disabled={locked}
+                            >
+                                <option value="">Model default</option>
+                                {[4000, 6000, 8000, 12000, 16000].map((tok) => (
+                                    <option key={tok} value={tok}>
+                                        {tok.toLocaleString()}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className={theme.helperText}>
+                                Caps subtitle JSON length per chunk. Higher caps can reduce truncation on longer segments but increase token usage (Gemini 2.5 Flash free tier: ~5 RPM / 250k TPM / 20 RPD).
+                            </p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <FieldLabel>Top-p (advanced)</FieldLabel>
+                            <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.05"
+                                value={topPEnabled ? topP : 0.9}
+                                onChange={(e) => setTopP?.(Number(e.target.value))}
+                                disabled={locked || !topPEnabled}
+                                className="w-full"
+                            />
+                            <div className="flex items-center justify-between text-xs opacity-70">
+                                <span>More diverse (1.0)</span>
+                                <span>Deterministic (0.0)</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs opacity-80">
+                                <label className="flex items-center gap-1">
+                                    <input
+                                        type="checkbox"
+                                        checked={topPEnabled}
+                                        onChange={(e) => {
+                                            if (!e.target.checked) {
+                                                setTopP?.(undefined);
+                                            } else {
+                                                setTopP?.(topPEnabled ? topP : 0.9);
+                                            }
+                                        }}
+                                        disabled={locked}
+                                    />
+                                    Enable override (default lets model decide)
+                                </label>
+                                {typeof topP === "number" && <span>Current: {topP.toFixed(2)}</span>}
+                            </div>
+                            <p className={theme.helperText}>
+                                Optional nucleus sampling control. Leave unset for model default; adjust with temperature for experimentation.
+                            </p>
+                        </div>
+                    </>
+                )}
+
+                {/* Transcription summary and previews */}
+                {transcriptionMode && selectedProvider === "gemini" && (
+                    <div className="md:col-span-2 space-y-3">
+                        <div className="rounded-lg border border-neutral-700/50 bg-neutral-900/40 p-3 text-sm space-y-1">
+                            <div className="font-semibold">Transcription settings overview</div>
+                            <div>Chunk length: {chunkSeconds}s</div>
+                            <div>Break window: last {breakWindow}s</div>
+                            <div>Thinking budget: {thinkingBudget ?? 0}</div>
+                            <div>Temperature: {temperature}</div>
+                            <div>Top-p: {typeof topP === "number" ? topP.toFixed(2) : "model default"}</div>
+                            <div>Max output tokens: {typeof maxOutputTokens === "number" ? maxOutputTokens.toLocaleString() : "model default"}</div>
+                        </div>
+                        <details className="rounded-lg border border-neutral-700/50 bg-neutral-900/40 p-3">
+                            <summary className="cursor-pointer font-semibold">Prompt & Schema Preview</summary>
+                            <div className="mt-3 space-y-2 text-sm">
+                                <div>
+                                    <div className="font-semibold mb-1">System prompt</div>
+                                    <pre className="whitespace-pre-wrap break-words bg-black/40 p-2 rounded text-xs overflow-auto">
+{promptPreview.systemPrompt}
+                                    </pre>
+                                </div>
+                                <div>
+                                    <div className="font-semibold mb-1">User prompt (first chunk)</div>
+                                    <pre className="whitespace-pre-wrap break-words bg-black/40 p-2 rounded text-xs overflow-auto">
+{promptPreview.userPrompt}
+                                    </pre>
+                                </div>
+                                <div>
+                                    <div className="font-semibold mb-1">Structured output schema</div>
+                                    <pre className="whitespace-pre bg-black/40 p-2 rounded text-xs overflow-auto">
+{schemaPretty}
+                                    </pre>
+                                </div>
+                            </div>
+                        </details>
                     </div>
                 )}
 

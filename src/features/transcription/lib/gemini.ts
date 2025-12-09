@@ -7,6 +7,7 @@ import { logDebugEvent } from "../../../lib/debugState";
 import { isDebugEnabled } from "../../../lib/debugToggle";
 import { extractAudioChunk } from "../../../lib/ffmpeg";
 import { validateCueIntegrity, mergeVttChunks, calculateTimeRanges } from "./shared";
+import { transcribeGeminiStructured } from "./gemini-structured";
 
 const DEFAULT_SYSTEM_PROMPT =
   "You are a professional transcriber. Output MUST be valid WebVTT with accurate timestamps.";
@@ -323,6 +324,18 @@ export async function transcribeGemini(
   shouldPause?: () => Promise<void>,
   runId?: number
 ): Promise<TranscriptionResult> {
+  // Use structured output workflow if enabled (default: true for new sequential approach)
+  if (config.useStructuredOutput !== false) {
+    return transcribeGeminiStructured(
+      config,
+      onChunkUpdate,
+      shouldCancel,
+      shouldPause,
+      runId
+    );
+  }
+
+  // Legacy parallel workflow (kept for backward compatibility)
   const ranges = calculateTimeRanges(
     config.videoDuration,
     config.chunkLength,

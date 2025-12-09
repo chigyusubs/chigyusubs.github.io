@@ -24,6 +24,11 @@ import {
   DEFAULT_WORKFLOW_MODE,
   type WorkflowMode,
 } from "../config/defaults";
+import {
+  TRANSCRIPTION_DEFAULT_MAX_OUTPUT_TOKENS,
+  TRANSCRIPTION_DEFAULT_THINKING_BUDGET,
+  TRANSCRIPTION_DEFAULT_TOP_P,
+} from "../config/transcriptionDefaults";
 import { parseModelName, ProviderFactory } from "../lib/providers/ProviderFactory";
 import type { ProviderType } from "../lib/providers/types";
 import { getProviderCapability } from "../lib/providers/capabilities";
@@ -81,6 +86,22 @@ export function useTranslationWorkflowRunner() {
   );
   const [useInlineChunks, setUseInlineChunks] = useState(
     saved?.useInlineChunks ?? false,
+  );
+  const [useStructuredTranscription, setUseStructuredTranscription] = useState(
+    saved?.useStructuredTranscription ?? true, // Default to true for new sequential workflow
+  );
+  const [thinkingBudget, setThinkingBudget] = useState<number>(
+    typeof saved?.thinkingBudget === "number"
+      ? saved.thinkingBudget
+      : TRANSCRIPTION_DEFAULT_THINKING_BUDGET,
+  );
+  const [maxOutputTokens, setMaxOutputTokens] = useState<number | undefined>(
+    typeof saved?.maxOutputTokens === "number"
+      ? saved.maxOutputTokens
+      : TRANSCRIPTION_DEFAULT_MAX_OUTPUT_TOKENS,
+  );
+  const [topP, setTopP] = useState<number | undefined>(
+    typeof saved?.topP === "number" ? saved.topP : TRANSCRIPTION_DEFAULT_TOP_P,
   );
   const translationWorkflow = useTranslationWorkflow(saved ?? undefined);
   const tState = translationWorkflow.state;
@@ -220,6 +241,10 @@ export function useTranslationWorkflowRunner() {
       transcriptionPrompt,
       transcriptionOverlapSeconds,
       useInlineChunks,
+      useStructuredTranscription,
+      thinkingBudget,
+      maxOutputTokens,
+      topP,
       useStructuredOutput: tState.useStructuredOutput,
     };
     savePrefs(prefs);
@@ -251,6 +276,10 @@ export function useTranslationWorkflowRunner() {
     transcriptionPrompt,
     transcriptionOverlapSeconds,
     useInlineChunks,
+    useStructuredTranscription,
+    thinkingBudget,
+    maxOutputTokens,
+    topP,
     tState.useStructuredOutput,
   ]);
 
@@ -614,8 +643,12 @@ export function useTranslationWorkflowRunner() {
           provider: "gemini",
           modelName: resolvedProvider.modelForProvider,
           useInlineChunks,
+          useStructuredOutput: useStructuredTranscription,
+          thinkingBudget,
           prompt: transcriptionPrompt,
-          temperature: DEFAULT_TEMPERATURE,
+          temperature: tState.temperature,
+          maxOutputTokens,
+          topP,
           safetyOff,
         });
       }
@@ -944,6 +977,10 @@ export function useTranslationWorkflowRunner() {
       transcriptionPrompt,
       transcriptionOverlapSeconds,
       useInlineChunks,
+      useStructuredTranscription,
+      thinkingBudget,
+      maxOutputTokens,
+      topP,
       useStructuredOutput: tState.useStructuredOutput,
     },
     actions: {
@@ -962,6 +999,10 @@ export function useTranslationWorkflowRunner() {
       setTranscriptionPrompt,
       setTranscriptionOverlapSeconds,
       setUseInlineChunks,
+      setUseStructuredTranscription,
+      setThinkingBudget,
+      setMaxOutputTokens,
+      setTopP,
       handleTranscribeAudio, // New action
       handleManualChunkEdit,
       setUseAudioOnly,

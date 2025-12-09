@@ -97,7 +97,7 @@ export function TranscriptionSettings({
             }
             disabled={locked}
           >
-            {[60, 120, 300, 600, 900, 1200].map((sec) => (
+            {[60, 120, 180, 240, 300, 600, 900, 1200].map((sec) => (
               <option key={sec} value={sec}>
                 {Math.round(sec / 60)} min
               </option>
@@ -105,12 +105,12 @@ export function TranscriptionSettings({
           </select>
           <p className="text-xs mt-1 opacity-70">
             {isGemini
-              ? "Duration of each media segment. Balance context quality and token cost."
+              ? "Max duration per chunk. In sequential mode, model may suggest earlier break points at natural boundaries (scene changes, pauses)."
               : "Duration of each audio segment for OpenAI transcription API."}
           </p>
         </div>
         <div>
-          <FieldLabel>Chunk Overlap</FieldLabel>
+          <FieldLabel>{isGemini ? "Break Window" : "Chunk Overlap / Break Window"}</FieldLabel>
           <select
             className={theme.input}
             value={transcriptionOverlapSeconds ?? TRANSCRIPTION_DEFAULT_OVERLAP_SECONDS}
@@ -119,14 +119,16 @@ export function TranscriptionSettings({
             }
             disabled={locked}
           >
-            {[0, 1, 2, 3, 4, 5, 10].map((ov) => (
+            {[0, 1, 2, 3, 4, 5, 10, 20, 30].map((ov) => (
               <option key={ov} value={ov}>
-                {ov}s overlap
+                {ov}s
               </option>
             ))}
           </select>
           <p className="text-xs mt-1 opacity-70">
-            Overlap between consecutive chunks to prevent word cutoff at boundaries.
+            {isGemini
+              ? "Window (in the final seconds of a chunk) where Gemini should pick the next natural break. Also reused as overlap for legacy mode."
+              : "Overlap between consecutive chunks for OpenAI. For Gemini sequential mode, this controls the end-of-chunk break window (e.g., last 20s)."}
           </p>
         </div>
 

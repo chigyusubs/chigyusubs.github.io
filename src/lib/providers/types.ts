@@ -49,6 +49,15 @@ export type GenerateRequest = {
     };
     safetyOff?: boolean;
     responseMimeType?: string;
+    responseJsonSchema?: unknown;
+    thinkingConfig?: {
+        thinkingBudget?: number;
+        thinkingLevel?: "low" | "high";
+        includeThoughts?: boolean;
+    };
+    maxOutputTokens?: number;
+    topP?: number;
+    topK?: number;
     // Provider-specific options can be added here
     providerOptions?: Record<string, unknown>;
 };

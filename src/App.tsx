@@ -262,6 +262,16 @@ function App() {
               setMediaResolution={actions.setMediaResolution}
               useInlineChunks={state.useInlineChunks}
               setUseInlineChunks={actions.setUseInlineChunks}
+              useStructuredTranscription={state.useStructuredTranscription}
+              setUseStructuredTranscription={actions.setUseStructuredTranscription}
+              thinkingBudget={state.thinkingBudget}
+              setThinkingBudget={actions.setThinkingBudget}
+              maxOutputTokens={state.maxOutputTokens}
+              setMaxOutputTokens={actions.setMaxOutputTokens}
+              topP={state.topP}
+              setTopP={actions.setTopP}
+              chunkLengthSeconds={state.providerConfigs.openai.transcriptionChunkSeconds}
+              breakWindowSeconds={state.transcriptionOverlapSeconds}
               workflowMode={state.workflowMode}
             />
 

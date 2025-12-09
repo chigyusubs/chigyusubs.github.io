@@ -83,7 +83,17 @@ export class GeminiProvider extends BaseProvider {
         request: GenerateRequest,
         trace?: ProviderTrace,
     ): Promise<GenerateResponse> {
-        const { systemPrompt, userPrompt, temperature, safetyOff, mediaUri, mediaInlineData } = request;
+        const {
+            systemPrompt,
+            userPrompt,
+            temperature,
+            safetyOff,
+            mediaUri,
+            mediaInlineData,
+            responseMimeType,
+            responseJsonSchema,
+            thinkingConfig,
+        } = request;
         const normalized = this.normalizeModel(this.config.modelName);
         const url = `${API_ROOT}/${normalized}:generateContent?key=${encodeURIComponent(this.config.apiKey!)}`;
         const startedAt = Date.now();
@@ -99,22 +109,23 @@ export class GeminiProvider extends BaseProvider {
                 },
             });
         } else if (mediaUri) {
-            const hasOffsets =
-                typeof request.mediaStartSeconds === "number" ||
-                typeof request.mediaEndSeconds === "number";
+            const formatDurationSeconds = (value?: number, isEnd?: boolean) => {
+                if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+                const safe = Math.max(0, value);
+                const rounded = isEnd ? Math.ceil(safe) : Math.floor(safe);
+                return `${rounded}s`;
+            };
+
+            const startOffset = formatDurationSeconds(request.mediaStartSeconds, false);
+            const endOffset = formatDurationSeconds(request.mediaEndSeconds, true);
+            const hasOffsets = Boolean(startOffset || endOffset);
             const part: Record<string, unknown> = {
                 fileData: { fileUri: mediaUri },
             };
             if (hasOffsets) {
                 part.videoMetadata = {
-                    startOffset:
-                        request.mediaStartSeconds !== undefined
-                            ? `${request.mediaStartSeconds}s`
-                            : undefined,
-                    endOffset:
-                        request.mediaEndSeconds !== undefined
-                            ? `${request.mediaEndSeconds}s`
-                            : undefined,
+                    startOffset,
+                    endOffset,
                 };
             }
             parts.push(part);
@@ -142,11 +153,30 @@ export class GeminiProvider extends BaseProvider {
             }
         }
 
-        if (typeof temperature === "number" || request.responseMimeType) {
-            body.generationConfig = {
-                temperature,
-                responseMimeType: request.responseMimeType,
-            };
+        const generationConfig: Record<string, unknown> = {};
+        if (typeof temperature === "number") {
+            generationConfig.temperature = temperature;
+        }
+        if (responseMimeType) {
+            generationConfig.responseMimeType = responseMimeType;
+        }
+        if (responseJsonSchema) {
+            generationConfig.responseJsonSchema = responseJsonSchema;
+        }
+        if (thinkingConfig) {
+            generationConfig.thinkingConfig = thinkingConfig;
+        }
+        if (typeof request.maxOutputTokens === "number") {
+            generationConfig.maxOutputTokens = request.maxOutputTokens;
+        }
+        if (typeof request.topP === "number") {
+            generationConfig.topP = request.topP;
+        }
+        if (typeof request.topK === "number") {
+            generationConfig.topK = request.topK;
+        }
+        if (Object.keys(generationConfig).length > 0) {
+            body.generationConfig = generationConfig;
         }
 
         if (safetyOff) {
@@ -322,7 +352,9 @@ export class GeminiProvider extends BaseProvider {
         let isActive = false;
         let lastState: string | undefined;
 
-        for (let i = 0; i < 8; i += 1) {
+        // Poll longer to allow processing large files (up to ~3 minutes)
+        const maxPolls = 30;
+        for (let i = 0; i < maxPolls; i += 1) {
             try {
                 const info = await this.requestJson(statusUrl, { method: "GET" });
                 const state =
@@ -339,7 +371,7 @@ export class GeminiProvider extends BaseProvider {
             } catch {
                 // ignore and retry
             }
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 5000));
         }
 
         addProviderLog({
