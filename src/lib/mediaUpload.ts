@@ -2,6 +2,18 @@ import { ProviderFactory } from "./providers/ProviderFactory";
 import type { ProviderType } from "./providers/types";
 
 const MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024; // 2GB
+const WEB_CODECS_BASELINE_CONFIG = {
+  codec: "avc1.42E01E", // H.264 baseline
+  width: 640,
+  height: 480,
+  framerate: 5,
+};
+const WEB_CODECS_AUDIO_CONFIG = {
+  codec: "mp4a.40.2", // AAC LC
+  numberOfChannels: 1,
+  sampleRate: 48000,
+  bitrate: 96000,
+};
 
 export type PreparedMedia = {
   file: File;
@@ -75,6 +87,20 @@ export async function uploadMediaToProvider(
   }
 
   return providerInstance.uploadMedia(file);
+}
+
+export async function detectWebCodecsSupport(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  if (!(window.VideoEncoder && window.AudioEncoder && window.VideoEncoder.isConfigSupported && window.AudioEncoder.isConfigSupported)) {
+    return false;
+  }
+  try {
+    const video = await (window as any).VideoEncoder.isConfigSupported?.(WEB_CODECS_BASELINE_CONFIG);
+    const audio = await (window as any).AudioEncoder.isConfigSupported?.(WEB_CODECS_AUDIO_CONFIG);
+    return Boolean(video?.supported && audio?.supported);
+  } catch {
+    return false;
+  }
 }
 
 export { MAX_UPLOAD_BYTES };

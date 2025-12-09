@@ -38,6 +38,7 @@ import { getMediaDuration } from "../lib/mediaDuration";
 import { extractAudioToOggMono } from "../lib/ffmpeg";
 import {
   MAX_UPLOAD_BYTES,
+  detectWebCodecsSupport,
   prepareMediaFile,
   uploadMediaToProvider,
 } from "../lib/mediaUpload";
@@ -106,6 +107,9 @@ export function useTranslationWorkflowRunner() {
     if (workflowMode === "transcription" && selectedProvider !== "gemini") {
       setSelectedProvider("gemini");
     }
+    if (workflowMode === "transcription") {
+      detectWebCodecsSupport().then(setSupportsWebCodecs).catch(() => setSupportsWebCodecs(false));
+    }
   }, [workflowMode, selectedProvider, setSelectedProvider]);
 
   // Video/media state
@@ -118,6 +122,7 @@ export function useTranslationWorkflowRunner() {
   >("idle");
   const [videoUploadMessage, setVideoUploadMessage] = useState("");
   const [mediaTooLargeWarning, setMediaTooLargeWarning] = useState(false);
+  const [supportsWebCodecs, setSupportsWebCodecs] = useState(false);
   const [error, setError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -286,7 +291,9 @@ export function useTranslationWorkflowRunner() {
       setMediaFile(null);
       setVideoUploadState("error");
       setVideoUploadMessage(
-        "File exceeds 2GB limit (Gemini File API + in-browser processing). Please trim or compress.",
+        supportsWebCodecs
+          ? "File exceeds 2GB limit; compression needed (WebCodecs available)."
+          : "File exceeds 2GB limit; please compress offline (WebCodecs not available).",
       );
       setVideoName(null);
       setVideoDuration(null);
@@ -897,6 +904,7 @@ export function useTranslationWorkflowRunner() {
       videoUploadState,
       videoUploadMessage,
       mediaTooLargeWarning,
+      supportsWebCodecs,
       videoSizeMb,
       videoDuration,
       temperature: tState.temperature,
