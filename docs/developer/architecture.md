@@ -860,14 +860,6 @@ const glossary =
 
 ---
 
-## 🔗 Related Documents
-
-- **[prompt-engineering.md](./prompt-engineering.md)**: Technical reference for current implementation
-- **[../README.md](../README.md)**: User-facing documentation
-- **[../AGENTS.md](../AGENTS.md)**: Agent-specific instructions
-
----
-
 ## 💡 Contributing to This Document
 
 When making design changes:
