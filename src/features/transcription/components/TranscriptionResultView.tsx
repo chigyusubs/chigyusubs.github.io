@@ -56,15 +56,20 @@ export function TranscriptionResultView({ result, onRetryChunk, onResume }: Prop
 
       {result.warnings.length > 0 && (
         <div className={`mb-4 p-3 rounded text-sm ${theme.well.warning}`}>
-          <h3 className="font-bold mb-1">Warnings:</h3>
-          <ul className="list-disc list-inside">
-            {result.warnings.slice(0, 5).map((w, i) => (
-              <li key={i}>{w}</li>
-            ))}
-            {result.warnings.length > 5 && (
-              <li>...and {result.warnings.length - 5} more</li>
-            )}
-          </ul>
+          <div className="flex items-center gap-2">
+            <span className="font-bold">Warnings</span>
+            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs border border-amber-200">
+              {result.warnings.length}
+            </span>
+          </div>
+          <details className="mt-2">
+            <summary className="cursor-pointer text-xs">Show details</summary>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              {result.warnings.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          </details>
         </div>
       )}
 
@@ -132,11 +137,16 @@ export function TranscriptionResultView({ result, onRetryChunk, onResume }: Prop
               </div>
             </div>
             {chunk.warnings.length > 0 && (
-              <div className={`mt-1 text-xs ${theme.warningText}`}>
-                {chunk.warnings.map((w, i) => (
-                  <div key={i}>⚠️ {w}</div>
-                ))}
-              </div>
+              <details className="mt-1 text-xs">
+                <summary className="cursor-pointer text-amber-600 dark:text-amber-300">
+                  ⚠️ {chunk.warnings.length} warning{chunk.warnings.length > 1 ? "s" : ""}
+                </summary>
+                <ul className="mt-1 space-y-1 list-disc list-inside">
+                  {chunk.warnings.map((w, i) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
+              </details>
             )}
             <details className="mt-2">
               <summary className={`cursor-pointer text-xs ${theme.mutedText}`}>

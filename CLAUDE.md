@@ -41,7 +41,7 @@ scripts/              # Utility scripts
 
 ### Browser-Only
 - ❌ No backend services
-- ❌ No API key persistence (privacy-first)
+- ❌ No API key persistence (privacy-first): keys stay in memory for the active tab only; never write keys to disk/localStorage. Recommend password manager if users want them remembered.
 - ✅ All processing client-side (chunking, validation, API calls)
 
 ### Translation Workflow
@@ -50,8 +50,8 @@ scripts/              # Utility scripts
 - Concurrency capped at 10 (Gemini free tier RPM limit)
 
 ### Provider Usage
-- **Gemini**: Only provider with media upload + vision (default, extensively tested)
-- **Others**: Implemented but not battle-tested for this use case
+- **Gemini**: Only provider with media upload + vision (default, extensively tested). Transcription is Gemini-only.
+- **Others**: Implemented but not battle-tested for this use case; translation supports OpenAI/Anthropic/Ollama.
 - See `@docs/reference/providers.md` for comparison
 
 ## Critical Code Patterns

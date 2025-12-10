@@ -173,7 +173,7 @@ export function ProviderSettings({
         >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Provider Selection */}
-                <div className="space-y-2 md:col-span-2">
+                <div className="space-y-2 md:col-span-2 max-w-xl">
                     <FieldLabel>AI Provider</FieldLabel>
                     <select
                         className={theme.input}
@@ -199,7 +199,7 @@ export function ProviderSettings({
 
                 {/* API Key Input */}
                 {requiresApiKey && (
-                    <div className="space-y-2 md:col-span-2">
+                    <div className="space-y-2 md:col-span-2 max-w-xl">
                         <FieldLabel>API Key</FieldLabel>
                         {/* Hidden username field so password managers can pair keys per provider */}
                         <input
@@ -294,60 +294,58 @@ export function ProviderSettings({
                     )}
                 </div>
 
-                {/* Gemini thinking budget */}
-                {transcriptionMode && selectedProvider === "gemini" && setThinkingBudget && (
-                    <div className="space-y-2 md:col-span-2">
-                        <FieldLabel>Thinking Budget (tokens)</FieldLabel>
-                        <select
-                            className={theme.input}
-                            value={typeof thinkingBudget === "number" ? thinkingBudget : 0}
-                            onChange={(e) => setThinkingBudget(Number(e.target.value))}
-                            disabled={locked}
-                        >
-                            {[0, 512, 1024, 2048, 4096, 8192, -1].map((budget) => (
-                                <option key={budget} value={budget}>
-                                    {budget === 0
-                                        ? "0 (disable thinking)"
-                                        : budget === -1
-                                            ? "-1 (dynamic / model decides)"
-                                            : `${budget.toLocaleString()} tokens`}
-                                </option>
-                            ))}
-                        </select>
-                        <p className={theme.helperText}>
-                            Controls Gemini thinking tokens for structured transcription. 0 disables thinking to minimize cost; -1 lets the model choose dynamically.
-                        </p>
-                    </div>
-                )}
-
                 {/* Gemini sampling/output controls */}
                 {transcriptionMode && selectedProvider === "gemini" && (
                     <>
-                        <div className="space-y-2">
-                            <FieldLabel>Max Output Tokens</FieldLabel>
-                            <select
-                                className={theme.input}
-                                value={typeof maxOutputTokens === "number" ? maxOutputTokens : ""}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (!val) {
-                                        setMaxOutputTokens?.(undefined);
-                                    } else {
-                                        setMaxOutputTokens?.(Number(val));
-                                    }
-                                }}
-                                disabled={locked}
-                            >
-                                <option value="">Model default</option>
-                                {[4000, 6000, 8000, 12000, 16000].map((tok) => (
-                                    <option key={tok} value={tok}>
-                                        {tok.toLocaleString()}
-                                    </option>
-                                ))}
-                            </select>
-                            <p className={theme.helperText}>
-                                Caps subtitle JSON length per chunk. Higher caps can reduce truncation on longer segments but increase token usage (Gemini 2.5 Flash free tier: ~5 RPM / 250k TPM / 20 RPD).
-                            </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                            <div className="space-y-2 max-w-xl">
+                                <FieldLabel>Thinking Budget (tokens)</FieldLabel>
+                                <select
+                                    className={theme.input}
+                                    value={typeof thinkingBudget === "number" ? thinkingBudget : 0}
+                                    onChange={(e) => setThinkingBudget(Number(e.target.value))}
+                                    disabled={locked}
+                                >
+                                    {[0, 512, 1024, 2048, 4096, 8192, -1].map((budget) => (
+                                        <option key={budget} value={budget}>
+                                            {budget === 0
+                                                ? "0 (disable thinking)"
+                                                : budget === -1
+                                                    ? "-1 (dynamic / model decides)"
+                                                    : `${budget.toLocaleString()} tokens`}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className={theme.helperText}>
+                                    Controls Gemini thinking tokens for structured transcription. 0 disables thinking to minimize cost; -1 lets the model choose dynamically.
+                                </p>
+                            </div>
+                            <div className="space-y-2 max-w-xl">
+                                <FieldLabel>Max Output Tokens</FieldLabel>
+                                <select
+                                    className={theme.input}
+                                    value={typeof maxOutputTokens === "number" ? maxOutputTokens : ""}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (!val) {
+                                            setMaxOutputTokens?.(undefined);
+                                        } else {
+                                            setMaxOutputTokens?.(Number(val));
+                                        }
+                                    }}
+                                    disabled={locked}
+                                >
+                                    <option value="">Model default</option>
+                                    {[4000, 6000, 8000, 12000, 16000].map((tok) => (
+                                        <option key={tok} value={tok}>
+                                            {tok.toLocaleString()}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className={theme.helperText}>
+                                    Caps subtitle JSON length per chunk. Higher caps can reduce truncation on longer segments but increase token usage (Gemini 2.5 Flash free tier: ~5 RPM / 250k TPM / 20 RPD).
+                                </p>
+                            </div>
                         </div>
 
                         <div className="space-y-2">
@@ -360,7 +358,7 @@ export function ProviderSettings({
                                 value={topPEnabled ? topP : 0.9}
                                 onChange={(e) => setTopP?.(Number(e.target.value))}
                                 disabled={locked || !topPEnabled}
-                                className="w-full accent-orange-500"
+                                className="range-input w-full"
                             />
                             <div className="flex items-center justify-between text-xs opacity-70">
                                 <span>More diverse (1.0)</span>
@@ -393,7 +391,7 @@ export function ProviderSettings({
 
                 {/* Temperature */}
                 <div className="space-y-2">
-                    <FieldLabel>Temperature: {temperature}</FieldLabel>
+                    <FieldLabel>Temperature: {temperature.toFixed(1)}</FieldLabel>
                     <input
                         type="range"
                         min="0"
@@ -401,7 +399,7 @@ export function ProviderSettings({
                         step="0.1"
                         value={temperature}
                         onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                        className="w-full accent-orange-500"
+                        className="range-input w-full"
                         disabled={locked}
                     />
                     <p className={theme.helperText}>

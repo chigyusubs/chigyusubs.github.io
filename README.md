@@ -11,13 +11,13 @@ Live app: https://chigyusubs.github.io (built from `main` via GitHub Actions)
 - 📝 **VTT/SRT input** — Translate any VTT/SRT (ours or Whisper/others) by converting to compact JSON, invoking a structured-output LLM, and rebuilding VTT.
 - 🎨 **Customizable prompts** — Edit system/user prompts and import/export preset configurations.
 - ⚡ **Concurrent processing** — Configurable chunk size and parallel requests for faster runs.
-- 🔒 **Privacy-first** — API keys and files stay in-memory in your browser, never persisted.
+- 🔒 **Privacy-first** — API keys and files stay in-memory in your browser, never persisted. Use your browser’s password manager if you want to save per-provider keys.
 
 ## Prerequisites
 
 - **Node.js 18+** (for local development)
 - **API Key** — Choose one or more providers:
-  - [Gemini API](https://aistudio.google.com/apikey) (default, recommended)
+  - [Gemini API](https://aistudio.google.com/apikey) (default, recommended; **required for transcription**)
   - [OpenAI API](https://platform.openai.com/api-keys)
   - [Anthropic API](https://console.anthropic.com/)
   - [Ollama](https://ollama.ai/) (local, no API key required)
@@ -75,7 +75,7 @@ This repo uses GitHub Pages with GitHub Actions. See `.github/workflows/deploy.y
 
 ## How it uses Gemini
 
-- **Transcription (primary path)**: Uses Gemini File API in structured mode; media is uploaded only for transcription and stays tied to that request.
+- **Transcription (primary path)**: Uses Gemini File API in structured mode; media is uploaded only for transcription and stays tied to that request. Transcription is Gemini-only in the UI.
 - **Translation**: Accepts VTT/SRT, converts to compact JSON, and calls a structured-output model (Gemini 2.5/3 or GPT-4+); media is not sent with translation chunks.
 - **Prompts**: System/summary/glossary/chunk prompts are customizable; structured translation uses a minimal JSON schema to avoid token waste.
 - **API costs**: Usage may incur costs per your Google billing/quotas. You control the key and model selection.

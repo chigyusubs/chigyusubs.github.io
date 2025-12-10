@@ -50,12 +50,12 @@ export const lightTheme: Theme = {
   subtext: "text-slate-600",
   mutedText: "text-slate-500",
   section:
-    "shadow-sm rounded-xl p-5 mb-4 border border-orange-100/50 bg-white transition-colors hover:shadow-md",
+    "shadow-[0_8px_24px_-12px_rgba(0,0,0,0.25)] rounded-xl p-5 mb-4 border border-orange-100 bg-gradient-to-b from-white to-orange-50/30 transition-colors hover:shadow-lg",
   label: "block text-sm font-bold mb-1 text-slate-700",
   input:
-    "w-full rounded-xl border border-slate-200 p-2.5 text-base bg-white text-slate-900 focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all",
+    "w-full rounded-xl border border-slate-200 p-2.5 text-base bg-white text-slate-900 focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400 focus-visible:outline-offset-2",
   inputCode:
-    "w-full rounded-xl border border-slate-200 p-2.5 text-base bg-white text-slate-900 focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all",
+    "w-full rounded-xl border border-slate-200 p-2.5 text-base bg-white text-slate-900 focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400 focus-visible:outline-offset-2",
   borderColor: "#fed7aa", // orange-200
   buttonPrimary:
     "px-5 py-2.5 rounded-xl bg-orange-500 text-white font-semibold shadow-sm hover:bg-orange-600 hover:shadow hover:-translate-y-0.5 active:translate-y-0 disabled:bg-orange-200 disabled:shadow-none disabled:cursor-not-allowed transition-all",
@@ -76,6 +76,8 @@ export const lightTheme: Theme = {
   progressError: "bg-rose-500",
   spinnerTrack: "#ffedd5", // orange-100
   spinnerLead: "#f97316", // orange-500
+  rangeTrack: "bg-orange-100",
+  rangeThumb: "bg-orange-500",
   badge: {
     ok: "bg-green-100 text-green-800 border border-green-200 rounded-lg px-2 py-0.5 font-medium",
     processing:
@@ -108,9 +110,9 @@ export const darkTheme: Theme = {
     "shadow-sm rounded-xl p-5 mb-4 border border-stone-800 bg-stone-900/50 transition-colors hover:bg-stone-900",
   label: "block text-sm font-bold mb-1 text-stone-200",
   input:
-    "w-full rounded-xl border border-stone-700 p-2.5 text-base bg-stone-950 text-stone-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all",
+    "w-full rounded-xl border border-stone-700 p-2.5 text-base bg-stone-950 text-stone-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 focus-visible:outline-offset-2",
   inputCode:
-    "w-full rounded-xl border border-stone-700 p-2.5 text-base bg-stone-950 text-stone-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all",
+    "w-full rounded-xl border border-stone-700 p-2.5 text-base bg-stone-950 text-stone-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 focus-visible:outline-offset-2",
   borderColor: "#1c1917", // stone-900
   buttonPrimary:
     "px-5 py-2.5 rounded-xl bg-orange-600 text-white font-semibold shadow-sm hover:bg-orange-500 hover:shadow hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all",
@@ -131,6 +133,8 @@ export const darkTheme: Theme = {
   progressError: "bg-rose-500",
   spinnerTrack: "#1c1917", // stone-900
   spinnerLead: "#f97316", // orange-500
+  rangeTrack: "bg-stone-700",
+  rangeThumb: "bg-orange-500",
   badge: {
     ok: "bg-green-900/30 text-green-300 border border-green-800 rounded-lg px-2 py-0.5 font-medium",
     processing:

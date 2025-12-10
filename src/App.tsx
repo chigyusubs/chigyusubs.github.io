@@ -35,6 +35,7 @@ import {
   setDebugWriter,
 } from "./lib/debugState";
 import type { StructuredCueHintMode } from "./lib/structured/StructuredPrompt";
+import { GlobeIcon, MicIcon, MoonIcon, SunIcon } from "./components/icons/Icons";
 // ============================================================================
 // MOCK MODE UI (can be removed with src/lib/mock/)
 // ============================================================================
@@ -225,9 +226,29 @@ function App() {
                 Debug mode: copy events
               </Button>
             )}
-            <Button tone="secondary" onClick={toggleTheme} className="text-sm">
-              {themeName === "dark" ? "☀️ Light mode" : "🌙 Dark mode"}
-            </Button>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className={`relative inline-flex items-center w-14 h-9 rounded-full border transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400 ${
+                isDarkTheme
+                  ? "bg-stone-800 border-stone-700 text-white"
+                  : "bg-white border-slate-200 text-slate-700 shadow-sm"
+              }`}
+              aria-label={themeName === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              <span
+                className={`absolute inset-y-1 left-1 w-7 h-7 rounded-full transition-transform ${
+                  isDarkTheme ? "translate-x-5 bg-orange-500" : "translate-x-0 bg-slate-200"
+                }`}
+              />
+              <span
+                className={`absolute inset-y-1 left-1 w-7 h-7 flex items-center justify-center text-base drop-shadow-sm transition-transform ${
+                  isDarkTheme ? "translate-x-5 text-white" : "translate-x-0 text-slate-700"
+                }`}
+              >
+                {themeName === "dark" ? <SunIcon size={16} /> : <MoonIcon size={16} />}
+              </span>
+            </button>
           </div>
         </div>
       </header>
@@ -251,14 +272,14 @@ function App() {
                       {
                         key: "translation",
                         label: "Translation",
-                        icon: "🌐",
+                        icon: <GlobeIcon size={18} />,
                         description: "VTT/SRT → translated subtitles",
                       },
                       {
                         key: "transcription",
                         label: "Transcription",
-                        icon: "🎙️",
-                        description: "Media → VTT (Gemini only)",
+                        icon: <MicIcon size={18} />,
+                        description: "Video → VTT (Gemini only)",
                       },
                     ].map((option) => {
                       const active = state.workflowMode === option.key;
@@ -272,7 +293,7 @@ function App() {
                               ? actions.setWorkflowMode("translation")
                               : actions.setWorkflowMode("transcription")
                           }
-                          className={`relative flex min-w-[200px] flex-col items-start gap-1 rounded-lg px-4 py-3 text-left transition ${
+                          className={`relative flex min-w-[220px] flex-col items-start gap-1 rounded-lg px-4 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400 ${
                             active
                               ? isDarkTheme
                                 ? "bg-white/10 text-white shadow-lg shadow-black/40"
@@ -1042,11 +1063,13 @@ function App() {
         </main>
         {showTranscriptionPromptModal && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
             onClick={() => setShowTranscriptionPromptModal(false)}
           >
             <div
-              className="bg-white dark:bg-stone-900 rounded-lg shadow-xl max-w-5xl w-full mx-4 max-h-[90vh] flex flex-col border"
+              className={`rounded-2xl shadow-2xl max-w-5xl w-full mx-4 max-h-[90vh] flex flex-col border ${
+                isDarkTheme ? "bg-stone-900" : "bg-white"
+              }`}
               onClick={(e) => e.stopPropagation()}
               style={{ borderColor: theme.borderColor }}
             >
@@ -1062,7 +1085,9 @@ function App() {
                 <div>
                   <div className="font-semibold mb-1" style={{ color: theme.text }}>System prompt</div>
                   <pre
-                    className="whitespace-pre-wrap break-words bg-black/40 p-3 rounded text-xs overflow-auto"
+                    className={`whitespace-pre-wrap break-words p-3 rounded text-xs overflow-auto ${
+                      isDarkTheme ? "text-white" : "text-slate-800"
+                    }`}
                     style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor, borderWidth: 1 }}
                   >
                     {structuredPromptPreview.systemPrompt}
@@ -1071,7 +1096,9 @@ function App() {
                 <div>
                   <div className="font-semibold mb-1" style={{ color: theme.text }}>User prompt (first chunk)</div>
                   <pre
-                    className="whitespace-pre-wrap break-words bg-black/40 p-3 rounded text-xs overflow-auto"
+                    className={`whitespace-pre-wrap break-words p-3 rounded text-xs overflow-auto ${
+                      isDarkTheme ? "text-white" : "text-slate-800"
+                    }`}
                     style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor, borderWidth: 1 }}
                   >
                     {structuredPromptPreview.userPrompt}
@@ -1091,7 +1118,9 @@ function App() {
                 <div>
                   <div className="font-semibold mb-1" style={{ color: theme.text }}>Structured output schema</div>
                   <pre
-                    className="whitespace-pre bg-black/40 p-3 rounded text-xs overflow-auto"
+                    className={`whitespace-pre p-3 rounded text-xs overflow-auto ${
+                      isDarkTheme ? "text-white" : "text-slate-800"
+                    }`}
                     style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor, borderWidth: 1 }}
                   >
                     {schemaPretty}

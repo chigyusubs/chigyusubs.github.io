@@ -9,6 +9,7 @@ Structured transcription is the main feature: Gemini File API only, structured m
 - **Provider**: Gemini 2.5/3 via File API (required; others are not supported for transcription).
 - **Input**: Video or audio file; Japanese comedy is the primary target.
 - **Output**: Structured JSON plus WebVTT (VTT) for direct playback or translation.
+- **Keys**: Keys are not persisted; they live only in the tab. Use your browser’s password manager if you want to save per-provider keys.
 
 ## Steps
 1. Select **Gemini** as provider (File API).

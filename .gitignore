@@ -13,3 +13,6 @@ coverage/
 .eslintcache
 .vscode/
 .claude/
+docs-backup-*.tar.gz
+structured_test_output.txt
+aligned.json

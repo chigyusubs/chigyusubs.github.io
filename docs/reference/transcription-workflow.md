@@ -3,7 +3,6 @@
 ### Architecture Overview
 - **Sequential processing**: Process 2-minute video chunks with context handoff (Gemini-only)
 - **Model**: `gemini-2.5-flash` with thinking mode OFF
-- **Validation**: `gemini-2.5-flash-lite` for automated sanity checking
 - **Output**: Structured JSON → VTT format
 
 ### Chunk Processing Strategy
@@ -180,44 +179,9 @@ OUTPUT ONLY THE JSON following the schema.
 }
 ```
 
-### Sanity Check (Optional but Recommended)
-
-After each chunk, validate with `gemini-2.5-flash-lite`:
-
-```javascript
-{
-  model: "gemini-2.5-flash-lite",
-  prompt: `Review this Japanese transcript chunk for obvious errors:
-
-PREVIOUS CONTEXT:
-${contextCues}
-
-CURRENT CHUNK:
-${currentCues}
-
-Check for:
-- Nonsensical word sequences
-- Sudden topic breaks inconsistent with context
-- Repeated hallucinated phrases
-- Character names that don't match context
-- Gibberish or malformed Japanese
-
-Return your assessment.`,
-  generationConfig: {
-    temperature: 0.3,
-    maxOutputTokens: 512,
-    responseMimeType: "application/json",
-    responseSchema: {
-      type: "object",
-      properties: {
-        valid: {type: "boolean"},
-        confidence: {type: "string", enum: ["high", "medium", "low"]},
-        issues: {type: "array", items: {type: "string"}}
-      }
-    }
-  }
-}
-```
+### Future considerations
+- Optional second-pass validation (e.g., lightweight “sanity check” prompt) if recurring quality issues appear. Not enabled today to avoid extra cost/latency.
+- Additional overlap repair suggestions instead of hard failures if timing overlaps are minor.
 
 ### Key Implementation Details
 
@@ -234,4 +198,3 @@ Return your assessment.`,
 - Comedian names correctly identified
 - Story/jokes comprehensible
 - Context flows between chunks
-

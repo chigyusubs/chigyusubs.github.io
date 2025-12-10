@@ -6,7 +6,7 @@ ChigyuSubs supports multiple LLM API backends through a provider abstraction lay
 
 | Feature | Gemini | OpenAI | Anthropic | Ollama |
 |---------|--------|---------|-----------|--------|
-| **Media Upload** | ✅ | ❌ | ❌ | ❌ |
+| **Media Upload (transcription)** | ✅ (required for transcription) | ❌ | ❌ | ❌ |
 | **Vision Support** | ✅ | ⚠️ Limited | ⚠️ Limited | ⚠️ Some models |
 | **API Key Required** | ✅ | ✅ | ✅ | ❌ |
 | **Translation Quality** | Excellent | Excellent | Excellent | Good-Excellent* |
@@ -28,8 +28,8 @@ Choose a provider and follow the setup guide:
 
 ## Quick Recommendations
 
-### I need to see video/on-screen text
-→ **Use Gemini** (only provider with media upload and vision)
+### I need to see video/on-screen text / transcription
+→ **Use Gemini** (only provider with media upload/vision; transcription is Gemini-only)
 
 ### I want best translation quality for dialogue
 → **Try GPT-4 Turbo or Claude 3.5 Sonnet**
@@ -65,7 +65,7 @@ See [Tokenomics](./reference/tokenomics.md) for detailed cost analysis.
 
 **A**: It depends on your needs:
 
-- **Video with context**: Gemini (only provider with media upload)
+- **Video with context / transcription**: Gemini (only provider with media upload; transcription is Gemini-only)
 - **Best quality**: Try GPT-4 Turbo or Claude 3.5 Sonnet
 - **Privacy/offline**: Ollama
 - **Cost-conscious**: GPT-3.5 Turbo or Claude 3.5 Haiku
@@ -79,7 +79,7 @@ See [Tokenomics](./reference/tokenomics.md) for detailed cost analysis.
 
 **A**: No. Key differences:
 
-- **Media upload**: Only Gemini currently
+- **Media upload / transcription**: Only Gemini currently (transcription is Gemini-only in the UI)
 - **Safety settings**: Only Gemini
 - **Vision support**: Gemini (full), others (limited or none)
 - **Model listing**: OpenAI and Ollama have API endpoints; Anthropic uses static list
@@ -95,6 +95,10 @@ See [Tokenomics](./reference/tokenomics.md) for detailed cost analysis.
 
 We recommend testing your specific content with different providers.
 
+### Q: How are API keys handled?
+
+**A**: Keys are never persisted by the app. They live only in memory for the open tab. Use your browser’s password manager if you want to save per-provider keys.
+
 ### Q: Is Ollama quality as good as cloud providers?
 
 **A**: It depends on the model:
@@ -104,4 +108,3 @@ We recommend testing your specific content with different providers.
 - **Small models** (<7B): Best for experimentation, not production
 
 Ollama is great for privacy and cost, but expect slower speeds and potentially lower quality vs. GPT-4 or Claude 3.5 Sonnet.
-

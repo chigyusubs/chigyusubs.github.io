@@ -9,6 +9,7 @@ Translation is secondary to transcription. It converts VTT/SRT into a compact JS
 - **Input**: VTT/SRT from the transcription workflow or any other source (e.g., Whisper).
 - **Provider**: Structured-output models only. Target models: **Gemini 2.5/3** and **OpenAI GPT-4+**. Claude is untested; Ollama support depends on model capabilities (low priority).
 - **Output**: Reconstructed WebVTT file.
+- **Keys**: Keys are not persisted; they live only in the tab. Use your browser’s password manager if you want to save per-provider keys.
 
 ## Pipeline (at a glance)
 1. Upload/import VTT or SRT.
@@ -30,6 +31,7 @@ Translation is secondary to transcription. It converts VTT/SRT into a compact JS
 - **OpenAI GPT-4+**: Use JSON mode/JSON schema.
 - **Claude**: Not tested yet.
 - **Ollama**: Model-dependent; expect limited structured support (low priority).
+- **Transcription**: Gemini-only; OpenAI transcription is not available in this UI.
 
 ## Known gaps
 - Structured translation implementation is still in progress; legacy non-structured flows may remain in UI until replaced.
