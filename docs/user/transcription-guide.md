@@ -11,6 +11,13 @@ Structured transcription is the main feature: Gemini File API only, structured m
 - **Output**: Structured JSON plus WebVTT (VTT) for direct playback or translation.
 - **Keys**: Keys are not persisted; they live only in the tab. Use your browser’s password manager if you want to save per-provider keys.
 
+## Recommended settings
+- Model: **Gemini 2.5 Pro** (use a small thinking budget; 0 is not supported) or **Gemini 2.5 Flash** with thinking budget **0** for lowest cost.
+- Chunk length: **1–2 minutes**; overlap window **~20s** near the end of each chunk.
+- Concurrency: **Sequential** (no parallel transcription).
+- Temperature: **0**; Top-p: **off**.
+- Structured mode: **Always on** (default).
+
 ## Steps
 1. Select **Gemini** as provider (File API).
 2. Click **Upload media** and select your video/audio file.

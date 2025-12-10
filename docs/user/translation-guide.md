@@ -11,6 +11,13 @@ Translation is secondary to transcription. It converts VTT/SRT into a compact JS
 - **Output**: Reconstructed WebVTT file.
 - **Keys**: Keys are not persisted; they live only in the tab. Use your browser’s password manager if you want to save per-provider keys.
 
+## Recommended settings
+- Models: **Gemini 2.5/3** or **GPT-4+** (structured/JSON mode). Larger models handle up to ~10-minute chunks; use smaller chunks for small models.
+- Temperature: **0–0.3** for accuracy; Top-p: **off** unless experimenting.
+- Cue hinting: **Durations** (default); use `[SHORT]` tags if you need stronger merging of quick interjections.
+- Concurrency: **Moderate (3–5)** to avoid throttling.
+- Media: **Text-only** (do not send media for translation).
+
 ## Pipeline (at a glance)
 1. Upload/import VTT or SRT.
 2. App converts cues to a **compact JSON** array (start, end, text, speaker? if present). We keep input minimal so LLMs aren’t distracted by verbose metadata.
