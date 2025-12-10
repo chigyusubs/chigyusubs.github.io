@@ -3,6 +3,20 @@
  * Separate from translation to avoid optional fields and conditionals
  */
 
+import type { TranscriptionCue } from "../../lib/structured/TranscriptionStructuredOutput";
+
+/**
+ * Cursor state for resuming structured transcription
+ * Stores everything needed to continue from where we left off
+ */
+export type TranscriptionCursor = {
+  nextVideoStart: number;      // Where to start the next chunk (seconds)
+  nextCueNumber: number;       // Sequential cue numbering
+  lastTwoCues?: TranscriptionCue[];  // Context for next chunk's prompt
+  nextChunkIdx: number;        // Which chunk index to process next
+  videoDuration: number;       // Total video duration (needed for loop condition)
+};
+
 export type TranscriptionChunk = {
   idx: number;
   status: "ok" | "failed" | "processing" | "waiting" | "paused";
@@ -42,6 +56,7 @@ export type TranscriptionResult = {
   vtt: string;
   srt: string;
   video_ref?: string | null;
+  cursor?: TranscriptionCursor;  // Resume state for structured transcription
 };
 
 export type TranscriptionProvider = "gemini" | "openai";
@@ -61,6 +76,7 @@ export type GeminiTranscriptionConfig = BaseTranscriptionConfig & {
   modelName: string;
   useStructuredOutput?: boolean; // Structured mode is the default path
   thinkingBudget?: number; // Thinking tokens to allow; 0 disables thinking by default
+  thinkingLevel?: "low" | "high"; // Gemini 3 thinking level override
   maxOutputTokens?: number;
   topP?: number;
   prompt?: string;

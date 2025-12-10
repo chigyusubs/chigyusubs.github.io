@@ -48,6 +48,7 @@ export type UserPrefs = {
   useGlossary?: boolean;
   useGlossaryInSummary?: boolean;
   useTranscriptionForSummary?: boolean;
+  thinkingLevel?: "low" | "high";
   safetyOff?: boolean;
   useStructuredOutput?: boolean;
   structuredCueHintMode?: StructuredCueHintMode;

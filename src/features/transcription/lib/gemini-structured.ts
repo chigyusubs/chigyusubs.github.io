@@ -6,7 +6,7 @@
  */
 
 import { ProviderFactory } from "../../../lib/providers/ProviderFactory";
-import type { GeminiTranscriptionConfig, TranscriptionChunk, TranscriptionResult } from "../types";
+import type { GeminiTranscriptionConfig, TranscriptionChunk, TranscriptionResult, TranscriptionCursor } from "../types";
 import { logDebugEvent } from "../../../lib/debugState";
 import { isDebugEnabled } from "../../../lib/debugToggle";
 import { mergeVttChunks } from "./shared";
@@ -19,6 +19,7 @@ import {
 import { buildTranscriptionPrompt } from "../../../lib/structured/TranscriptionStructuredPrompt";
 import { reconstructTranscriptionVtt, parseTimestamp, formatTimestamp } from "../../../lib/structured/TranscriptionVttReconstructor";
 import type { GenerateRequest } from "../../../lib/providers/types";
+import { buildGeminiThinkingConfig } from "./thinkingConfig";
 
 const FALLBACK_CHUNK_DURATION = 120; // 2 minutes
 const FALLBACK_BREAK_WINDOW = 20;    // Last 20 seconds
@@ -90,7 +91,11 @@ async function transcribeChunkStructured(
       safetyOff: config.safetyOff,
       responseMimeType: "application/json",
       responseJsonSchema: TRANSCRIPTION_JSON_SCHEMA,
-      thinkingConfig: { thinkingBudget: typeof config.thinkingBudget === "number" ? config.thinkingBudget : 0 },
+      thinkingConfig: buildGeminiThinkingConfig(
+        config.modelName,
+        config.thinkingBudget,
+        config.thinkingLevel
+      ),
       maxOutputTokens: config.maxOutputTokens,
       topP: config.topP
     };
@@ -259,13 +264,16 @@ async function transcribeChunkStructured(
  * Processes video chunks one at a time, using suggested break points from
  * the model to determine chunk boundaries. Passes context between chunks
  * for improved continuity.
+ *
+ * @param initialCursor - Optional cursor to resume from a previous run
  */
 export async function transcribeGeminiStructured(
   config: GeminiTranscriptionConfig,
   onChunkUpdate?: (chunk: TranscriptionChunk) => void,
   shouldCancel?: () => boolean,
   shouldPause?: () => Promise<void>,
-  runId?: number
+  runId?: number,
+  initialCursor?: TranscriptionCursor
 ): Promise<TranscriptionResult> {
   const chunks: TranscriptionChunk[] = [];
   const allWarnings: string[] = [];
@@ -282,23 +290,33 @@ export async function transcribeGeminiStructured(
     chunkDuration
   );
 
-  let currentVideoStart = 0;
-  let nextCueNumber = 1;
-  let lastTwoCues: TranscriptionCue[] | undefined = undefined;
-  let chunkIdx = 0;
+  // Initialize from cursor or defaults
+  let currentVideoStart = initialCursor?.nextVideoStart ?? 0;
+  let nextCueNumber = initialCursor?.nextCueNumber ?? 1;
+  let lastTwoCues: TranscriptionCue[] | undefined = initialCursor?.lastTwoCues;
+  let chunkIdx = initialCursor?.nextChunkIdx ?? 0;
 
-  const videoDuration = Number.isFinite(config.videoDuration)
-    ? (config.videoDuration as number)
-    : chunkDuration; // Fallback to a single chunk if duration unknown
+  const videoDuration = initialCursor?.videoDuration ?? (
+    Number.isFinite(config.videoDuration)
+      ? (config.videoDuration as number)
+      : chunkDuration // Fallback to a single chunk if duration unknown
+  );
 
   if (isDebugEnabled()) {
     logDebugEvent({
       kind: "transcription-structured-start",
       runId,
-      message: `Starting structured transcription`,
+      message: initialCursor
+        ? `Resuming structured transcription from chunk ${initialCursor.nextChunkIdx}`
+        : `Starting structured transcription`,
       data: {
         videoDuration,
-        modelName: config.modelName
+        modelName: config.modelName,
+        resumingFrom: initialCursor ? {
+          chunkIdx: initialCursor.nextChunkIdx,
+          videoStart: initialCursor.nextVideoStart,
+          cueNumber: initialCursor.nextCueNumber
+        } : undefined
       }
     });
   }
@@ -343,17 +361,98 @@ export async function transcribeGeminiStructured(
       onChunkUpdate(chunk);
     }
 
-    // If no structured output, stop
-    if (!structuredOutput) {
+    // If chunk requires resume (critical warning), return with cursor
+    // This allows the user to review/retry before continuing
+    if (chunk.requiresResume && structuredOutput) {
       if (isDebugEnabled()) {
         logDebugEvent({
-          kind: "transcription-structured-stopped",
+          kind: "transcription-structured-paused-critical",
           runId,
-          message: `Stopping due to missing structured output`,
-          data: { chunkIdx }
+          message: `Pausing for critical review`,
+          data: { chunkIdx, currentVideoStart }
         });
       }
-      break;
+
+      // Calculate cursor for next chunk (this one succeeded)
+      let nextStart = currentVideoEnd;
+      let nextLastTwoCues = lastTwoCues;
+      let nextNumber = nextCueNumber;
+
+      if (structuredOutput.lastTwoCues?.length === 2) {
+        try {
+          const contextStart = parseTimestamp(structuredOutput.lastTwoCues[0].startTime);
+          if (contextStart > currentVideoStart) {
+            nextStart = contextStart;
+          }
+        } catch {
+          // Use default nextStart
+        }
+        nextLastTwoCues = structuredOutput.lastTwoCues;
+        nextNumber = structuredOutput.lastTwoCues[1].number + 1;
+      }
+
+      const { vtt, srt } = mergeVttChunks(
+        chunks
+          .filter(c => c.status === "ok")
+          .map(c => ({ vtt: c.vtt, offset: 0 }))
+      );
+
+      return {
+        ok: false,
+        warnings: allWarnings,
+        chunks,
+        vtt,
+        srt,
+        video_ref: config.videoRef,
+        cursor: {
+          nextVideoStart: nextStart,
+          nextCueNumber: nextNumber,
+          lastTwoCues: nextLastTwoCues,
+          nextChunkIdx: chunkIdx + 1,
+          videoDuration
+        }
+      };
+    }
+
+    // If no structured output (failure), return with cursor for resume
+    if (!structuredOutput) {
+      // Mark the failed chunk as requiring resume
+      const failedChunk = chunks[chunks.length - 1];
+      if (failedChunk && failedChunk.status === "failed") {
+        failedChunk.requiresResume = true;
+      }
+
+      if (isDebugEnabled()) {
+        logDebugEvent({
+          kind: "transcription-structured-paused",
+          runId,
+          message: `Pausing due to missing structured output (failure)`,
+          data: { chunkIdx, currentVideoStart }
+        });
+      }
+
+      // Return partial result with cursor for resuming
+      const { vtt, srt } = mergeVttChunks(
+        chunks
+          .filter(c => c.status === "ok")
+          .map(c => ({ vtt: c.vtt, offset: 0 }))
+      );
+
+      return {
+        ok: false,
+        warnings: allWarnings,
+        chunks,
+        vtt,
+        srt,
+        video_ref: config.videoRef,
+        cursor: {
+          nextVideoStart: currentVideoStart,  // Stay at same position
+          nextCueNumber,
+          lastTwoCues,
+          nextChunkIdx: chunkIdx,
+          videoDuration
+        }
+      };
     }
 
     // Check if this was the last chunk

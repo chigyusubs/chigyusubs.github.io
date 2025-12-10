@@ -229,16 +229,43 @@ export async function transcribeGeminiChunk(
 
 /**
  * Stitch all successful chunks into final VTT/SRT using shared utilities
+ *
+ * For structured transcription, timestamps are already absolute (HH:MM:SS.mmm)
+ * so we detect this and use offset: 0 to avoid double-shifting.
  */
 export function stitchGeminiChunks(
   chunks: TranscriptionChunk[]
 ): { vtt: string; srt: string } {
   const successfulChunks = chunks
     .filter((c) => c.status === "ok")
-    .map((chunk) => ({
-      vtt: chunk.vtt,
-      offset: chunk.timeRange.start,
-    }));
+    .map((chunk) => {
+      // Detect if timestamps are already absolute (structured output)
+      // by checking if the first cue starts at or after chunk.timeRange.start
+      // If so, use offset: 0 to avoid double-shifting
+      let useAbsoluteTimestamps = false;
+
+      if (chunk.vtt && chunk.timeRange.start > 0) {
+        try {
+          const cues = parseVtt(chunk.vtt);
+          if (cues.length > 0) {
+            // If first cue starts at or after the chunk's video start time,
+            // timestamps are already absolute
+            const firstCueStart = cues[0].start;
+            const threshold = chunk.timeRange.start - 5; // 5 second tolerance
+            if (firstCueStart >= threshold) {
+              useAbsoluteTimestamps = true;
+            }
+          }
+        } catch {
+          // Parse error, fall back to offset-based
+        }
+      }
+
+      return {
+        vtt: chunk.vtt,
+        offset: useAbsoluteTimestamps ? 0 : chunk.timeRange.start,
+      };
+    });
 
   return mergeVttChunks(successfulChunks);
 }

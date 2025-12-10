@@ -25,6 +25,7 @@ import {
 } from "../config/defaults";
 import {
   TRANSCRIPTION_DEFAULT_MAX_OUTPUT_TOKENS,
+  TRANSCRIPTION_DEFAULT_THINKING_LEVEL,
   TRANSCRIPTION_DEFAULT_THINKING_BUDGET,
   TRANSCRIPTION_DEFAULT_TOP_P,
 } from "../config/transcriptionDefaults";
@@ -87,6 +88,9 @@ export function useTranslationWorkflowRunner() {
     typeof saved?.thinkingBudget === "number"
       ? saved.thinkingBudget
       : TRANSCRIPTION_DEFAULT_THINKING_BUDGET,
+  );
+  const [thinkingLevel, setThinkingLevel] = useState<"low" | "high" | undefined>(
+    saved?.thinkingLevel ?? TRANSCRIPTION_DEFAULT_THINKING_LEVEL,
   );
   const [maxOutputTokens, setMaxOutputTokens] = useState<number | undefined>(
     typeof saved?.maxOutputTokens === "number"
@@ -181,9 +185,46 @@ export function useTranslationWorkflowRunner() {
   const setConcurrencyClamped = (value: number) =>
     tActions.setConcurrency(Math.min(MAX_CONCURRENCY, Math.max(1, value)));
 
-  const resumeTranscription = () => {
-    transcriptionFeature.actions.resume();
-    transcriptionPausedRef.current = false;
+  const resumeTranscription = async () => {
+    // Check if we have a cursor (structured transcription with remaining work)
+    const hasCursor = !!transcriptionState.result?.cursor;
+
+    if (hasCursor) {
+      // Structured resume: re-enter the transcription loop with config
+      const resolvedProvider = resolveProviderConfig();
+      const chunkLength = providerConfigs.openai.transcriptionChunkSeconds ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS;
+      const overlapSeconds = Math.max(0, transcriptionOverlapSeconds ?? 0);
+      const totalDuration = videoDuration && Number.isFinite(videoDuration) ? videoDuration : null;
+
+      transcriptionPausedRef.current = false;
+
+      try {
+        await transcriptionFeature.actions.resumeStructured({
+          provider: "gemini",
+          videoRef: videoRef ?? "",
+          videoFile: mediaFile ?? undefined,
+          apiKey: resolvedProvider.apiKeyForProvider,
+          modelName: resolvedProvider.modelForProvider,
+          useStructuredOutput: true,
+          chunkLength,
+          overlapSeconds,
+          videoDuration: totalDuration,
+          prompt: transcriptionPrompt,
+          temperature: tState.temperature,
+          safetyOff,
+          thinkingBudget,
+          thinkingLevel,
+          maxOutputTokens,
+          topP,
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Resume failed");
+      }
+    } else {
+      // Simple resume: just toggle the pause flag (legacy flow)
+      transcriptionFeature.actions.resume();
+      transcriptionPausedRef.current = false;
+    }
   };
 
   const pauseTranscription = () => {
@@ -241,6 +282,7 @@ export function useTranslationWorkflowRunner() {
       transcriptionPrompt,
       transcriptionOverlapSeconds,
       thinkingBudget,
+      thinkingLevel,
       maxOutputTokens,
       topP,
       useStructuredOutput: tState.useStructuredOutput,
@@ -275,6 +317,7 @@ export function useTranslationWorkflowRunner() {
     transcriptionPrompt,
     transcriptionOverlapSeconds,
     thinkingBudget,
+    thinkingLevel,
     maxOutputTokens,
     topP,
     tState.useStructuredOutput,
@@ -631,6 +674,7 @@ export function useTranslationWorkflowRunner() {
           modelName: resolvedProvider.modelForProvider,
           useStructuredOutput: true,
           thinkingBudget,
+          thinkingLevel,
           prompt: transcriptionPrompt,
           temperature: tState.temperature,
           maxOutputTokens,
@@ -796,8 +840,12 @@ export function useTranslationWorkflowRunner() {
         overlapSeconds,
         videoDuration: totalDuration,
         prompt: transcriptionPrompt,
-        temperature: DEFAULT_TEMPERATURE,
+        temperature: typeof chunk.temperature === "number" ? chunk.temperature : state.temperature ?? DEFAULT_TEMPERATURE,
         safetyOff,
+        thinkingBudget,
+        thinkingLevel,
+        maxOutputTokens,
+        topP,
       });
       setError("");
     } catch (err) {
@@ -960,6 +1008,7 @@ export function useTranslationWorkflowRunner() {
       transcriptionPrompt,
       transcriptionOverlapSeconds,
       thinkingBudget,
+      thinkingLevel,
       maxOutputTokens,
       topP,
       useStructuredOutput: tState.useStructuredOutput,
@@ -981,6 +1030,7 @@ export function useTranslationWorkflowRunner() {
       setTranscriptionPrompt,
       setTranscriptionOverlapSeconds,
       setThinkingBudget,
+      setThinkingLevel,
       setMaxOutputTokens,
       setTopP,
       handleTranscribeAudio, // New action

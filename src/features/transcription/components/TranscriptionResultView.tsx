@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import type { TranscriptionResult, TranscriptionChunk } from "../types";
 import { Button } from "../../../components/ui/Button";
 import { SectionCard } from "../../../components/ui/SectionCard";
@@ -32,11 +32,45 @@ function formatTime(seconds: number): string {
 
 export function TranscriptionResultView({ result, onRetryChunk, onResume }: Props) {
   const theme = useTheme();
+  const [showPreview, setShowPreview] = useState(false);
 
   if (!result) return null;
 
+  // Check if there's remaining work (cursor indicates paused state)
+  const hasCursor = !!result.cursor;
+  const completedChunks = result.chunks.filter((c) => c.status === "ok").length;
+  const totalExpectedChunks = hasCursor
+    ? Math.ceil(result.cursor!.videoDuration / 120) // Estimate based on 2min chunks
+    : result.chunks.length;
+
   return (
     <SectionCard title="Results">
+      {/* Paused for review banner */}
+      {hasCursor && (
+        <div className={`mb-4 p-3 rounded text-sm ${theme.well.warning}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="font-bold">Paused for review</span>
+              <span className="ml-2 text-xs">
+                ({completedChunks} chunks completed, more remaining)
+              </span>
+            </div>
+            {onResume && (
+              <Button
+                tone="primary"
+                onClick={() => onResume()}
+                className="text-sm"
+              >
+                Resume Transcription
+              </Button>
+            )}
+          </div>
+          <p className="mt-1 text-xs opacity-75">
+            Review the chunks below. Retry any failed chunks, then click Resume to continue.
+          </p>
+        </div>
+      )}
+
       <div className="flex gap-2 mb-4">
         <Button
           tone="primary"
@@ -53,6 +87,28 @@ export function TranscriptionResultView({ result, onRetryChunk, onResume }: Prop
           Download SRT
         </Button>
       </div>
+
+      <div className="flex gap-2 mb-4">
+        <Button
+          tone="secondary"
+          onClick={() => setShowPreview((prev) => !prev)}
+          disabled={!result.vtt}
+        >
+          {showPreview ? "Hide preview" : "Show VTT preview"}
+        </Button>
+      </div>
+
+      {showPreview && result.vtt && (
+        <div
+          className="mb-4 p-3 rounded border text-base whitespace-pre-wrap max-h-64 overflow-y-auto font-mono text-sm"
+          style={{
+            backgroundColor: theme.codeBackground,
+            borderColor: theme.borderColor,
+          }}
+        >
+          {result.vtt}
+        </div>
+      )}
 
       {result.warnings.length > 0 && (
         <div className={`mb-4 p-3 rounded text-sm ${theme.well.warning}`}>
@@ -125,7 +181,7 @@ export function TranscriptionResultView({ result, onRetryChunk, onResume }: Prop
                     Resume
                   </Button>
                 )}
-                {chunk.status === "failed" && onRetryChunk && (
+                {(chunk.status === "failed" || chunk.requiresResume) && onRetryChunk && (
                   <Button
                     className="text-xs px-2 py-1"
                     tone="secondary"

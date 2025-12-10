@@ -53,7 +53,9 @@ type Props = {
     mediaResolution: "low" | "standard";
     setMediaResolution: (v: "low" | "standard") => void;
     thinkingBudget?: number;
+    thinkingLevel?: "low" | "high";
     setThinkingBudget?: (budget: number) => void;
+    setThinkingLevel?: (level?: "low" | "high") => void;
     maxOutputTokens?: number;
     setMaxOutputTokens?: (tokens?: number) => void;
     topP?: number;
@@ -84,7 +86,9 @@ export function ProviderSettings({
     mediaResolution,
     setMediaResolution,
     thinkingBudget,
+    thinkingLevel,
     setThinkingBudget,
+    setThinkingLevel,
     maxOutputTokens,
     setMaxOutputTokens,
     topP,
@@ -140,6 +144,12 @@ export function ProviderSettings({
     const modelsToDisplay = filteredModels.length ? filteredModels : models;
     const filteredFallback =
         transcriptionMode && selectedProvider === "openai" && !filteredModels.length;
+    const normalizedModelName = modelName.includes("/")
+        ? modelName.split("/").pop() || modelName
+        : modelName;
+    const isGemini3Model = normalizedModelName.toLowerCase().includes("gemini-3");
+    const showThinkingLevel = transcriptionMode && selectedProvider === "gemini" && isGemini3Model;
+    const showThinkingBudget = transcriptionMode && selectedProvider === "gemini" && !isGemini3Model;
 
     useEffect(() => {
         if (
@@ -299,26 +309,50 @@ export function ProviderSettings({
                     <>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                             <div className="space-y-2 max-w-xl">
-                                <FieldLabel>Thinking Budget (tokens)</FieldLabel>
-                                <select
-                                    className={theme.input}
-                                    value={typeof thinkingBudget === "number" ? thinkingBudget : 0}
-                                    onChange={(e) => setThinkingBudget(Number(e.target.value))}
-                                    disabled={locked}
-                                >
-                                    {[0, 512, 1024, 2048, 4096, 8192, -1].map((budget) => (
-                                        <option key={budget} value={budget}>
-                                            {budget === 0
-                                                ? "0 (disable thinking)"
-                                                : budget === -1
-                                                    ? "-1 (dynamic / model decides)"
-                                                    : `${budget.toLocaleString()} tokens`}
-                                        </option>
-                                    ))}
-                                </select>
-                                <p className={theme.helperText}>
-                                    Controls Gemini thinking tokens for structured transcription. 0 disables thinking to minimize cost; -1 lets the model choose dynamically.
-                                </p>
+                                {showThinkingLevel ? (
+                                    <>
+                                        <FieldLabel>Thinking Level (Gemini 3)</FieldLabel>
+                                        <select
+                                            className={theme.input}
+                                            value={thinkingLevel || ""}
+                                            onChange={(e) => {
+                                                const val = e.target.value as "low" | "high" | "";
+                                                setThinkingLevel?.(val || undefined);
+                                            }}
+                                            disabled={locked}
+                                        >
+                                            <option value="">Model default (high/dynamic)</option>
+                                            <option value="low">Low (faster, cheaper)</option>
+                                            <option value="high">High (max reasoning)</option>
+                                        </select>
+                                        <p className={theme.helperText}>
+                                            Gemini 3 uses thinking levels. Choose low to reduce latency and cost; leave default for full reasoning.
+                                        </p>
+                                    </>
+                                ) : showThinkingBudget ? (
+                                    <>
+                                        <FieldLabel>Thinking Budget (tokens)</FieldLabel>
+                                        <select
+                                            className={theme.input}
+                                            value={typeof thinkingBudget === "number" ? thinkingBudget : 0}
+                                            onChange={(e) => setThinkingBudget?.(Number(e.target.value))}
+                                            disabled={locked}
+                                        >
+                                            {[0, 512, 1024, 2048, 4096, 8192, -1].map((budget) => (
+                                                <option key={budget} value={budget}>
+                                                    {budget === 0
+                                                        ? "0 (disable thinking)"
+                                                        : budget === -1
+                                                            ? "-1 (dynamic / model decides)"
+                                                            : `${budget.toLocaleString()} tokens`}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className={theme.helperText}>
+                                            Controls Gemini thinking tokens for structured transcription. 0 disables thinking to minimize cost; -1 lets the model choose dynamically.
+                                        </p>
+                                    </>
+                                ) : null}
                             </div>
                             <div className="space-y-2 max-w-xl">
                                 <FieldLabel>Max Output Tokens</FieldLabel>

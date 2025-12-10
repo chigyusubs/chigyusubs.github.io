@@ -72,7 +72,8 @@ function App() {
     return undefined;
   }, [debugOn]);
   const running = state.isRunning;
-  const locked = state.submitting || running;
+  // Unlock settings when paused (cursor-based or manual) so user can adjust before retry/resume
+  const locked = state.submitting || (running && !state.paused);
   const providerCapability = getProviderCapability(state.selectedProvider);
   const chunkSeconds =
     state.providerConfigs.openai.transcriptionChunkSeconds ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS;
@@ -357,7 +358,9 @@ function App() {
               mediaResolution={state.mediaResolution}
               setMediaResolution={actions.setMediaResolution}
               thinkingBudget={state.thinkingBudget}
+              thinkingLevel={state.thinkingLevel}
               setThinkingBudget={actions.setThinkingBudget}
+              setThinkingLevel={actions.setThinkingLevel}
               maxOutputTokens={state.maxOutputTokens}
               setMaxOutputTokens={actions.setMaxOutputTokens}
               topP={state.topP}
