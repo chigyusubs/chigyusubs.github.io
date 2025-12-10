@@ -8,6 +8,7 @@ type Props = {
   result: TranscriptionResult | null;
   onRetryChunk?: (chunk: TranscriptionChunk) => void;
   onResume?: () => void;
+  resumeDisabled?: boolean;
 };
 
 function downloadText(filename: string, content: string, type = "text/plain") {
@@ -30,7 +31,7 @@ function formatTime(seconds: number): string {
   return parts;
 }
 
-export function TranscriptionResultView({ result, onRetryChunk, onResume }: Props) {
+export function TranscriptionResultView({ result, onRetryChunk, onResume, resumeDisabled }: Props) {
   const theme = useTheme();
   const [showPreview, setShowPreview] = useState(false);
 
@@ -59,6 +60,7 @@ export function TranscriptionResultView({ result, onRetryChunk, onResume }: Prop
               <Button
                 tone="primary"
                 onClick={() => onResume()}
+                disabled={resumeDisabled}
                 className="text-sm"
               >
                 Resume Transcription
@@ -177,6 +179,7 @@ export function TranscriptionResultView({ result, onRetryChunk, onResume }: Prop
                     className="text-xs px-2 py-1"
                     tone="primary"
                     onClick={() => onResume()}
+                    disabled={resumeDisabled}
                   >
                     Resume
                   </Button>

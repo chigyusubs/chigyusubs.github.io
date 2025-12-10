@@ -957,8 +957,9 @@ function App() {
                     tone="secondary"
                     onClick={state.transcriptionPaused ? actions.resumeTranscription : actions.pauseTranscription}
                     disabled={
-                      !state.transcriptionRunning &&
-                      !state.transcriptionResult?.chunks.some(c => c.status === "processing" || c.status === "waiting")
+                      state.transcriptionResuming ||
+                      (!state.transcriptionRunning &&
+                        !state.transcriptionResult?.chunks.some(c => c.status === "processing" || c.status === "waiting"))
                     }
                     title="Pause stops starting new transcription chunks."
                   >
@@ -1040,6 +1041,7 @@ function App() {
               result={state.transcriptionResult}
               onRetryChunk={actions.handleRetryTranscriptionChunk}
               onResume={actions.resumeTranscription}
+              resumeDisabled={state.transcriptionRunning || state.transcriptionResuming}
             />
           )}
 

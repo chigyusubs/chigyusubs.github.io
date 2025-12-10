@@ -20,6 +20,7 @@ let runIdCounter = 0;
 export function useTranscription() {
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isResuming, setIsResuming] = useState(false);
   const [progress, setProgress] = useState("");
   const [result, setResult] = useState<TranscriptionResult | null>(null);
   const [error, setError] = useState("");
@@ -262,6 +263,7 @@ export function useTranscription() {
     setProgress("");
     setIsRunning(false);
     setIsPaused(false);
+    setIsResuming(false);
     if (isDebugEnabled()) {
       logDebugEvent({
         kind: "transcription-cancel",
@@ -277,6 +279,7 @@ export function useTranscription() {
     setError("");
     setIsRunning(false);
     setIsPaused(false);
+    setIsResuming(false);
     cancelRef.current = false;
     pausedRef.current = false;
     if (isDebugEnabled()) {
@@ -300,6 +303,19 @@ export function useTranscription() {
       return;
     }
 
+    // Block double-resume if already running/resuming
+    if (isRunning || isResuming) {
+      if (isDebugEnabled()) {
+        logDebugEvent({
+          kind: "transcription-resume-ignored",
+          runId: runIdRef.current,
+          message: "Resume ignored because a run is already active",
+          data: { isRunning, isResuming }
+        });
+      }
+      return;
+    }
+
     if (isDebugEnabled()) {
       logDebugEvent({
         kind: "transcription-resume-structured",
@@ -310,11 +326,15 @@ export function useTranscription() {
     }
 
     setIsRunning(true);
+    setIsResuming(true);
     setIsPaused(false);
     setError("");
     setProgress(`Resuming from chunk ${cursor.nextChunkIdx + 1}...`);
     cancelRef.current = false;
     pausedRef.current = false;
+
+    // Hide stale cursor while resuming to avoid duplicate Resume clicks
+    setResult((prev) => prev ? { ...prev, cursor: undefined } : prev);
 
     // Chunk update callback for continued transcription
     const onChunkUpdate = (chunk: TranscriptionChunk) => {
@@ -442,6 +462,7 @@ export function useTranscription() {
       }
     } finally {
       setIsRunning(false);
+      setIsResuming(false);
       // Preserve paused state if we paused for review
       const wasPaused = pausedRef.current;
       if (!wasPaused) {
@@ -689,6 +710,7 @@ export function useTranscription() {
     state: {
       isRunning,
       isPaused,
+      isResuming,
       progress,
       result,
       error,

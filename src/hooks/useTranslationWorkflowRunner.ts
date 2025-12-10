@@ -993,6 +993,7 @@ export function useTranslationWorkflowRunner() {
       allPresets: tState.allPresets,
       useGlossaryInSummary: tState.useGlossaryInSummary,
       transcriptionRunning: transcriptionState.isRunning,
+      transcriptionResuming: transcriptionState.isResuming,
       transcriptionPaused: transcriptionState.isPaused,
       translationResult: tState.runnerState.result,
       translationProgress: tState.runnerState.progress,
