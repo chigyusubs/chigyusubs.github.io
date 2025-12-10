@@ -791,6 +791,7 @@ export function useTranslationWorkflowRunner() {
         videoFile: mediaFile ?? undefined,
         apiKey: resolvedProvider.apiKeyForProvider,
         modelName: resolvedProvider.modelForProvider,
+        useStructuredOutput: true,
         chunkLength,
         overlapSeconds,
         videoDuration: totalDuration,
