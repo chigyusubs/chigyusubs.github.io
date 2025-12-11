@@ -45,7 +45,7 @@ npm run dev -- --host --port 5173
 
 Open http://localhost:5173, paste your Gemini API key, and translate. You can build with `npm run build` for a static bundle.
 
-**CSP note**: Dev uses Vite HMR which injects inline styles; `.env.development` sets `VITE_CSP_STYLE_INLINE="'unsafe-inline'"` so `npm run dev` works. Production builds leave that unset so the CSP ships without `unsafe-inline`.
+**CSP note**: Dev uses Vite HMR which injects inline styles; `.env.development` sets `VITE_CSP_STYLE_INLINE="'unsafe-inline'"` so `npm run dev` works. Production builds use `.env.production` (blank) so the CSP ships without `unsafe-inline`.
 
 ## 📚 Documentation
 
