@@ -219,7 +219,7 @@ export function ProviderSettings({
                             aria-hidden="true"
                             tabIndex={-1}
                             autoComplete="username"
-                            style={{ position: "absolute", left: "-10000px", opacity: 0, height: 0, width: 0 }}
+                            className="hidden-ghost-input"
                         />
                         <TextInput
                             type="password"

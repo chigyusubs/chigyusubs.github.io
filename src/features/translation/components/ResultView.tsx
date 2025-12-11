@@ -71,11 +71,7 @@ export function ResultView({
       </div>
       {showPreview && result.vtt && (
         <div
-          className="mb-4 p-3 rounded border text-base whitespace-pre-wrap max-h-64 overflow-y-auto"
-          style={{
-            backgroundColor: theme.codeBackground,
-            borderColor: theme.borderColor,
-          }}
+          className="mb-4 p-3 rounded border text-base whitespace-pre-wrap max-h-64 overflow-y-auto theme-border bg-theme-code"
         >
           {result.vtt}
         </div>
@@ -174,25 +170,13 @@ export function ResultView({
               <div className="mt-2 space-y-2">
                 <div>
                   <p className="text-sm font-semibold">Prompt Sent:</p>
-                  <pre
-                    className="p-2 rounded border text-base whitespace-pre-wrap max-h-40 overflow-y-auto"
-                    style={{
-                      backgroundColor: theme.codeBackground,
-                      borderColor: theme.borderColor,
-                    }}
-                  >
+                  <pre className="p-2 rounded border text-base whitespace-pre-wrap max-h-40 overflow-y-auto theme-border bg-theme-code">
                     {chunk.prompt || "(no prompt recorded)"}
                   </pre>
                 </div>
                 <div>
                   <p className="text-sm font-semibold">Raw Model Output:</p>
-                  <pre
-                    className="p-2 rounded border text-base whitespace-pre-wrap max-h-40 overflow-y-auto"
-                    style={{
-                      backgroundColor: theme.codeBackground,
-                      borderColor: theme.borderColor,
-                    }}
-                  >
+                  <pre className="p-2 rounded border text-base whitespace-pre-wrap max-h-40 overflow-y-auto theme-border bg-theme-code">
                     {chunk.raw_model_output || "(no output)"}
                   </pre>
                 </div>
@@ -210,12 +194,7 @@ export function ResultView({
                     )}
                   </div>
                   <pre
-                    className="p-2 rounded border text-base whitespace-pre-wrap max-h-40 overflow-y-auto"
-                    style={{
-                      backgroundColor: theme.codeBackground,
-                      borderColor: theme.borderColor,
-                      color: theme.text,
-                    }}
+                    className="p-2 rounded border text-base whitespace-pre-wrap max-h-40 overflow-y-auto theme-border bg-theme-code text-theme"
                   >
                     {chunk.vtt || chunk.raw_model_output || "(no output)"}
                   </pre>

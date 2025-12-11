@@ -81,8 +81,7 @@ export function ProviderApiLog() {
             </div>
             {open && (
                 <div
-                    className="overflow-x-auto border rounded"
-                    style={{ borderColor: theme.borderColor }}
+                    className="overflow-x-auto border rounded theme-border"
                 >
                     <table
                         className={`min-w-full text-sm ${isDark ? "text-stone-100" : "text-orange-900"}`}

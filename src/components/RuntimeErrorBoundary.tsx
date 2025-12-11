@@ -47,8 +47,7 @@ export class RuntimeErrorBoundary extends React.Component<Props, State> {
       }
       const textarea = document.createElement("textarea");
       textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.left = "-1000px";
+      textarea.className = "hidden-ghost-input";
       document.body.appendChild(textarea);
       textarea.select();
       try {

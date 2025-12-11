@@ -120,6 +120,7 @@ export function FileUploader({
       : videoUploadState === "uploading"
         ? 70
         : 0;
+  const uploadWidthClass = `w-[${Math.max(0, Math.min(100, Math.round(videoProgress)))}%]`;
 
   return (
     <SectionCard
@@ -187,7 +188,7 @@ export function FileUploader({
 
       {/* Transcription Controls */}
       {showAudioUpload && audioFile && onTranscribe && (
-        <div className="space-y-3 pt-4 border-t" style={{ borderColor: theme.borderColor }}>
+        <div className="space-y-3 pt-4 border-t theme-border">
           <div className="flex items-center gap-4">
             <Button
               type="button"
@@ -280,8 +281,7 @@ export function FileUploader({
           </div>
           <div className={`h-2 rounded overflow-hidden ${theme.progressTrack}`}>
             <div
-              className={`h-2 ${videoUploadState === "error" ? theme.progressError : videoUploadState === "ready" ? theme.progressOk : theme.progressBar} ${videoUploadState === "uploading" ? "animate-pulse" : ""}`}
-              style={{ width: `${videoProgress}%` }}
+              className={`h-2 ${videoUploadState === "error" ? theme.progressError : videoUploadState === "ready" ? theme.progressOk : theme.progressBar} ${videoUploadState === "uploading" ? "animate-pulse" : ""} ${uploadWidthClass}`}
             />
           </div>
           <p className={theme.helperText}>

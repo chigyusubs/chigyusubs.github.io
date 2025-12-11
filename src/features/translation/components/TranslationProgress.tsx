@@ -26,13 +26,13 @@ export function TranslationProgress({ progress, result }: Props) {
     chunkProgress.total > 0
       ? (chunkProgress.completed / chunkProgress.total) * 100
       : 0;
+  const widthClass = `w-[${Math.max(0, Math.min(100, Math.round(pct)))}%]`;
 
   return (
     <SectionCard title="Progress">
       <div className={`h-4 rounded overflow-hidden ${theme.progressTrack}`}>
         <div
-          className={`h-full transition-all duration-300 ${theme.progressBar}`}
-          style={{ width: `${pct}%` }}
+          className={`h-full transition-all duration-300 ${theme.progressBar} ${widthClass}`}
         />
       </div>
       <div className={`flex justify-between text-xs mt-1 ${theme.mutedText}`}>

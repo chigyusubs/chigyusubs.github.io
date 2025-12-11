@@ -12,40 +12,17 @@ export function MockModeIndicator() {
   const scenarioName = getScenarioName();
 
   return (
-    <div
-      style={{
-        position: 'sticky',
-        top: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: '#fbbf24',
-        color: '#78350f',
-        padding: '12px 16px',
-        textAlign: 'center',
-        fontWeight: 600,
-        zIndex: 9999,
-        borderBottom: '2px solid #f59e0b',
-      }}
-    >
-      <span style={{ fontSize: '20px', marginRight: '8px' }}>🎭</span>
+    <div className="sticky top-0 left-0 right-0 bg-amber-400 text-amber-900 px-4 py-3 text-center font-semibold z-[9999] border-b-2 border-amber-500">
+      <span className="text-xl mr-2">🎭</span>
       DEMO MODE - Using mock data (no real API calls)
       {scenarioName && (
-        <span style={{ marginLeft: '12px', fontSize: '14px', opacity: 0.8 }}>
+        <span className="ml-3 text-sm opacity-80">
           Scenario: {scenarioName}
         </span>
       )}
       <button
         onClick={disableMockMode}
-        style={{
-          marginLeft: '16px',
-          padding: '4px 12px',
-          backgroundColor: '#78350f',
-          color: '#fbbf24',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '14px',
-        }}
+        className="ml-4 px-3 py-1 bg-amber-900 text-amber-100 rounded cursor-pointer text-sm"
       >
         Exit Demo
       </button>

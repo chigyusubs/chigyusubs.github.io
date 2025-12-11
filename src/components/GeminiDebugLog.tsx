@@ -54,13 +54,12 @@ export function GeminiDebugLog() {
         // fall back
       }
     }
-    // fallback textarea copy
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.style.position = "fixed";
-    textarea.style.left = "-1000px";
-    document.body.appendChild(textarea);
-    textarea.select();
+  // fallback textarea copy
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.className = "hidden-ghost-input";
+  document.body.appendChild(textarea);
+  textarea.select();
     try {
       document.execCommand("copy");
       alert("Internal events copied");
@@ -101,8 +100,7 @@ export function GeminiDebugLog() {
       </div>
       {open && (
         <div
-          className="overflow-x-auto border rounded"
-          style={{ borderColor: theme.borderColor }}
+          className="overflow-x-auto border rounded theme-border"
         >
           <table
             className={`min-w-full text-sm ${isDark ? "text-stone-100" : "text-orange-900"}`}

@@ -178,8 +178,7 @@ function App() {
             <img
               src="/gyudon.png"
               alt="Gyudon mascot"
-              className="w-12 h-12 animate-float"
-              style={{ imageRendering: "pixelated" }}
+              className="w-12 h-12 animate-float pixelated"
             />
             <div>
               <h1 className="text-2xl font-bold">ChigyuSubs</h1>
@@ -210,8 +209,7 @@ function App() {
                   }
                   const textarea = document.createElement("textarea");
                   textarea.value = text;
-                  textarea.style.position = "fixed";
-                  textarea.style.left = "-1000px";
+                  textarea.className = "hidden-ghost-input";
                   document.body.appendChild(textarea);
                   textarea.select();
                   try {
@@ -687,11 +685,7 @@ function App() {
                     User Prompt Preview
                   </summary>
                   <pre
-                    className="mt-2 p-3 rounded border text-base whitespace-pre-wrap h-48 overflow-y-auto"
-                    style={{
-                      backgroundColor: theme.codeBackground,
-                      borderColor: theme.borderColor,
-                    }}
+                    className="mt-2 p-3 rounded border text-base whitespace-pre-wrap h-48 overflow-y-auto theme-border bg-theme-code"
                   >
                     {state.promptPreview}
                   </pre>
@@ -809,7 +803,7 @@ function App() {
                   </p>
                 )}
 
-                <hr className="my-4" style={{ borderColor: theme.borderColor }} />
+                <hr className="my-4 border theme-border" />
 
                 <div className="flex items-center gap-2 mb-3">
                   <Button
@@ -1145,45 +1139,42 @@ function App() {
             onClick={() => setShowTranscriptionPromptModal(false)}
           >
             <div
-              className={`rounded-2xl shadow-2xl max-w-5xl w-full mx-4 max-h-[90vh] flex flex-col border ${
+              className={`rounded-2xl shadow-2xl max-w-5xl w-full mx-4 max-h-[90vh] flex flex-col border theme-border ${
                 isDarkTheme ? "bg-stone-900" : "bg-white"
               }`}
               onClick={(e) => e.stopPropagation()}
-              style={{ borderColor: theme.borderColor }}
             >
-              <div className="px-6 py-4 border-b" style={{ borderColor: theme.borderColor }}>
-                <h2 className="text-xl font-semibold" style={{ color: theme.text }}>
+              <div className="px-6 py-4 border-b theme-border">
+                <h2 className="text-xl font-semibold text-theme">
                   Structured Transcription Prompt
                 </h2>
-                <p className="text-sm mt-1" style={{ color: theme.mutedText }}>
+                <p className="text-sm mt-1 text-theme-muted">
                   System + user prompt shown below. Your additional instructions are appended at the end.
                 </p>
               </div>
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                 <div>
-                  <div className="font-semibold mb-1" style={{ color: theme.text }}>System prompt</div>
+                  <div className="font-semibold mb-1 text-theme">System prompt</div>
                   <pre
-                    className={`whitespace-pre-wrap break-words p-3 rounded text-xs overflow-auto ${
+                    className={`whitespace-pre-wrap break-words p-3 rounded text-xs overflow-auto border theme-border bg-theme-code ${
                       isDarkTheme ? "text-white" : "text-slate-800"
                     }`}
-                    style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor, borderWidth: 1 }}
                   >
                     {structuredPromptPreview.systemPrompt}
                   </pre>
                 </div>
                 <div>
-                  <div className="font-semibold mb-1" style={{ color: theme.text }}>User prompt (first chunk)</div>
+                  <div className="font-semibold mb-1 text-theme">User prompt (first chunk)</div>
                   <pre
-                    className={`whitespace-pre-wrap break-words p-3 rounded text-xs overflow-auto ${
+                    className={`whitespace-pre-wrap break-words p-3 rounded text-xs overflow-auto border theme-border bg-theme-code ${
                       isDarkTheme ? "text-white" : "text-slate-800"
                     }`}
-                    style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor, borderWidth: 1 }}
                   >
                     {structuredPromptPreview.userPrompt}
                   </pre>
                 </div>
                 <div>
-                  <div className="font-semibold mb-1" style={{ color: theme.text }}>Your additional instructions</div>
+                  <div className="font-semibold mb-1 text-theme">Your additional instructions</div>
                   <TextArea
                     variant="code"
                     className="h-32"
@@ -1194,18 +1185,17 @@ function App() {
                   />
                 </div>
                 <div>
-                  <div className="font-semibold mb-1" style={{ color: theme.text }}>Structured output schema</div>
+                  <div className="font-semibold mb-1 text-theme">Structured output schema</div>
                   <pre
-                    className={`whitespace-pre p-3 rounded text-xs overflow-auto ${
+                    className={`whitespace-pre p-3 rounded text-xs overflow-auto border theme-border bg-theme-code ${
                       isDarkTheme ? "text-white" : "text-slate-800"
                     }`}
-                    style={{ backgroundColor: theme.codeBackground, borderColor: theme.borderColor, borderWidth: 1 }}
                   >
                     {schemaPretty}
                   </pre>
                 </div>
               </div>
-              <div className="px-6 py-4 border-t flex justify-end gap-3" style={{ borderColor: theme.borderColor }}>
+              <div className="px-6 py-4 border-t flex justify-end gap-3 theme-border">
                 <Button tone="secondary" onClick={() => setShowTranscriptionPromptModal(false)}>
                   Close
                 </Button>

@@ -11,11 +11,7 @@ export function CodeBlock({ children, className = "" }: CodeBlockProps) {
 
   return (
     <pre
-      className={`p-2 rounded border text-base whitespace-pre-wrap overflow-y-auto ${className}`}
-      style={{
-        backgroundColor: theme.codeBackground,
-        borderColor: theme.borderColor,
-      }}
+      className={`p-2 rounded border text-base whitespace-pre-wrap overflow-y-auto theme-border bg-theme-code ${className}`}
     >
       {children}
     </pre>

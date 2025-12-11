@@ -75,18 +75,15 @@ export function VttEditModal({
             onClick={onClose}
         >
             <div
-                className="bg-white dark:bg-stone-900 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col border"
+                className="bg-white dark:bg-stone-900 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col border theme-border"
                 onClick={(e) => e.stopPropagation()}
-                style={{
-                    borderColor: theme.borderColor,
-                }}
             >
                 {/* Header */}
-                <div className="px-6 py-4 border-b" style={{ borderColor: theme.borderColor }}>
-                    <h2 className="text-xl font-semibold" style={{ color: theme.text }}>
+                <div className="px-6 py-4 border-b theme-border">
+                    <h2 className="text-xl font-semibold text-theme">
                         Edit VTT Content - Chunk {chunkIdx}
                     </h2>
-                    <p className="text-sm mt-1" style={{ color: theme.mutedText }}>
+                    <p className="text-sm mt-1 text-theme-muted">
                         Edit the VTT content below. Ensure proper VTT format with timecodes.
                     </p>
                 </div>
@@ -96,37 +93,19 @@ export function VttEditModal({
                     <textarea
                         value={content}
                         onChange={handleContentChange}
-                        className="w-full h-96 p-3 rounded border font-mono text-sm resize-y"
-                        style={{
-                            backgroundColor: theme.codeBackground,
-                            borderColor: validationError ? "#ef4444" : theme.borderColor,
-                            color: theme.text,
-                        }}
+                        className={`w-full h-96 p-3 rounded border font-mono text-sm resize-y bg-theme-code text-theme ${validationError ? "border-red-500" : "theme-border"}`}
                         spellCheck={false}
                     />
 
                     {validationError && (
-                        <div
-                            className="mt-2 p-3 rounded text-sm"
-                            style={{
-                                backgroundColor: "#fef2f2",
-                                color: "#991b1b",
-                                borderColor: "#fecaca",
-                            }}
-                        >
+                        <div className="mt-2 p-3 rounded text-sm bg-red-50 text-red-700 border border-red-200">
                             <strong>Validation Error:</strong> {validationError}
                         </div>
                     )}
 
-                    <div className="mt-3 text-xs" style={{ color: theme.mutedText }}>
+                    <div className="mt-3 text-xs text-theme-muted">
                         <strong>VTT Format Example:</strong>
-                        <pre
-                            className="mt-1 p-2 rounded"
-                            style={{
-                                backgroundColor: theme.codeBackground,
-                                borderColor: theme.borderColor,
-                            }}
-                        >
+                        <pre className="mt-1 p-2 rounded border theme-border bg-theme-code">
                             {`00:00:01.000 --> 00:00:03.000
 Translated subtitle text here
 
@@ -138,8 +117,7 @@ Next subtitle line`}
 
                 {/* Footer */}
                 <div
-                    className="px-6 py-4 border-t flex justify-end gap-3"
-                    style={{ borderColor: theme.borderColor }}
+                    className="px-6 py-4 border-t flex justify-end gap-3 theme-border"
                 >
                     <Button tone="secondary" onClick={onClose}>
                         Cancel

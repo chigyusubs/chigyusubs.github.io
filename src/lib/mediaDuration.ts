@@ -29,7 +29,7 @@ async function probeWithMediaElement(file: File): Promise<number | null> {
   el.preload = "metadata";
   el.muted = true;
   el.playsInline = true;
-  el.style.display = "none";
+  el.classList.add("media-probe-hidden");
 
   return await new Promise<number | null>((resolve) => {
     const url = URL.createObjectURL(file);
