@@ -8,6 +8,7 @@ type Props = {
   result: TranscriptionResult | null;
   onRetryChunk?: (chunk: TranscriptionChunk) => void;
   onResume?: () => void;
+  onSaveProgress?: () => void;
   resumeDisabled?: boolean;
 };
 
@@ -31,7 +32,7 @@ function formatTime(seconds: number): string {
   return parts;
 }
 
-export function TranscriptionResultView({ result, onRetryChunk, onResume, resumeDisabled }: Props) {
+export function TranscriptionResultView({ result, onRetryChunk, onResume, onSaveProgress, resumeDisabled }: Props) {
   const theme = useTheme();
   const [showPreview, setShowPreview] = useState(false);
 
@@ -88,6 +89,15 @@ export function TranscriptionResultView({ result, onRetryChunk, onResume, resume
         >
           Download SRT
         </Button>
+        {onSaveProgress && (
+          <Button
+            tone="secondary"
+            onClick={onSaveProgress}
+            disabled={!result.chunks.length}
+          >
+            Save Progress
+          </Button>
+        )}
       </div>
 
       <div className="flex gap-2 mb-4">

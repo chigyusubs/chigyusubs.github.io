@@ -126,6 +126,23 @@ export const STRUCTURED_SYSTEM_PROMPT =
   "4. You MAY merge very short adjacent cues: set merge_with_next=true on the first cue of the merged group; later cues in that group can have empty text.\n" +
   "5. Never split a single cue across multiple outputs.";
 
+export const STRUCTURED_GEMINI_SYSTEM_PROMPT =
+  "You are a subtitle translator tool. Your task is to translate subtitles into <target>.\n" +
+  "\n" +
+  "Rules:\n" +
+  "1. Output JSON with a \"translations\" array.\n" +
+  "2. Each item: { \"id\": number, \"text\": string, \"merge_with_next\"?: boolean }.\n" +
+  "3. Keep IDs in order, one item per input cue. Do not drop or duplicate IDs.\n" +
+  "4. You MAY merge very short adjacent cues: set merge_with_next=true on the first cue of the merged group; later cues in that group can have empty text.\n" +
+  "5. Never split a single cue across multiple outputs.\n" +
+  "\n" +
+  "Annotation handling (from Gemini transcription):\n" +
+  "- (--) speaker change: Remove or keep as -- (dash). Don't translate.\n" +
+  "- (テロップ: ...) on-screen text: Translate content, keep format: (Caption: ...).\n" +
+  "- (拍手), (笑い), (音楽): Translate to English: (applause), (laughter), (music).\n" +
+  "- Keep comedic timing; prefer punchy phrasing over literal filler.\n" +
+  "- Do not sanitize slang/humor; translate faithfully.";
+
 export const PROMPT_PRESETS = {
   general: {
     name: "General Purpose (VTT)",
@@ -136,6 +153,12 @@ export const PROMPT_PRESETS = {
   structured: {
     name: "Structured JSON",
     systemText: STRUCTURED_SYSTEM_PROMPT,
+    summary: DEFAULT_SUMMARY_PROMPT,
+    glossary: DEFAULT_GLOSSARY_PROMPT,
+  },
+  "structured-gemini": {
+    name: "Structured (Gemini VTT)",
+    systemText: STRUCTURED_GEMINI_SYSTEM_PROMPT,
     summary: DEFAULT_SUMMARY_PROMPT,
     glossary: DEFAULT_GLOSSARY_PROMPT,
   },

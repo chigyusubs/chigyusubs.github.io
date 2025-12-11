@@ -1,6 +1,6 @@
 # ChigyuSubs Documentation
 
-> **Type**: Index | **Status**: Stable | **Last Updated**: 2025-12-09 | **Owner**: Documentation  
+> **Type**: Index | **Status**: Stable | **Last Updated**: 2025-12-10 | **Owner**: Documentation  
 > **Source of truth**: Keep this index aligned with the docs tree and changelog.
 
 > **Project Mission**: Build a browser-only subtitle transcription tool (primary) with optional structured translation, focused on Japanese comedy content. See [MISSION.md](./MISSION.md) for scope and goals.
@@ -46,6 +46,8 @@ Technical specifications and details:
 ### Technical Specs
 - **[Tokenomics](./reference/tokenomics.md)** - Cost estimates and token usage
 - **[Transcription Workflow](./reference/transcription-workflow.md)** - Technical details of chunking and processing
+- **[Transcription Session Save/Load](./reference/transcription-session-save-load.md)** - Save/resume progress across sessions
+- **[Structured Transcription Resume](./reference/structured-transcription-resume.md)** - Cursor-based resume mechanism
 - **[File Structure](./reference/file-structure.md)** - Quick reference for finding code
 - **[Legal](./reference/legal.md)** - Copyright, licensing, and usage terms
 

@@ -31,6 +31,7 @@ Quick reference for finding code in the repository.
 - **Media upload**: `src/lib/mediaUpload.ts`
 - **Rate limiting**: `src/lib/rateLimit.ts`
 - **Preferences**: `src/lib/prefs.ts`
+- **Session save/load**: `src/lib/transcriptionSession.ts`
 
 ## Features
 

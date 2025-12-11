@@ -17,6 +17,45 @@ export type TranscriptionPromptContext = {
   nextCueNumber: number;    // Where to start numbering
 };
 
+// Shared prompt sections to avoid duplication
+const TIMESTAMP_FORMAT = `TIMESTAMP FORMAT: Use HH:MM:SS.mmm format where:
+- HH = hours (always 2 digits, e.g., 00)
+- MM = minutes (always 2 digits)
+- SS = seconds (always 2 digits)
+- mmm = milliseconds (always 3 digits)
+Use at least 100ms precision. DO NOT collapse to whole seconds; keep the .mmm component (e.g., 00:01:05.100).
+Example: "00:00:03.483" NOT "00:03:483" or "00:03.483"`;
+
+const TEXT_FORMAT_RULES = `TEXT FORMAT RULES:
+1. Write Japanese text naturally WITHOUT spaces between characters
+   CORRECT: "バンジージャンプがギリギリ地面って書いてるやつ"
+   WRONG: "バンジー ジャンプ が ギリギリ 地面 って 書い てるやつ"
+
+2. Natural Japanese uses spaces only after punctuation (。、) or between distinct phrases (rare).
+
+3. Cue length and splitting:
+   - Target 2-5 seconds per cue. Never exceed 6s.
+   - Split at natural pause points: clause boundaries (が、けど、て), breaths, commas.
+   - It's OK to split mid-sentence if it improves readability.
+   - Keep dialogue to 1-2 lines (~80 chars). Annotations don't count toward this.
+   - Avoid <1.5s cues unless pure SFX or single-word reactions.
+   - Limit total cues per chunk to 120.
+
+4. Anti-looping: If a speaker drags filler (まあまあまあ...), collapse to 1-2 natural repeats.
+   Never emit 2 identical consecutive cues.`;
+
+const TIMING_RULES = (videoStart: string, videoEnd: string) => `TIMING RULES:
+- All cues must have start < end (no zero-length or negative duration).
+- Cues must be strictly increasing (no overlaps).
+- All times must stay within ${videoStart} - ${videoEnd}.
+- If a timestamp would be outside this window, drop or adjust the cue.`;
+
+const INLINE_ANNOTATIONS = `INLINE ANNOTATIONS (include in cue text for translation context):
+- Speaker change: Mark with "(--)" at start of cue when speaker changes.
+- On-screen text: Important telops/captions: "(テロップ: 衝撃の事実!)"
+- Sound effects: (拍手), (笑い), (音楽)
+Only annotate when it adds meaning. Don't over-annotate.`;
+
 /**
  * Build transcription prompts for a chunk
  *
@@ -38,34 +77,13 @@ This is the first chunk starting at 00:00:00.000.
 
 VIDEO SEGMENT: ${context.videoStart} to ${context.videoEnd}
 
-TIMESTAMP FORMAT: Use HH:MM:SS.mmm format where:
-- HH = hours (always 2 digits, e.g., 00)
-- MM = minutes (always 2 digits)
-- SS = seconds (always 2 digits)
-- mmm = milliseconds (always 3 digits)
-Use at least 100ms precision. DO NOT collapse to whole seconds; keep the .mmm component (e.g., 00:01:05.100). Example: "00:00:03.483" NOT "00:03:483" or "00:03.483"
+${TIMESTAMP_FORMAT}
 
-TEXT FORMAT RULES:
-1. Write Japanese text naturally WITHOUT spaces between characters
-   CORRECT: "バンジージャンプがギリギリ地面って書いてるやつ"
-   WRONG: "バンジー ジャンプ が ギリギリ 地面 って 書い てるやつ"
+${TEXT_FORMAT_RULES}
 
-2. Natural Japanese uses spaces only:
-   - After punctuation (。、)
-   - Between distinct phrases (rare)
-   NOT between every character or word
+${TIMING_RULES(context.videoStart, context.videoEnd)}
 
-3. Keep sentences together in one cue when possible
-   - Don't break mid-sentence unless speaker changes
-   - Typical cue length: 1.2s–6s. Avoid <1s unless it is an SFX or single short reaction.
-   - Limit total cues in this chunk to 120. Merge tiny interjections into surrounding speech.
-   - Keep each cue under ~200 Japanese characters. Do NOT pad with filler. If a speaker drags a filler (まあまあまあ...), collapse to 1–2 natural repeats; never loop or spam the same token inside a cue.
-
-4. Timing bounds:
-   - All start/end times must stay within ${context.videoStart} - ${context.videoEnd}.
-   - If a timestamp would be outside this window, drop or adjust the cue to fit inside.
-
-Include sound effects in parentheses: (音楽), (拍手), (笑い)
+${INLINE_ANNOTATIONS}
 
 Start cue numbering at: ${context.nextCueNumber}
 
@@ -82,7 +100,7 @@ OUTPUT FORMAT - Return JSON with this structure:
       "number": 1,
       "startTime": "00:00:03.483",
       "endTime": "00:00:06.120",
-      "text": "Japanese subtitle text here"
+      "text": "(--) Japanese subtitle text here"
     }
   ],
   "suggestedNextBreak": "00:01:45.000",
@@ -111,34 +129,13 @@ ${contextSection}
 BEGIN TRANSCRIPTION from ${lastCueEndTime}
 Start cue numbering at: ${context.nextCueNumber}
 
-TIMESTAMP FORMAT: Use HH:MM:SS.mmm format where:
-- HH = hours (always 2 digits, e.g., 00)
-- MM = minutes (always 2 digits)
-- SS = seconds (always 2 digits)
-- mmm = milliseconds (always 3 digits)
-Use at least 100ms precision. DO NOT collapse to whole seconds; keep the .mmm component (e.g., 00:01:05.100). Example: "00:00:03.483" NOT "00:03:483" or "00:03.483"
+${TIMESTAMP_FORMAT}
 
-TEXT FORMAT RULES:
-1. Write Japanese text naturally WITHOUT spaces between characters
-   CORRECT: "バンジージャンプがギリギリ地面って書いてるやつ"
-   WRONG: "バンジー ジャンプ が ギリギリ 地面 って 書い てるやつ"
+${TEXT_FORMAT_RULES}
 
-2. Natural Japanese uses spaces only:
-   - After punctuation (。、)
-   - Between distinct phrases (rare)
-   NOT between every character or word
+${TIMING_RULES(context.videoStart, context.videoEnd)}
 
-3. Keep sentences together in one cue when possible
-   - Don't break mid-sentence unless speaker changes
-   - Typical cue length: 1.2s–6s. Avoid <1s unless it is an SFX or single short reaction.
-   - Limit total cues in this chunk to 120. Merge tiny interjections into surrounding speech.
-   - Keep each cue under ~200 Japanese characters. Do NOT pad with filler. If a speaker drags a filler (まあまあまあ...), collapse to 1–2 natural repeats; never loop or spam the same token inside a cue.
-
-4. Timing bounds:
-   - All start/end times must stay within ${context.videoStart} - ${context.videoEnd}.
-   - If a timestamp would be outside this window, drop or adjust the cue to fit inside.
-
-Include sound effects in parentheses: (音楽), (拍手), (笑い)
+${INLINE_ANNOTATIONS}
 
 Suggest a natural break point between ${context.breakWindowStart} and ${context.breakWindowEnd} based on:
 - Pause after punchline
@@ -153,7 +150,7 @@ OUTPUT FORMAT - Return JSON with this structure:
       "number": ${context.nextCueNumber},
       "startTime": "00:00:03.483",
       "endTime": "00:00:06.120",
-      "text": "Japanese subtitle text here"
+      "text": "(--) Japanese subtitle text here"
     }
   ],
   "suggestedNextBreak": "00:01:45.000",

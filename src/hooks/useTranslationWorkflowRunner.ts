@@ -48,6 +48,15 @@ import { useProviderState } from "./useProviderState";
 import { useTranslationWorkflow } from "../features/translation/hooks/useTranslationWorkflow";
 
 import { clearPrefs, loadPrefs, savePrefs, type UserPrefs } from "../lib/prefs";
+import {
+  type TranscriptionSessionExport,
+  parseSessionImport,
+  createSessionExport,
+  downloadSession,
+  getSessionSummary,
+  checkVideoDurationMatch,
+} from "../lib/transcriptionSession";
+import type { GeminiTranscriptionConfig } from "../features/transcription/types";
 
 export function useTranslationWorkflowRunner() {
   const saved = loadPrefs();
@@ -139,6 +148,9 @@ export function useTranslationWorkflowRunner() {
   const [useTranscriptionForSummary, setUseTranscriptionForSummary] = useState(
     saved?.useTranscriptionForSummary ?? false,
   );
+
+  // Session save/load state (for transcription progress)
+  const [loadedSession, setLoadedSession] = useState<TranscriptionSessionExport | null>(null);
 
   const providerLabels: Record<ProviderType, string> = {
     gemini: getProviderCapability("gemini").label,
@@ -377,8 +389,10 @@ export function useTranslationWorkflowRunner() {
     setVideoUploadState("uploading");
     setVideoUploadMessage(`Uploading media to ${selectedProvider}…`);
     try {
+      const shouldUseAudioOnly =
+        workflowMode === "translation" && useAudioOnly;
       const prepared = await prepareMediaFile(mediaFile, {
-        useAudioOnly,
+        useAudioOnly: shouldUseAudioOnly,
         getMediaDuration,
         extractAudioToOggMono,
       });
@@ -625,12 +639,15 @@ export function useTranslationWorkflowRunner() {
     const chunkLength = providerConfigs.openai.transcriptionChunkSeconds ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS;
     const overlapSeconds = Math.max(0, transcriptionOverlapSeconds ?? 0);
 
+    const shouldUseAudioOnly =
+      workflowMode === "translation" && useAudioOnly;
+
     let preparedMedia: Awaited<ReturnType<typeof prepareMediaFile>> | null = null;
 
     if (mediaFile) {
       try {
         preparedMedia = await prepareMediaFile(mediaFile, {
-          useAudioOnly,
+          useAudioOnly: shouldUseAudioOnly,
           getMediaDuration,
           extractAudioToOggMono,
         });
@@ -935,6 +952,109 @@ export function useTranslationWorkflowRunner() {
     }
   };
 
+  // Session save/load handlers
+  const handleLoadSession = async (file: File) => {
+    try {
+      const json = await file.text();
+      const session = parseSessionImport(json);
+
+      // Check if there's current progress that would be replaced
+      if (transcriptionState.result?.chunks?.length) {
+        const confirmed = window.confirm(
+          "Loading this session will replace your current transcription progress. Continue?"
+        );
+        if (!confirmed) return;
+      }
+
+      // Load the session into transcription hook
+      transcriptionFeature.actions.loadSession(session);
+      setLoadedSession(session);
+
+      // Restore config from session
+      setModelName(`gemini/${session.config.modelName}`);
+      tActions.setTemperature(session.config.temperature);
+      setThinkingBudget(session.config.thinkingBudget);
+      setMaxOutputTokens(session.config.maxOutputTokens);
+      setTopP(session.config.topP);
+      setSafetyOff(session.config.safetyOff);
+      setTranscriptionPrompt(session.config.prompt);
+      setTranscriptionOverlapSeconds(session.config.overlapSeconds);
+      updateProviderConfig("openai", {
+        transcriptionChunkSeconds: session.config.chunkLengthSeconds,
+      });
+
+      // Set video duration from session (needed for resume)
+      setVideoDuration(session.video.durationSeconds);
+      setVideoName(session.video.name);
+
+      // Clear videoRef - user needs to re-upload
+      setVideoRef(null);
+      setVideoUploadState("idle");
+      setVideoUploadMessage("");
+
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load session");
+    }
+  };
+
+  const handleSaveSession = () => {
+    const result = transcriptionState.result;
+    if (!result || !result.chunks.length) {
+      setError("No transcription progress to save");
+      return;
+    }
+
+    const resolvedProvider = resolveProviderConfig();
+    const chunkLength = providerConfigs.openai.transcriptionChunkSeconds ?? TRANSCRIPTION_DEFAULT_CHUNK_SECONDS;
+    const overlapSeconds = Math.max(0, transcriptionOverlapSeconds ?? 0);
+
+    const config: GeminiTranscriptionConfig = {
+      provider: "gemini",
+      videoRef: videoRef ?? "",
+      apiKey: "", // Not saved
+      modelName: resolvedProvider.modelForProvider,
+      chunkLength,
+      overlapSeconds,
+      videoDuration: videoDuration,
+      temperature: tState.temperature,
+      thinkingBudget,
+      maxOutputTokens,
+      topP,
+      safetyOff,
+      prompt: transcriptionPrompt,
+    };
+
+    const session = createSessionExport(result, config, {
+      name: videoName ?? "video",
+      durationSeconds: videoDuration ?? 0,
+    });
+
+    downloadSession(session);
+  };
+
+  const clearLoadedSession = () => {
+    setLoadedSession(null);
+    transcriptionActions.reset();
+    setVideoName(null);
+    setVideoDuration(null);
+    setVideoRef(null);
+    setVideoUploadState("idle");
+    setVideoUploadMessage("");
+  };
+
+  // Get summary of loaded session for UI
+  const getLoadedSessionSummary = () => {
+    if (!loadedSession) return null;
+    return getSessionSummary(loadedSession);
+  };
+
+  // Check if loaded session video matches uploaded video
+  const checkLoadedSessionVideoMatch = () => {
+    if (!loadedSession || !videoDuration) return null;
+    return checkVideoDurationMatch(loadedSession, videoDuration);
+  };
+
   return {
     state: {
       // Provider state
@@ -1014,6 +1134,10 @@ export function useTranslationWorkflowRunner() {
       topP,
       useStructuredOutput: tState.useStructuredOutput,
       structuredCueHintMode: tState.structuredCueHintMode,
+      // Session save/load
+      loadedSession,
+      loadedSessionSummary: getLoadedSessionSummary(),
+      loadedSessionVideoMismatch: checkLoadedSessionVideoMatch(),
     },
     actions: {
       // Provider actions
@@ -1078,6 +1202,10 @@ export function useTranslationWorkflowRunner() {
       setUseGlossaryInSummary: tActions.setUseGlossaryInSummary,
       setUseStructuredOutput: tActions.setUseStructuredOutput,
       setStructuredCueHintMode: tActions.setStructuredCueHintMode,
+      // Session save/load
+      handleLoadSession,
+      handleSaveSession,
+      clearLoadedSession,
     },
   };
 }

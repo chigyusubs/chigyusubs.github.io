@@ -403,6 +403,77 @@ function App() {
               setUseTranscriptionForSummary={actions.setUseTranscriptionForSummary}
             />
 
+            {/* Session Load UI - Transcription Mode */}
+            {state.workflowMode === "transcription" && (
+              <SectionCard
+                title="Session Progress"
+                subtitle="Save or load transcription progress to resume later."
+              >
+                {/* Loaded session banner */}
+                {state.loadedSessionSummary && (
+                  <div className={`mb-4 p-3 rounded ${theme.well.info}`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-bold">Loaded: </span>
+                        <span>{state.loadedSessionSummary.videoName}</span>
+                        <span className="ml-2 text-xs">
+                          ({state.loadedSessionSummary.completedChunks}/{state.loadedSessionSummary.totalExpectedChunks} chunks complete)
+                        </span>
+                      </div>
+                      <Button
+                        tone="secondary"
+                        className="text-sm"
+                        onClick={actions.clearLoadedSession}
+                        disabled={locked}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    {!state.videoRef && (
+                      <p className="mt-2 text-sm">
+                        Upload the same video file to continue transcription.
+                      </p>
+                    )}
+                    {state.loadedSessionVideoMismatch && (
+                      <p className={`mt-2 text-sm ${theme.dangerText}`}>
+                        {state.loadedSessionVideoMismatch}
+                      </p>
+                    )}
+                    {state.videoRef && state.loadedSessionSummary.hasRemainingWork && (
+                      <p className={`mt-2 text-sm ${theme.successText}`}>
+                        Video uploaded. Click Resume to continue transcription.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Load progress button */}
+                <div className="flex gap-2 items-center">
+                  <Button
+                    tone="secondary"
+                    onClick={() => {
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = ".json";
+                      input.onchange = async (e) => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
+                        if (file) {
+                          await actions.handleLoadSession(file);
+                        }
+                      };
+                      input.click();
+                    }}
+                    disabled={locked}
+                  >
+                    Load Previous Progress
+                  </Button>
+                  <span className={`text-xs ${theme.subtext}`}>
+                    Load a saved transcription session (.json)
+                  </span>
+                </div>
+              </SectionCard>
+            )}
+
             {state.workflowMode === "translation" && (
               <SectionCard
                 title="Prompts"
@@ -1025,6 +1096,7 @@ function App() {
             <TranscriptionProgress
               progress={state.transcriptionProgress}
               result={state.transcriptionResult}
+              chunkLengthSeconds={chunkSeconds}
             />
           )}
 
@@ -1041,7 +1113,8 @@ function App() {
               result={state.transcriptionResult}
               onRetryChunk={actions.handleRetryTranscriptionChunk}
               onResume={actions.resumeTranscription}
-              resumeDisabled={state.transcriptionRunning || state.transcriptionResuming}
+              onSaveProgress={actions.handleSaveSession}
+              resumeDisabled={state.transcriptionRunning || state.transcriptionResuming || !state.videoRef}
             />
           )}
 

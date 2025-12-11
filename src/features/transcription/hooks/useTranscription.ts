@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import type { TranscriptionChunk, TranscriptionConfig, TranscriptionResult, GeminiTranscriptionConfig, OpenAITranscriptionConfig } from "../types";
+import type { TranscriptionSessionExport } from "../../../lib/transcriptionSession";
 import { transcribeGemini, transcribeGeminiChunk, stitchGeminiChunks } from "../lib/gemini";
 import { transcribeGeminiStructured } from "../lib/gemini-structured";
 import { transcribeOpenAI } from "../lib/openai";
@@ -287,6 +288,48 @@ export function useTranscription() {
         kind: "transcription-reset",
         runId: runIdRef.current,
         message: "Transcription reset",
+      });
+    }
+  };
+
+  /**
+   * Load a previously saved session's progress
+   * This restores the result state from the saved session
+   */
+  const loadSession = (session: TranscriptionSessionExport) => {
+    // Reset any running state
+    cancelRef.current = false;
+    pausedRef.current = false;
+    setIsRunning(false);
+    setIsPaused(session.progress.cursor ? true : false);
+    setIsResuming(false);
+    setError("");
+    setProgress("");
+
+    // Restore result from session
+    setResult({
+      ok: session.progress.chunks.every((c) => c.status === "ok") && !session.progress.cursor,
+      warnings: session.progress.warnings,
+      chunks: session.progress.chunks,
+      vtt: session.progress.vtt,
+      srt: session.progress.srt,
+      cursor: session.progress.cursor,
+      // video_ref will be set when user uploads video
+      video_ref: null,
+    });
+
+    if (isDebugEnabled()) {
+      const completedChunks = session.progress.chunks.filter((c) => c.status === "ok").length;
+      logDebugEvent({
+        kind: "transcription-session-loaded",
+        runId: runIdRef.current,
+        message: `Loaded session: ${completedChunks} chunks complete, cursor: ${session.progress.cursor ? "present" : "none"}`,
+        data: {
+          videoName: session.video.name,
+          completedChunks,
+          totalChunks: session.progress.chunks.length,
+          hasCursor: !!session.progress.cursor,
+        },
       });
     }
   };
@@ -723,6 +766,7 @@ export function useTranscription() {
       cancel,
       reset,
       retryChunk,
+      loadSession,
     },
   };
 }
