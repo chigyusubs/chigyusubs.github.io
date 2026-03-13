@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChiguyuSubs</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  min-height: 100vh;
+  background: #080808;
+  color: #ccc;
+  font-family: 'Noto Sans JP', 'Helvetica Neue', sans-serif;
+}
+
+a { color: inherit; text-decoration: none; }
+
+.mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+.noto { font-family: 'Noto Sans JP', sans-serif; }
+
+/* Header */
+.header {
+  border-bottom: 1px solid #1a1a1a;
+  padding: 0 24px;
+}
+.header-inner {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 48px 0 40px;
+}
+.title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.title {
+  font-weight: 900;
+  font-size: 42px;
+  color: #fff;
+  letter-spacing: -1.5px;
+  line-height: 1;
+}
+.title-accent { color: #FF3B3B; }
+.title-version {
+  font-size: 11px;
+  color: #333;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.tagline {
+  font-size: 14px;
+  color: #555;
+  margin-top: 12px;
+  letter-spacing: 0.2px;
+  line-height: 1.6;
+}
+.stats {
+  display: flex;
+  gap: 24px;
+  margin-top: 24px;
+  font-size: 11px;
+  color: #333;
+}
+.stats .val { color: #666; }
+.stats .updated { color: #222; }
+
+/* Content */
+.content {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px 24px 80px;
+}
+
+/* Contributor block */
+.contributor {
+  margin-bottom: 4px;
+  border: 1px solid #1a1a1a;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.contributor.open { background: #0d0d0d; }
+.contributor-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  cursor: pointer;
+  user-select: none;
+}
+.contributor-header:hover { background: #111; }
+.contributor.open .contributor-header { background: #0d0d0d; }
+.contributor.open .contributor-header:hover { background: #111; }
+.contributor-arrow {
+  color: #FF3B3B;
+  font-size: 12px;
+  width: 14px;
+  text-align: center;
+  transition: transform 0.1s;
+}
+.contributor.open > .contributor-header > .contributor-arrow { transform: rotate(90deg); }
+.contributor-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.3px;
+}
+.contributor-meta {
+  font-size: 11px;
+  color: #555;
+}
+.contributor-spacer { flex: 1; }
+.repo-link {
+  font-size: 11px;
+  color: #444;
+  padding: 3px 8px;
+  border: 1px solid #222;
+  border-radius: 4px;
+}
+.repo-link:hover {
+  color: #888;
+  border-color: #444;
+}
+.contributor-body {
+  display: none;
+  padding: 0 6px 12px 6px;
+}
+.contributor.open > .contributor-body { display: block; }
+
+/* Folder */
+.folder-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  user-select: none;
+}
+.folder-header:hover { background: rgba(255,255,255,0.04); }
+.folder-arrow {
+  color: #FF3B3B;
+  font-size: 10px;
+  width: 12px;
+  text-align: center;
+  transition: transform 0.1s;
+}
+.folder.open > .folder-header > .folder-arrow { transform: rotate(90deg); }
+.folder-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e8e8e8;
+  letter-spacing: -0.2px;
+}
+.folder-count {
+  font-size: 11px;
+  color: #555;
+  margin-left: 4px;
+}
+.folder-children {
+  display: none;
+  border-left: 1px solid #222;
+  margin-left: 17px;
+}
+.folder.open > .folder-children { display: block; }
+
+/* File entry */
+.file-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #c9c9c9;
+}
+.file-entry:hover { background: rgba(255,255,255,0.05); }
+.ext-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+.file-name {
+  font-size: 13px;
+  flex: 1;
+}
+.file-size {
+  font-size: 11px;
+  color: #666;
+  flex-shrink: 0;
+}
+.file-dl {
+  font-size: 14px;
+  color: #666;
+  flex-shrink: 0;
+}
+
+/* Footer */
+.footer {
+  border-top: 1px solid #111;
+  padding: 24px;
+  text-align: center;
+  font-size: 11px;
+  color: #222;
+}
+.footer a { color: #333; }
+.footer a:hover { color: #666; }
+
+/* Loading */
+.loading {
+  text-align: center;
+  padding: 80px 24px;
+  font-size: 13px;
+  color: #333;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="title-row">
+      <h1 class="title noto">チギュ<span class="title-accent">SUBS</span></h1>
+      <span class="mono title-version">v1</span>
+    </div>
+    <p class="tagline noto">&#x30B3;&#x30DF;&#x30E5;&#x30CB;&#x30C6;&#x30A3;&#x5B57;&#x5E55; &mdash; community subtitles for Japanese variety</p>
+    <div class="stats mono" id="stats"></div>
+  </div>
+</div>
+
+<div class="content" id="content">
+  <div class="loading mono">loading index...</div>
+</div>
+
+<div class="footer mono">
+  contribute &rarr; submit a PR to <a href="https://github.com/chiguyusubs/chiguyusubs.github.io">registry.json</a>
+</div>
+
+<script>
+(function () {
+  const EXT_COLORS = {
+    srt: '#FF3B3B',
+    ass: '#FFB800',
+    ssa: '#FFB800',
+    vtt: '#3B8BFF',
+    sub: '#8B5CF6',
+    sbv: '#10B981',
+  };
+
+  function getExt(name) {
+    return name.split('.').pop().toLowerCase();
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function isFile(node) {
+    return node && typeof node === 'object' && 'raw_url' in node;
+  }
+
+  function countFiles(node) {
+    if (isFile(node)) return 1;
+    let c = 0;
+    for (const k of Object.keys(node)) c += countFiles(node[k]);
+    return c;
+  }
+
+  function buildTree(files) {
+    const root = {};
+    for (const file of files) {
+      const parts = file.path.split('/');
+      let cur = root;
+      for (let i = 0; i < parts.length - 1; i++) {
+        if (!cur[parts[i]]) cur[parts[i]] = {};
+        cur = cur[parts[i]];
+      }
+      cur[parts[parts.length - 1]] = file;
+    }
+    return root;
+  }
+
+  function sortedEntries(node) {
+    return Object.entries(node).sort(([a, av], [b, bv]) => {
+      const af = isFile(av), bf = isFile(bv);
+      if (af !== bf) return af ? 1 : -1;
+      return a.localeCompare(b);
+    });
+  }
+
+  function createFileEntry(name, file) {
+    const ext = getExt(name);
+    const color = EXT_COLORS[ext] || '#888';
+    const a = document.createElement('a');
+    a.href = file.raw_url;
+    a.download = '';
+    a.className = 'file-entry mono';
+
+    const badge = document.createElement('span');
+    badge.className = 'ext-badge';
+    badge.textContent = ext;
+    badge.style.color = color;
+    badge.style.background = color + '18';
+    badge.style.border = '1px solid ' + color + '40';
+
+    const fname = document.createElement('span');
+    fname.className = 'file-name';
+    fname.textContent = name;
+
+    const fsize = document.createElement('span');
+    fsize.className = 'file-size';
+    fsize.textContent = formatSize(file.size);
+
+    const dl = document.createElement('span');
+    dl.className = 'file-dl';
+    dl.textContent = '\u2193';
+
+    a.append(badge, fname, fsize, dl);
+    return a;
+  }
+
+  function createFolder(name, node, depth) {
+    const div = document.createElement('div');
+    div.className = 'folder' + (depth < 1 ? ' open' : '');
+    if (depth > 0) div.style.marginLeft = '16px';
+
+    const header = document.createElement('div');
+    header.className = 'folder-header';
+
+    const arrow = document.createElement('span');
+    arrow.className = 'folder-arrow mono';
+    arrow.textContent = '\u25B6';
+
+    const fname = document.createElement('span');
+    fname.className = 'folder-name noto';
+    fname.textContent = name;
+
+    const fcount = document.createElement('span');
+    fcount.className = 'folder-count mono';
+    fcount.textContent = countFiles(node);
+
+    header.append(arrow, fname, fcount);
+    header.addEventListener('click', () => div.classList.toggle('open'));
+
+    const children = document.createElement('div');
+    children.className = 'folder-children';
+    for (const [key, value] of sortedEntries(node)) {
+      children.appendChild(
+        isFile(value)
+          ? createFileEntry(key, value)
+          : createFolder(key, value, depth + 1)
+      );
+    }
+
+    div.append(header, children);
+    return div;
+  }
+
+  function createContributor(contributor) {
+    const tree = buildTree(contributor.files);
+    const showCount = Object.keys(tree).length;
+
+    const div = document.createElement('div');
+    div.className = 'contributor';
+
+    const header = document.createElement('div');
+    header.className = 'contributor-header';
+
+    const arrow = document.createElement('span');
+    arrow.className = 'contributor-arrow mono';
+    arrow.textContent = '\u25B6';
+
+    const name = document.createElement('span');
+    name.className = 'contributor-name noto';
+    name.textContent = contributor.name;
+
+    const meta = document.createElement('span');
+    meta.className = 'contributor-meta mono';
+    meta.textContent = contributor.files.length + ' files \u00B7 ' + showCount + ' ' + (showCount === 1 ? 'show' : 'shows');
+
+    const spacer = document.createElement('div');
+    spacer.className = 'contributor-spacer';
+
+    const repo = document.createElement('a');
+    repo.className = 'repo-link mono';
+    repo.href = contributor.url;
+    repo.target = '_blank';
+    repo.rel = 'noopener noreferrer';
+    repo.textContent = 'repo \u2192';
+    repo.addEventListener('click', (e) => e.stopPropagation());
+
+    header.append(arrow, name, meta, spacer, repo);
+    header.addEventListener('click', () => div.classList.toggle('open'));
+
+    const body = document.createElement('div');
+    body.className = 'contributor-body';
+    for (const [key, value] of sortedEntries(tree)) {
+      body.appendChild(
+        isFile(value)
+          ? createFileEntry(key, value)
+          : createFolder(key, value, 0)
+      );
+    }
+
+    div.append(header, body);
+    return div;
+  }
+
+  async function init() {
+    const content = document.getElementById('content');
+    const stats = document.getElementById('stats');
+
+    let data;
+    try {
+      const res = await fetch('index.json');
+      if (!res.ok) throw new Error(res.status);
+      data = await res.json();
+    } catch (e) {
+      content.innerHTML = '<div class="loading mono">failed to load index.json</div>';
+      return;
+    }
+
+    const totalFiles = data.contributors.reduce((s, c) => s + c.files.length, 0);
+    const shows = new Set();
+    data.contributors.forEach((c) => c.files.forEach((f) => shows.add(f.path.split('/')[0])));
+
+    const updated = new Date(data.generated_at).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+    stats.innerHTML =
+      '<span><span class="val">' + data.contributors.length + '</span> contributors</span>' +
+      '<span><span class="val">' + shows.size + '</span> shows</span>' +
+      '<span><span class="val">' + totalFiles + '</span> files</span>' +
+      '<span class="updated">updated ' + updated + '</span>';
+
+    content.innerHTML = '';
+    for (const contributor of data.contributors) {
+      content.appendChild(createContributor(contributor));
+    }
+  }
+
+  init();
+})();
+</script>
+
+</body>
+</html>

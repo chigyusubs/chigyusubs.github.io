@@ -1,0 +1,53 @@
+{
+  "generated_at": "2026-03-13T14:00:00Z",
+  "contributors": [
+    {
+      "name": "ChiguyuSubs",
+      "url": "https://github.com/chiguyusubs/releases",
+      "files": [
+        { "path": "wednesday-downtown/2026-01-07.srt", "raw_url": "#", "size": 45200 },
+        { "path": "wednesday-downtown/2026-01-14.srt", "raw_url": "#", "size": 52100 },
+        { "path": "wednesday-downtown/2026-01-21.ass", "raw_url": "#", "size": 68300 },
+        { "path": "wednesday-downtown/2026-01-28.srt", "raw_url": "#", "size": 41700 },
+        { "path": "wednesday-downtown/2026-02-04.srt", "raw_url": "#", "size": 39800 },
+        { "path": "wednesday-downtown/2026-02-11.srt", "raw_url": "#", "size": 47600 },
+        { "path": "wednesday-downtown/2026-02-18.srt", "raw_url": "#", "size": 51200 },
+        { "path": "wednesday-downtown/2026-02-25.srt", "raw_url": "#", "size": 44900 },
+        { "path": "wednesday-downtown/2026-03-04.srt", "raw_url": "#", "size": 46300 },
+        { "path": "gaki-no-tsukai/batsu-games/2024-12-31.srt", "raw_url": "#", "size": 312400 },
+        { "path": "gaki-no-tsukai/kiki/S01E31.srt", "raw_url": "#", "size": 38400 },
+        { "path": "gaki-no-tsukai/kiki/S01E32.srt", "raw_url": "#", "size": 35200 },
+        { "path": "documental/S11/E01.srt", "raw_url": "#", "size": 62100 },
+        { "path": "documental/S11/E02.srt", "raw_url": "#", "size": 58700 },
+        { "path": "documental/S11/E03.srt", "raw_url": "#", "size": 61400 },
+        { "path": "documental/S11/E04.srt", "raw_url": "#", "size": 59200 }
+      ]
+    },
+    {
+      "name": "ardarvin",
+      "url": "https://github.com/ardarvin/wednesday-downtown-subs",
+      "files": [
+        { "path": "wednesday-downtown/2026-01-07.srt", "raw_url": "#", "size": 44800 },
+        { "path": "wednesday-downtown/2026-01-14.srt", "raw_url": "#", "size": 51300 },
+        { "path": "wednesday-downtown/2026-01-21.srt", "raw_url": "#", "size": 49700 },
+        { "path": "wednesday-downtown/2026-01-28.srt", "raw_url": "#", "size": 42100 },
+        { "path": "wednesday-downtown/2026-02-04.srt", "raw_url": "#", "size": 40200 },
+        { "path": "wednesday-downtown/2026-02-11.srt", "raw_url": "#", "size": 48100 },
+        { "path": "wednesday-downtown/2026-02-18.srt", "raw_url": "#", "size": 50800 },
+        { "path": "wednesday-downtown/2026-02-25.srt", "raw_url": "#", "size": 45600 },
+        { "path": "wednesday-downtown/2026-03-04.srt", "raw_url": "#", "size": 47100 }
+      ]
+    },
+    {
+      "name": "killah_kuts",
+      "url": "https://github.com/killahkuts/subs",
+      "files": [
+        { "path": "lincoln/S2008/E01.srt", "raw_url": "#", "size": 55300 },
+        { "path": "lincoln/S2008/E02.srt", "raw_url": "#", "size": 52100 },
+        { "path": "lincoln/S2008/E03.ass", "raw_url": "#", "size": 71200 },
+        { "path": "suberanai-hanashi/2024-01-13.srt", "raw_url": "#", "size": 34500 },
+        { "path": "suberanai-hanashi/2024-07-06.srt", "raw_url": "#", "size": 31200 }
+      ]
+    }
+  ]
+}
