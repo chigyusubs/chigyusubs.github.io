@@ -71,13 +71,27 @@ async function main() {
     process.exit(1);
   }
 
-  const index = {
+  const newIndex = {
     generated_at: new Date().toISOString(),
     contributors: results,
   };
 
-  fs.writeFileSync(outputPath, JSON.stringify(index, null, 2) + "\n");
-  console.error(`[build] Wrote index.json with ${results.length} contributors`);
+  // Only write if content actually changed (ignore generated_at timestamp)
+  let changed = true;
+  try {
+    const existing = JSON.parse(fs.readFileSync(outputPath, "utf-8"));
+    const oldData = JSON.stringify(existing.contributors);
+    const newData = JSON.stringify(results);
+    if (oldData === newData) {
+      changed = false;
+      console.error("[build] No changes detected, skipping write");
+    }
+  } catch {}
+
+  if (changed) {
+    fs.writeFileSync(outputPath, JSON.stringify(newIndex, null, 2) + "\n");
+    console.error(`[build] Wrote index.json with ${results.length} contributors`);
+  }
 }
 
 main();
