@@ -7,8 +7,7 @@ on:
   repository_dispatch:
     types: [subtitles-updated]
   push:
-    paths:
-      - 'registry.json'
+    branches: [main]
 
 jobs:
   build:
