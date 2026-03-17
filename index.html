@@ -427,13 +427,22 @@ a { color: inherit; text-decoration: none; }
 
     var fileLink = fileLinks && fileLinks[name];
     if (fileLink) {
+      var ytMatch = fileLink.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+      if (ytMatch) {
+        var watchBtn = document.createElement('a');
+        watchBtn.className = 'folder-tmdb mono';
+        watchBtn.href = 'watch.html?v=' + ytMatch[1] + '&sub=' + encodeURIComponent(file.raw_url);
+        watchBtn.textContent = 'watch \u25B6';
+        watchBtn.addEventListener('click', function (e) { e.stopPropagation(); });
+        a.appendChild(watchBtn);
+      }
       var linkBtn = document.createElement('a');
       linkBtn.className = 'folder-tmdb mono';
       linkBtn.href = fileLink;
       linkBtn.target = '_blank';
       linkBtn.rel = 'noopener noreferrer';
       var label = 'link';
-      if (fileLink.includes('youtube.com') || fileLink.includes('youtu.be')) label = 'YouTube';
+      if (ytMatch) label = 'YouTube';
       linkBtn.textContent = label + ' \u2192';
       linkBtn.addEventListener('click', function (e) { e.stopPropagation(); });
       a.appendChild(linkBtn);

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChigyuSubs - Watch</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  min-height: 100vh;
+  background: #080808;
+  color: #ccc;
+  font-family: 'Noto Sans JP', 'Helvetica Neue', sans-serif;
+}
+
+a { color: inherit; text-decoration: none; }
+.mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+.noto { font-family: 'Noto Sans JP', sans-serif; }
+
+/* Header */
+.header {
+  border-bottom: 1px solid #1a1a1a;
+  padding: 0 24px;
+}
+.header-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.title {
+  font-weight: 900;
+  font-size: 24px;
+  color: #fff;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.title-accent { color: #FF3B3B; }
+.back-link {
+  font-size: 12px;
+  color: #444;
+  padding: 3px 8px;
+  border: 1px solid #222;
+  border-radius: 4px;
+}
+.back-link:hover { color: #888; border-color: #444; }
+
+/* Player area */
+.content {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.player-wrap {
+  position: relative;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.player-wrap.is-fullscreen {
+  border-radius: 0;
+}
+
+.video-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%;
+}
+
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* Subtitle overlay (fullscreen only) */
+.sub-overlay {
+  display: none;
+  position: absolute;
+  bottom: 60px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.is-fullscreen .sub-overlay {
+  display: block;
+}
+
+.sub-overlay-text {
+  display: inline-block;
+  max-width: 80%;
+  font-size: 28px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 0 8px rgba(0,0,0,0.9), 0 2px 4px rgba(0,0,0,0.9);
+  background: rgba(0,0,0,0.5);
+  padding: 6px 16px;
+  border-radius: 4px;
+  line-height: 1.4;
+}
+
+/* Subtitle display (windowed) */
+.sub-display {
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 24px;
+  background: #0d0d0d;
+  border: 1px solid #1a1a1a;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+}
+
+.is-fullscreen + .sub-display {
+  display: none;
+}
+
+.sub-text {
+  font-size: 20px;
+  font-weight: 600;
+  color: #e8e8e8;
+  text-align: center;
+  line-height: 1.5;
+  min-height: 1.5em;
+}
+
+.sub-text.empty {
+  color: #333;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+/* Controls bar */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  margin-top: 8px;
+}
+
+.ctrl-btn {
+  font-size: 11px;
+  color: #444;
+  padding: 4px 10px;
+  border: 1px solid #222;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+}
+.ctrl-btn:hover { color: #888; border-color: #444; }
+.ctrl-btn.active { color: #FF3B3B; border-color: #FF3B3B40; }
+
+.ctrl-spacer { flex: 1; }
+
+.offset-display {
+  font-size: 11px;
+  color: #555;
+}
+
+/* Info */
+.info {
+  margin-top: 16px;
+  padding: 12px 0;
+  border-top: 1px solid #1a1a1a;
+  font-size: 12px;
+  color: #333;
+}
+.info a { color: #444; }
+.info a:hover { color: #888; }
+
+/* Error */
+.error {
+  text-align: center;
+  padding: 80px 24px;
+  font-size: 14px;
+  color: #555;
+}
+.error a { color: #FF3B3B; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <a href="./" class="title noto">チギュ<span class="title-accent">SUBS</span></a>
+    <a href="./" class="back-link mono">&larr; index</a>
+  </div>
+</div>
+
+<div class="content" id="content"></div>
+
+<script>
+(function () {
+
+  // Parse URL params
+  var params = new URLSearchParams(location.search);
+  var videoId = params.get('v');
+  var vttUrl = params.get('sub');
+  var content = document.getElementById('content');
+
+  if (!videoId || !vttUrl) {
+    content.innerHTML = '<div class="error">Missing parameters.<br><br>' +
+      '<span class="mono" style="font-size:12px;color:#444;">watch.html?v=VIDEO_ID&sub=VTT_URL</span></div>';
+    return;
+  }
+
+  // Parse VTT
+  function parseVTT(text) {
+    var cues = [];
+    var blocks = text.replace(/\r\n/g, '\n').split('\n\n');
+    for (var i = 0; i < blocks.length; i++) {
+      var lines = blocks[i].trim().split('\n');
+      for (var j = 0; j < lines.length; j++) {
+        var match = lines[j].match(/(\d{2}:\d{2}:\d{2}\.\d{3})\s+-->\s+(\d{2}:\d{2}:\d{2}\.\d{3})/);
+        if (match) {
+          var text = lines.slice(j + 1).join('\n').replace(/<[^>]+>/g, '');
+          if (text.trim()) {
+            cues.push({
+              start: parseTime(match[1]),
+              end: parseTime(match[2]),
+              text: text.trim()
+            });
+          }
+          break;
+        }
+      }
+    }
+    return cues;
+  }
+
+  function parseTime(s) {
+    var p = s.split(':');
+    return parseInt(p[0]) * 3600 + parseInt(p[1]) * 60 + parseFloat(p[2]);
+  }
+
+  // Build DOM
+  content.innerHTML =
+    '<div class="player-wrap" id="player-wrap">' +
+      '<div class="video-container"><div id="yt-player"></div></div>' +
+      '<div class="sub-overlay"><span class="sub-overlay-text" id="sub-overlay-text"></span></div>' +
+    '</div>' +
+    '<div class="sub-display" id="sub-display">' +
+      '<div class="sub-text empty" id="sub-text">loading subtitles...</div>' +
+    '</div>' +
+    '<div class="controls">' +
+      '<button class="ctrl-btn mono" id="btn-fs" title="Fullscreen with subtitles">fullscreen</button>' +
+      '<button class="ctrl-btn mono" id="btn-offset-down" title="Subtitles earlier">&minus;0.5s</button>' +
+      '<span class="offset-display mono" id="offset-display">offset: 0.0s</span>' +
+      '<button class="ctrl-btn mono" id="btn-offset-up" title="Subtitles later">+0.5s</button>' +
+      '<div class="ctrl-spacer"></div>' +
+      '<button class="ctrl-btn mono" id="btn-dl" title="Download subtitle file">download .vtt</button>' +
+    '</div>' +
+    '<div class="info mono">' +
+      'subtitles from <a href="./">chigyusubs</a>' +
+    '</div>';
+
+  var wrap = document.getElementById('player-wrap');
+  var subText = document.getElementById('sub-text');
+  var subOverlayText = document.getElementById('sub-overlay-text');
+  var offsetDisplay = document.getElementById('offset-display');
+  var cues = [];
+  var offset = 0;
+  var player = null;
+  var pollId = null;
+  var lastCueIdx = -1;
+
+  // Load VTT
+  fetch(vttUrl)
+    .then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      return r.text();
+    })
+    .then(function (text) {
+      cues = parseVTT(text);
+      subText.textContent = '';
+      subText.className = 'sub-text empty';
+      if (cues.length === 0) {
+        subText.textContent = 'no cues found in subtitle file';
+      }
+    })
+    .catch(function () {
+      subText.textContent = 'failed to load subtitles';
+    });
+
+  // Load YouTube iframe API
+  var tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+
+  window.onYouTubeIframeAPIReady = function () {
+    player = new YT.Player('yt-player', {
+      videoId: videoId,
+      playerVars: {
+        fs: 0,
+        rel: 0,
+        modestbranding: 1
+      },
+      events: {
+        onReady: function () { startPoll(); },
+        onStateChange: function (e) {
+          if (e.data === YT.PlayerState.PLAYING) startPoll();
+          else if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) stopPoll();
+        }
+      }
+    });
+  };
+
+  function startPoll() {
+    if (pollId) return;
+    pollId = setInterval(updateSub, 200);
+  }
+
+  function stopPoll() {
+    if (pollId) { clearInterval(pollId); pollId = null; }
+    updateSub();
+  }
+
+  function updateSub() {
+    if (!player || !player.getCurrentTime || cues.length === 0) return;
+    var t = player.getCurrentTime() + offset;
+    var found = -1;
+    for (var i = 0; i < cues.length; i++) {
+      if (t >= cues[i].start && t < cues[i].end) {
+        found = i;
+        break;
+      }
+    }
+    if (found === lastCueIdx) return;
+    lastCueIdx = found;
+    if (found >= 0) {
+      subText.textContent = cues[found].text;
+      subText.className = 'sub-text noto';
+      subOverlayText.textContent = cues[found].text;
+      subOverlayText.style.display = '';
+    } else {
+      subText.textContent = '';
+      subText.className = 'sub-text empty';
+      subOverlayText.textContent = '';
+      subOverlayText.style.display = 'none';
+    }
+  }
+
+  // Binary search would be better for large files, but linear scan is fine for <5000 cues
+
+  // Fullscreen
+  document.getElementById('btn-fs').addEventListener('click', function () {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      wrap.requestFullscreen();
+    }
+  });
+
+  document.addEventListener('fullscreenchange', function () {
+    wrap.classList.toggle('is-fullscreen', !!document.fullscreenElement);
+  });
+
+  // Offset controls
+  document.getElementById('btn-offset-down').addEventListener('click', function () {
+    offset -= 0.5;
+    lastCueIdx = -1;
+    offsetDisplay.textContent = 'offset: ' + offset.toFixed(1) + 's';
+    updateSub();
+  });
+  document.getElementById('btn-offset-up').addEventListener('click', function () {
+    offset += 0.5;
+    lastCueIdx = -1;
+    offsetDisplay.textContent = 'offset: ' + offset.toFixed(1) + 's';
+    updateSub();
+  });
+
+  // Download
+  document.getElementById('btn-dl').addEventListener('click', function () {
+    var a = document.createElement('a');
+    a.href = vttUrl;
+    a.download = '';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'f' || e.key === 'F') {
+      document.getElementById('btn-fs').click();
+    }
+  });
+
+})();
+</script>
+
+</body>
+</html>
