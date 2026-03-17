@@ -79,7 +79,6 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 4px;
   border: 1px solid #1a1a1a;
   border-radius: 8px;
-  overflow: hidden;
 }
 .contributor.open { background: #0d0d0d; }
 .contributor-header {
@@ -146,18 +145,73 @@ a { color: inherit; text-decoration: none; }
   width: 12px;
   text-align: center;
   transition: transform 0.1s;
+  flex-shrink: 0;
+  align-self: center;
 }
 .folder.open > .folder-header > .folder-arrow { transform: rotate(90deg); }
+.folder-poster-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.folder-poster {
+  width: 80px;
+  height: 45px;
+  object-fit: cover;
+  border-radius: 3px;
+  background: #1a1a1a;
+}
+.folder-poster-full {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 10;
+  margin-top: 6px;
+  border-radius: 6px;
+  border: 1px solid #222;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  max-width: 480px;
+  width: max-content;
+}
+.folder-poster-wrap:hover .folder-poster-full {
+  display: block;
+}
+.folder-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
 .folder-name {
   font-size: 14px;
   font-weight: 600;
   color: #e8e8e8;
   letter-spacing: -0.2px;
 }
+.folder-name-ja {
+  font-size: 11px;
+  color: #555;
+  letter-spacing: 0;
+}
+.folder-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .folder-count {
   font-size: 11px;
   color: #555;
-  margin-left: 4px;
+}
+.folder-tmdb {
+  font-size: 10px;
+  color: #444;
+  padding: 1px 5px;
+  border: 1px solid #222;
+  border-radius: 3px;
+}
+.folder-tmdb:hover {
+  color: #888;
+  border-color: #444;
 }
 .folder-children {
   display: none;
@@ -262,6 +316,7 @@ a { color: inherit; text-decoration: none; }
 
 <div class="footer mono">
   contribute &rarr; submit a PR to <a href="https://github.com/chigyusubs/chigyusubs.github.io/blob/main/registry.json">registry.json</a>
+  <div id="tmdb-attr" style="display:none; margin-top:8px;">show data courtesy of <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer">TMDB</a></div>
 </div>
 
 <script>
@@ -318,7 +373,7 @@ a { color: inherit; text-decoration: none; }
     });
   }
 
-  function createFileEntry(name, file) {
+  function createFileEntry(name, file, fileLinks) {
     const ext = getExt(name);
     const color = EXT_COLORS[ext] || '#888';
     const a = document.createElement('a');
@@ -363,12 +418,30 @@ a { color: inherit; text-decoration: none; }
     });
 
     a.append(badge, fname, fsize, dl);
+
+    var fileLink = fileLinks && fileLinks[name];
+    if (fileLink) {
+      var linkBtn = document.createElement('a');
+      linkBtn.className = 'folder-tmdb mono';
+      linkBtn.href = fileLink;
+      linkBtn.target = '_blank';
+      linkBtn.rel = 'noopener noreferrer';
+      var label = 'link';
+      if (fileLink.includes('youtube.com') || fileLink.includes('youtu.be')) label = 'YouTube';
+      linkBtn.textContent = label + ' \u2192';
+      linkBtn.addEventListener('click', function (e) { e.stopPropagation(); });
+      a.appendChild(linkBtn);
+    }
+
     return a;
   }
 
+  var showsMeta = {};
+  var hasImages = false;
+
   function createFolder(name, node, depth) {
     const div = document.createElement('div');
-    div.className = 'folder' + (depth < 1 ? ' open' : '');
+    div.className = 'folder';
     if (depth > 0) div.style.marginLeft = '16px';
 
     const header = document.createElement('div');
@@ -378,23 +451,78 @@ a { color: inherit; text-decoration: none; }
     arrow.className = 'folder-arrow mono';
     arrow.textContent = '\u25B6';
 
+    const meta = showsMeta[name];
+
+    header.appendChild(arrow);
+
+    if (meta && meta.image) {
+      const wrap = document.createElement('div');
+      wrap.className = 'folder-poster-wrap';
+      const img = document.createElement('img');
+      img.className = 'folder-poster';
+      img.src = meta.image;
+      img.alt = meta.title || name;
+      img.loading = 'lazy';
+      const full = document.createElement('img');
+      full.className = 'folder-poster-full';
+      full.src = meta.image;
+      full.alt = meta.title || name;
+      full.loading = 'lazy';
+      wrap.append(img, full);
+      header.appendChild(wrap);
+      hasImages = true;
+    }
+
+    const info = document.createElement('div');
+    info.className = 'folder-info';
+
     const fname = document.createElement('span');
     fname.className = 'folder-name noto';
-    fname.textContent = name;
+    fname.textContent = (meta && meta.title) ? meta.title : name;
+
+    info.appendChild(fname);
+
+    if (meta && meta.title_ja) {
+      const ja = document.createElement('span');
+      ja.className = 'folder-name-ja noto';
+      ja.textContent = meta.title_ja;
+      info.appendChild(ja);
+    }
+
+    const metaRow = document.createElement('div');
+    metaRow.className = 'folder-meta-row';
 
     const fcount = document.createElement('span');
     fcount.className = 'folder-count mono';
-    fcount.textContent = countFiles(node);
+    fcount.textContent = countFiles(node) + ' files';
+    metaRow.appendChild(fcount);
 
-    header.append(arrow, fname, fcount);
+    if (meta && meta.url) {
+      const link = document.createElement('a');
+      link.className = 'folder-tmdb mono';
+      link.href = meta.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      var linkLabel = 'link';
+      if (meta.url.includes('themoviedb.org')) linkLabel = 'TMDB';
+      else if (meta.url.includes('youtube.com') || meta.url.includes('youtu.be')) linkLabel = 'YouTube';
+      link.textContent = linkLabel + ' \u2192';
+      link.addEventListener('click', function (e) { e.stopPropagation(); });
+      metaRow.appendChild(link);
+    }
+
+    info.appendChild(metaRow);
+    header.appendChild(info);
+
     header.addEventListener('click', () => div.classList.toggle('open'));
 
+    var fileLinks = meta && meta.links;
     const children = document.createElement('div');
     children.className = 'folder-children';
     for (const [key, value] of sortedEntries(node)) {
       children.appendChild(
         isFile(value)
-          ? createFileEntry(key, value)
+          ? createFileEntry(key, value, fileLinks)
           : createFolder(key, value, depth + 1)
       );
     }
@@ -408,7 +536,7 @@ a { color: inherit; text-decoration: none; }
     const showCount = Object.keys(tree).length;
 
     const div = document.createElement('div');
-    div.className = 'contributor';
+    div.className = 'contributor open';
 
     const header = document.createElement('div');
     header.className = 'contributor-header';
@@ -459,9 +587,15 @@ a { color: inherit; text-decoration: none; }
 
     let data;
     try {
-      const res = await fetch('index.json');
-      if (!res.ok) throw new Error(res.status);
-      data = await res.json();
+      const [indexRes, showsRes] = await Promise.all([
+        fetch('index.json'),
+        fetch('shows.json').catch(function () { return null; }),
+      ]);
+      if (!indexRes.ok) throw new Error(indexRes.status);
+      data = await indexRes.json();
+      if (showsRes && showsRes.ok) {
+        showsMeta = await showsRes.json();
+      }
     } catch (e) {
       content.innerHTML = '<div class="loading mono">failed to load index.json</div>';
       return;
@@ -496,6 +630,10 @@ a { color: inherit; text-decoration: none; }
         el.classList.toggle('open', expanded);
       });
     });
+
+    if (hasImages) {
+      document.getElementById('tmdb-attr').style.display = '';
+    }
   }
 
   init();

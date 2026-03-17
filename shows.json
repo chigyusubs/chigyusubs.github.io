@@ -1,0 +1,28 @@
+{
+  "the-great-escape-2023": {
+    "title": "The Great Escape",
+    "title_ja": "大脱出2023",
+    "image": "https://media.themoviedb.org/t/p/w1066_and_h600_face/j6lsYQ6Bqbc3tPHZe01K0MKDWMg.jpg",
+    "url": "https://www.themoviedb.org/tv/221675"
+  },
+  "killah-kuts": {
+    "title": "Killah Kuts",
+    "title_ja": "キラーカッツ",
+    "image": "https://media.themoviedb.org/t/p/w1066_and_h600_face/fPM4g39eFj3BzSom8eW862ujYl7.jpg",
+    "url": "https://www.themoviedb.org/tv/272951-killah-kuts"
+  },
+  "secret-ng-house": {
+    "title": "Secret NG House",
+    "title_ja": "シークレットNGハウス"
+  },
+  "oni-no-dokkiri-de-namida": {
+    "title": "Oni no Dokkiri de Namida",
+    "title_ja": "鬼のドッキリで涙"
+  },
+  "youtube": {
+    "title": "YouTube",
+    "links": {
+      "killah-kuts-s01e02.en.vtt": "https://www.youtube.com/watch?v=VAatQB0sNw0"
+    }
+  }
+}
