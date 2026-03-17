@@ -13,11 +13,15 @@
   },
   "secret-ng-house": {
     "title": "Secret NG House",
-    "title_ja": "シークレットNGハウス"
+    "title_ja": "シークレットNGハウス",
+    "image": "https://media.themoviedb.org/t/p/w1066_and_h600_face/r53XboE52Vowb3q2pBn3T2lcLkd.jpg",
+    "url": "https://www.themoviedb.org/tv/303031-ng"
   },
   "oni-no-dokkiri-de-namida": {
     "title": "Oni no Dokkiri de Namida",
-    "title_ja": "鬼のドッキリで涙"
+    "title_ja": "鬼のドッキリで涙",
+    "image": "https://media.themoviedb.org/t/p/w1066_and_h600_face/o3IQHB4HZ8gbk1MZRFsnNzqSsG8.jpg",
+    "url": "https://www.themoviedb.org/tv/283348"
   },
   "youtube": {
     "title": "YouTube",
