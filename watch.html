@@ -336,7 +336,7 @@ a { color: inherit; text-decoration: none; }
   if (ytVideoId && subUrl) {
     initPlayer('youtube', { videoId: ytVideoId, subUrl: subUrl });
   } else if (videoSrc && subUrl) {
-    initPlayer('url', { videoSrc: videoSrc, subUrl: subUrl });
+    initPlayer('native', { videoSrc: videoSrc, subUrl: subUrl });
   } else {
     initPicker();
   }
