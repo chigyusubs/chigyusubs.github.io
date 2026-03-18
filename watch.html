@@ -49,40 +49,152 @@ a { color: inherit; text-decoration: none; }
 }
 .back-link:hover { color: #888; border-color: #444; }
 
-/* Player area */
+/* Content */
 .content {
   max-width: 960px;
   margin: 0 auto;
   padding: 24px;
 }
 
+/* Drop zone / picker */
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.picker-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.picker-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ccc;
+  letter-spacing: 0.5px;
+}
+
+.drop-zone {
+  border: 2px dashed #333;
+  border-radius: 8px;
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: #FF3B3B;
+  background: #FF3B3B08;
+}
+.drop-zone-sm {
+  padding: 24px;
+}
+.drop-zone-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #aaa;
+  margin-bottom: 6px;
+}
+.drop-zone-hint {
+  font-size: 12px;
+  color: #555;
+}
+.drop-zone input[type="file"] { display: none; }
+
+.picked-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #111;
+  border: 1px solid #282828;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.picked-file .label { color: #666; flex-shrink: 0; }
+.picked-file .name { color: #e8e8e8; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picked-file .remove {
+  color: #555;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 16px;
+}
+.picked-file .remove:hover { color: #FF3B3B; background: #FF3B3B18; }
+
+.picker-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #555;
+  font-size: 11px;
+}
+.picker-divider::before, .picker-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #222;
+}
+
+.url-input {
+  width: 100%;
+  background: #0d0d0d;
+  border: 1px solid #282828;
+  border-radius: 6px;
+  padding: 10px 14px;
+  color: #e8e8e8;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  outline: none;
+}
+.url-input:focus { border-color: #555; }
+.url-input::placeholder { color: #444; }
+
+.picker-btn {
+  font-size: 14px;
+  font-weight: 600;
+  color: #FF3B3B;
+  padding: 14px 24px;
+  border: 1px solid #FF3B3B40;
+  border-radius: 6px;
+  background: #FF3B3B15;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.picker-btn:hover { background: #FF3B3B30; border-color: #FF3B3B; color: #fff; }
+.picker-btn:disabled { opacity: 0.25; cursor: default; }
+.picker-btn:disabled:hover { background: #FF3B3B15; border-color: #FF3B3B40; color: #FF3B3B; }
+
+/* Player area */
 .player-wrap {
   position: relative;
   background: #000;
   border-radius: 8px;
   overflow: hidden;
 }
-
-.player-wrap.is-fullscreen {
-  border-radius: 0;
-}
+.player-wrap.is-fullscreen { border-radius: 0; }
 
 .video-container {
   position: relative;
   width: 100%;
   padding-bottom: 56.25%;
 }
-
-.video-container iframe {
+.video-container iframe,
+.video-container video {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   border: 0;
+  background: #000;
 }
 
-/* Subtitle overlay (fullscreen only) */
+/* Subtitle overlay (fullscreen) */
 .sub-overlay {
   display: none;
   position: absolute;
@@ -93,10 +205,7 @@ a { color: inherit; text-decoration: none; }
   pointer-events: none;
   z-index: 10;
 }
-
-.is-fullscreen .sub-overlay {
-  display: block;
-}
+.is-fullscreen .sub-overlay { display: block; }
 
 .sub-overlay-text {
   display: inline-block;
@@ -123,10 +232,7 @@ a { color: inherit; text-decoration: none; }
   border-top: none;
   border-radius: 0 0 8px 8px;
 }
-
-.is-fullscreen + .sub-display {
-  display: none;
-}
+.is-fullscreen + .sub-display { display: none; }
 
 .sub-text {
   font-size: 20px;
@@ -136,22 +242,21 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.5;
   min-height: 1.5em;
 }
-
 .sub-text.empty {
   color: #333;
   font-size: 14px;
   font-weight: 400;
 }
 
-/* Controls bar */
+/* Controls */
 .controls {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 0;
   margin-top: 8px;
+  flex-wrap: wrap;
 }
-
 .ctrl-btn {
   font-size: 11px;
   color: #444;
@@ -163,10 +268,7 @@ a { color: inherit; text-decoration: none; }
   font-family: 'JetBrains Mono', monospace;
 }
 .ctrl-btn:hover { color: #888; border-color: #444; }
-.ctrl-btn.active { color: #FF3B3B; border-color: #FF3B3B40; }
-
 .ctrl-spacer { flex: 1; }
-
 .offset-display {
   font-size: 11px;
   color: #555;
@@ -182,15 +284,6 @@ a { color: inherit; text-decoration: none; }
 }
 .info a { color: #444; }
 .info a:hover { color: #888; }
-
-/* Error */
-.error {
-  text-align: center;
-  padding: 80px 24px;
-  font-size: 14px;
-  color: #555;
-}
-.error a { color: #FF3B3B; }
 </style>
 </head>
 <body>
@@ -207,34 +300,24 @@ a { color: inherit; text-decoration: none; }
 <script>
 (function () {
 
-  // Parse URL params
   var params = new URLSearchParams(location.search);
-  var videoId = params.get('v');
-  var vttUrl = params.get('sub');
+  var ytVideoId = params.get('v');
+  var subUrl = params.get('sub');
+  var videoSrc = params.get('src');
   var content = document.getElementById('content');
 
-  if (!videoId || !vttUrl) {
-    content.innerHTML = '<div class="error">Missing parameters.<br><br>' +
-      '<span class="mono" style="font-size:12px;color:#444;">watch.html?v=VIDEO_ID&sub=VTT_URL</span></div>';
-    return;
-  }
-
-  // Parse VTT
+  // Shared VTT parser
   function parseVTT(text) {
     var cues = [];
     var blocks = text.replace(/\r\n/g, '\n').split('\n\n');
     for (var i = 0; i < blocks.length; i++) {
       var lines = blocks[i].trim().split('\n');
       for (var j = 0; j < lines.length; j++) {
-        var match = lines[j].match(/(\d{2}:\d{2}:\d{2}\.\d{3})\s+-->\s+(\d{2}:\d{2}:\d{2}\.\d{3})/);
-        if (match) {
-          var text = lines.slice(j + 1).join('\n').replace(/<[^>]+>/g, '');
-          if (text.trim()) {
-            cues.push({
-              start: parseTime(match[1]),
-              end: parseTime(match[2]),
-              text: text.trim()
-            });
+        var m = lines[j].match(/(\d{2}:\d{2}:\d{2}\.\d{3})\s+-->\s+(\d{2}:\d{2}:\d{2}\.\d{3})/);
+        if (m) {
+          var t = lines.slice(j + 1).join('\n').replace(/<[^>]+>/g, '');
+          if (t.trim()) {
+            cues.push({ start: parseTime(m[1]), end: parseTime(m[2]), text: t.trim() });
           }
           break;
         }
@@ -248,158 +331,376 @@ a { color: inherit; text-decoration: none; }
     return parseInt(p[0]) * 3600 + parseInt(p[1]) * 60 + parseFloat(p[2]);
   }
 
-  // Build DOM
-  content.innerHTML =
-    '<div class="player-wrap" id="player-wrap">' +
-      '<div class="video-container"><div id="yt-player"></div></div>' +
-      '<div class="sub-overlay"><span class="sub-overlay-text" id="sub-overlay-text"></span></div>' +
-    '</div>' +
-    '<div class="sub-display" id="sub-display">' +
-      '<div class="sub-text empty" id="sub-text">loading subtitles...</div>' +
-    '</div>' +
-    '<div class="controls">' +
-      '<button class="ctrl-btn mono" id="btn-fs" title="Fullscreen with subtitles">fullscreen</button>' +
-      '<button class="ctrl-btn mono" id="btn-offset-down" title="Subtitles earlier">&minus;0.5s</button>' +
-      '<span class="offset-display mono" id="offset-display">offset: 0.0s</span>' +
-      '<button class="ctrl-btn mono" id="btn-offset-up" title="Subtitles later">+0.5s</button>' +
-      '<div class="ctrl-spacer"></div>' +
-      '<button class="ctrl-btn mono" id="btn-dl" title="Download subtitle file">download .vtt</button>' +
-    '</div>' +
-    '<div class="info mono">' +
-      'subtitles from <a href="./">chigyusubs</a>' +
-    '</div>';
+  // ── Determine mode ──
 
-  var wrap = document.getElementById('player-wrap');
-  var subText = document.getElementById('sub-text');
-  var subOverlayText = document.getElementById('sub-overlay-text');
-  var offsetDisplay = document.getElementById('offset-display');
-  var cues = [];
-  var offset = 0;
-  var player = null;
-  var pollId = null;
-  var lastCueIdx = -1;
+  if (ytVideoId && subUrl) {
+    initPlayer('youtube', { videoId: ytVideoId, subUrl: subUrl });
+  } else if (videoSrc && subUrl) {
+    initPlayer('url', { videoSrc: videoSrc, subUrl: subUrl });
+  } else {
+    initPicker();
+  }
 
-  // Load VTT
-  fetch(vttUrl)
-    .then(function (r) {
-      if (!r.ok) throw new Error(r.status);
-      return r.text();
-    })
-    .then(function (text) {
+  // ── File picker mode ──
+
+  function initPicker() {
+    var videoFile = null;
+    var subFile = null;
+
+    var subLabel = subUrl ? decodeURIComponent(subUrl.split('/').pop()) : '';
+
+    content.innerHTML =
+      '<div class="picker">' +
+        '<div class="picker-section">' +
+          '<div class="picker-label mono">1. Video</div>' +
+          '<div class="drop-zone" id="drop-video">' +
+            '<div class="drop-zone-title">drop video file here</div>' +
+            '<div class="drop-zone-hint mono">click to browse &mdash; mp4, webm, mkv</div>' +
+            '<input type="file" id="input-video" accept="video/*,.mkv">' +
+          '</div>' +
+          '<div id="picked-video"></div>' +
+          '<div class="picker-divider mono">or paste a direct video URL</div>' +
+          '<input class="url-input mono" id="url-input" type="text" placeholder="https://example.com/video.mp4">' +
+        '</div>' +
+        '<div class="picker-section">' +
+          '<div class="picker-label mono">2. Subtitles</div>' +
+          (subUrl
+            ? '<div class="picked-file mono" id="picked-sub-default">' +
+                '<span class="label">from index</span>' +
+                '<span class="name">' + subLabel + '</span>' +
+                '<span class="remove" id="remove-default-sub">&times;</span>' +
+              '</div>' +
+              '<div class="picker-divider mono">or use your own subtitle file</div>'
+            : '') +
+          '<div class="drop-zone drop-zone-sm" id="drop-sub">' +
+            '<div class="drop-zone-title">' + (subUrl ? 'drop .vtt or .srt to replace' : 'drop subtitle file here') + '</div>' +
+            '<div class="drop-zone-hint mono">click to browse &mdash; .vtt, .srt</div>' +
+            '<input type="file" id="input-sub" accept=".vtt,.srt">' +
+          '</div>' +
+          '<div id="picked-sub"></div>' +
+        '</div>' +
+        '<button class="picker-btn mono" id="btn-play" disabled>play with subtitles</button>' +
+      '</div>';
+
+    var dropVideo = document.getElementById('drop-video');
+    var dropSub = document.getElementById('drop-sub');
+    var inputVideo = document.getElementById('input-video');
+    var inputSub = document.getElementById('input-sub');
+    var urlInput = document.getElementById('url-input');
+    var btnPlay = document.getElementById('btn-play');
+
+    function updateBtn() {
+      var hasVideo = videoFile || urlInput.value.trim();
+      var hasSub = subFile || subUrl;
+      btnPlay.disabled = !(hasVideo && hasSub);
+    }
+
+    // Drag & drop helpers
+    function setupDrop(zone, input, onFile) {
+      zone.addEventListener('click', function () { input.click(); });
+      zone.addEventListener('dragover', function (e) { e.preventDefault(); zone.classList.add('drag-over'); });
+      zone.addEventListener('dragleave', function () { zone.classList.remove('drag-over'); });
+      zone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length) onFile(e.dataTransfer.files[0]);
+      });
+      input.addEventListener('change', function () {
+        if (input.files.length) onFile(input.files[0]);
+      });
+    }
+
+    setupDrop(dropVideo, inputVideo, function (f) {
+      videoFile = f;
+      urlInput.value = '';
+      document.getElementById('picked-video').innerHTML =
+        '<div class="picked-file mono">' +
+          '<span class="label">file</span>' +
+          '<span class="name">' + f.name + '</span>' +
+          '<span class="remove" id="remove-video">&times;</span>' +
+        '</div>';
+      document.getElementById('remove-video').addEventListener('click', function () {
+        videoFile = null;
+        document.getElementById('picked-video').innerHTML = '';
+        updateBtn();
+      });
+      dropVideo.style.display = 'none';
+      updateBtn();
+    });
+
+    setupDrop(dropSub, inputSub, function (f) {
+      subFile = f;
+      var defaultSub = document.getElementById('picked-sub-default');
+      if (defaultSub) defaultSub.style.display = 'none';
+      document.getElementById('picked-sub').innerHTML =
+        '<div class="picked-file mono">' +
+          '<span class="label">file</span>' +
+          '<span class="name">' + f.name + '</span>' +
+          '<span class="remove" id="remove-sub">&times;</span>' +
+        '</div>';
+      document.getElementById('remove-sub').addEventListener('click', function () {
+        subFile = null;
+        document.getElementById('picked-sub').innerHTML = '';
+        if (defaultSub) defaultSub.style.display = '';
+        updateBtn();
+      });
+      dropSub.style.display = 'none';
+      updateBtn();
+    });
+
+    // Remove default sub
+    var removeDefault = document.getElementById('remove-default-sub');
+    if (removeDefault) {
+      removeDefault.addEventListener('click', function () {
+        subUrl = null;
+        document.getElementById('picked-sub-default').remove();
+        // Update drop zone text
+        dropSub.querySelector('.drop-zone-title').textContent = 'drop subtitle file here';
+        updateBtn();
+      });
+    }
+
+    urlInput.addEventListener('input', function () {
+      if (urlInput.value.trim()) {
+        videoFile = null;
+        document.getElementById('picked-video').innerHTML = '';
+        dropVideo.style.display = '';
+      }
+      updateBtn();
+    });
+
+    btnPlay.addEventListener('click', function () {
+      var vSrc = videoFile ? URL.createObjectURL(videoFile) : urlInput.value.trim();
+      if (subFile) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          initPlayer('native', { videoSrc: vSrc, subText: reader.result });
+        };
+        reader.readAsText(subFile);
+      } else if (subUrl) {
+        initPlayer('native', { videoSrc: vSrc, subUrl: subUrl });
+      }
+    });
+
+    updateBtn();
+  }
+
+  // ── Player mode ──
+
+  function initPlayer(mode, opts) {
+    content.innerHTML =
+      '<div class="player-wrap" id="player-wrap">' +
+        '<div class="video-container" id="video-container"></div>' +
+        '<div class="sub-overlay"><span class="sub-overlay-text" id="sub-overlay-text"></span></div>' +
+      '</div>' +
+      '<div class="sub-display" id="sub-display"' + (mode !== 'youtube' ? ' style="display:none"' : '') + '>' +
+        '<div class="sub-text empty" id="sub-text">loading subtitles...</div>' +
+      '</div>' +
+      '<div class="controls">' +
+        (mode !== 'youtube' ? '<button class="ctrl-btn mono" id="btn-textsub" title="Toggle text subtitle below video">text subs</button>' : '') +
+        '<button class="ctrl-btn mono" id="btn-fs" title="Fullscreen with subtitles (F)">fullscreen</button>' +
+        '<button class="ctrl-btn mono" id="btn-offset-down" title="Subtitles earlier">&minus;0.5s</button>' +
+        '<span class="offset-display mono" id="offset-display">offset: 0.0s</span>' +
+        '<button class="ctrl-btn mono" id="btn-offset-up" title="Subtitles later">+0.5s</button>' +
+        '<div class="ctrl-spacer"></div>' +
+        (opts.subUrl ? '<button class="ctrl-btn mono" id="btn-dl" title="Download subtitle file">download .vtt</button>' : '') +
+      '</div>' +
+      '<div class="info mono">subtitles from <a href="./">chigyusubs</a></div>';
+
+    var wrap = document.getElementById('player-wrap');
+    var container = document.getElementById('video-container');
+    var subText = document.getElementById('sub-text');
+    var subOverlay = document.getElementById('sub-overlay-text');
+    var offsetDisplay = document.getElementById('offset-display');
+    var cues = [];
+    var offset = 0;
+    var lastCueIdx = -1;
+
+    function updateSub(currentTime) {
+      if (cues.length === 0) return;
+      var t = currentTime + offset;
+      var found = -1;
+      for (var i = 0; i < cues.length; i++) {
+        if (t >= cues[i].start && t < cues[i].end) { found = i; break; }
+      }
+      if (found === lastCueIdx) return;
+      lastCueIdx = found;
+      if (found >= 0) {
+        subText.textContent = cues[found].text;
+        subText.className = 'sub-text noto';
+        subOverlay.textContent = cues[found].text;
+        subOverlay.style.display = '';
+      } else {
+        subText.textContent = '';
+        subText.className = 'sub-text empty';
+        subOverlay.textContent = '';
+        subOverlay.style.display = 'none';
+      }
+    }
+
+    function resetCue() { lastCueIdx = -1; }
+
+    // Load subtitles
+    function loadCues(text) {
       cues = parseVTT(text);
       subText.textContent = '';
       subText.className = 'sub-text empty';
-      if (cues.length === 0) {
-        subText.textContent = 'no cues found in subtitle file';
+      if (cues.length === 0) subText.textContent = 'no cues found in subtitle file';
+    }
+
+    if (opts.subText) {
+      loadCues(opts.subText);
+    } else if (opts.subUrl) {
+      fetch(opts.subUrl)
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+        .then(loadCues)
+        .catch(function () { subText.textContent = 'failed to load subtitles'; });
+    }
+
+    // ── YouTube mode ──
+    if (mode === 'youtube') {
+      container.innerHTML = '<div id="yt-player"></div>';
+      var pollId = null;
+      var player = null;
+
+      var tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(tag);
+
+      window.onYouTubeIframeAPIReady = function () {
+        player = new YT.Player('yt-player', {
+          videoId: opts.videoId,
+          playerVars: { fs: 0, rel: 0, modestbranding: 1 },
+          events: {
+            onReady: function () { startPoll(); },
+            onStateChange: function (e) {
+              if (e.data === YT.PlayerState.PLAYING) startPoll();
+              else if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) stopPoll();
+            }
+          }
+        });
+      };
+
+      function startPoll() {
+        if (pollId) return;
+        pollId = setInterval(function () {
+          if (player && player.getCurrentTime) updateSub(player.getCurrentTime());
+        }, 200);
       }
-    })
-    .catch(function () {
-      subText.textContent = 'failed to load subtitles';
-    });
+      function stopPoll() {
+        if (pollId) { clearInterval(pollId); pollId = null; }
+        if (player && player.getCurrentTime) updateSub(player.getCurrentTime());
+      }
+    }
 
-  // Load YouTube iframe API
-  var tag = document.createElement('script');
-  tag.src = 'https://www.youtube.com/iframe_api';
-  document.head.appendChild(tag);
+    // ── Native video mode (local file or URL) ──
+    if (mode === 'native' || mode === 'url') {
+      var video = document.createElement('video');
+      video.controls = true;
+      video.autoplay = true;
+      video.src = opts.videoSrc;
+      container.appendChild(video);
 
-  window.onYouTubeIframeAPIReady = function () {
-    player = new YT.Player('yt-player', {
-      videoId: videoId,
-      playerVars: {
-        fs: 0,
-        rel: 0,
-        modestbranding: 1
-      },
-      events: {
-        onReady: function () { startPoll(); },
-        onStateChange: function (e) {
-          if (e.data === YT.PlayerState.PLAYING) startPoll();
-          else if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) stopPoll();
+      video.addEventListener('timeupdate', function () {
+        updateSub(video.currentTime);
+      });
+
+      // Inject VTT as native <track> for fullscreen subtitle rendering
+      function addTrack(vttText) {
+        // Ensure valid VTT header
+        if (!vttText.trim().startsWith('WEBVTT')) {
+          vttText = 'WEBVTT\n\n' + vttText;
         }
+        var blob = new Blob([vttText], { type: 'text/vtt' });
+        var trackUrl = URL.createObjectURL(blob);
+        var track = document.createElement('track');
+        track.kind = 'subtitles';
+        track.label = 'English';
+        track.srclang = 'en';
+        track.src = trackUrl;
+        track.default = true;
+        video.appendChild(track);
+        // Force track to showing mode after it loads
+        track.addEventListener('load', function () {
+          if (video.textTracks.length > 0) {
+            video.textTracks[0].mode = 'showing';
+          }
+        });
+        // Also try setting it immediately for browsers that load sync
+        video.addEventListener('loadedmetadata', function () {
+          if (video.textTracks.length > 0) {
+            video.textTracks[0].mode = 'showing';
+          }
+        });
+      }
+
+      if (opts.subText) {
+        addTrack(opts.subText);
+      } else if (opts.subUrl) {
+        fetch(opts.subUrl)
+          .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+          .then(function (text) { addTrack(text); })
+          .catch(function () {});
+      }
+    }
+
+    // ── Shared controls ──
+
+    // Text sub toggle
+    var btnTextSub = document.getElementById('btn-textsub');
+    if (btnTextSub) {
+      var subDisplay = document.getElementById('sub-display');
+      btnTextSub.addEventListener('click', function () {
+        var visible = subDisplay.style.display !== 'none';
+        subDisplay.style.display = visible ? 'none' : '';
+        btnTextSub.style.color = visible ? '' : '#FF3B3B';
+        btnTextSub.style.borderColor = visible ? '' : '#FF3B3B40';
+      });
+    }
+
+    // Fullscreen
+    document.getElementById('btn-fs').addEventListener('click', function () {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        wrap.requestFullscreen();
       }
     });
-  };
+    document.addEventListener('fullscreenchange', function () {
+      wrap.classList.toggle('is-fullscreen', !!document.fullscreenElement);
+    });
 
-  function startPoll() {
-    if (pollId) return;
-    pollId = setInterval(updateSub, 200);
-  }
+    // Offset
+    document.getElementById('btn-offset-down').addEventListener('click', function () {
+      offset -= 0.5; resetCue();
+      offsetDisplay.textContent = 'offset: ' + offset.toFixed(1) + 's';
+    });
+    document.getElementById('btn-offset-up').addEventListener('click', function () {
+      offset += 0.5; resetCue();
+      offsetDisplay.textContent = 'offset: ' + offset.toFixed(1) + 's';
+    });
 
-  function stopPoll() {
-    if (pollId) { clearInterval(pollId); pollId = null; }
-    updateSub();
-  }
+    // Download
+    var dlBtn = document.getElementById('btn-dl');
+    if (dlBtn && opts.subUrl) {
+      dlBtn.addEventListener('click', function () {
+        var a = document.createElement('a');
+        a.href = opts.subUrl;
+        a.download = '';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      });
+    }
 
-  function updateSub() {
-    if (!player || !player.getCurrentTime || cues.length === 0) return;
-    var t = player.getCurrentTime() + offset;
-    var found = -1;
-    for (var i = 0; i < cues.length; i++) {
-      if (t >= cues[i].start && t < cues[i].end) {
-        found = i;
-        break;
+    // Keyboard
+    document.addEventListener('keydown', function (e) {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.key === 'f' || e.key === 'F') {
+        document.getElementById('btn-fs').click();
       }
-    }
-    if (found === lastCueIdx) return;
-    lastCueIdx = found;
-    if (found >= 0) {
-      subText.textContent = cues[found].text;
-      subText.className = 'sub-text noto';
-      subOverlayText.textContent = cues[found].text;
-      subOverlayText.style.display = '';
-    } else {
-      subText.textContent = '';
-      subText.className = 'sub-text empty';
-      subOverlayText.textContent = '';
-      subOverlayText.style.display = 'none';
-    }
+    });
   }
-
-  // Binary search would be better for large files, but linear scan is fine for <5000 cues
-
-  // Fullscreen
-  document.getElementById('btn-fs').addEventListener('click', function () {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      wrap.requestFullscreen();
-    }
-  });
-
-  document.addEventListener('fullscreenchange', function () {
-    wrap.classList.toggle('is-fullscreen', !!document.fullscreenElement);
-  });
-
-  // Offset controls
-  document.getElementById('btn-offset-down').addEventListener('click', function () {
-    offset -= 0.5;
-    lastCueIdx = -1;
-    offsetDisplay.textContent = 'offset: ' + offset.toFixed(1) + 's';
-    updateSub();
-  });
-  document.getElementById('btn-offset-up').addEventListener('click', function () {
-    offset += 0.5;
-    lastCueIdx = -1;
-    offsetDisplay.textContent = 'offset: ' + offset.toFixed(1) + 's';
-    updateSub();
-  });
-
-  // Download
-  document.getElementById('btn-dl').addEventListener('click', function () {
-    var a = document.createElement('a');
-    a.href = vttUrl;
-    a.download = '';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  });
-
-  // Keyboard shortcuts
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'f' || e.key === 'F') {
-      document.getElementById('btn-fs').click();
-    }
-  });
 
 })();
 </script>

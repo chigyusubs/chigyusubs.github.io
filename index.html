@@ -343,6 +343,8 @@ a { color: inherit; text-decoration: none; }
 
 <div class="footer mono">
   contribute &rarr; submit a PR to <a href="https://github.com/chigyusubs/chigyusubs.github.io/blob/main/registry.json">registry.json</a>
+  &nbsp;&middot;&nbsp; <a href="https://github.com/chigyusubs/chigyusubs-pipeline">pipeline</a>
+  &nbsp;&middot;&nbsp; <a href="https://github.com/chigyusubs/chigyusubs.github.io">source</a>
   <div id="tmdb-attr" style="display:none; margin-top:8px;">show data courtesy of <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer">TMDB</a></div>
 </div>
 
@@ -444,7 +446,13 @@ a { color: inherit; text-decoration: none; }
         });
     });
 
-    a.append(badge, fname, fsize, dl);
+    var watchLink = document.createElement('a');
+    watchLink.className = 'watch-btn mono';
+    watchLink.href = 'watch.html?sub=' + encodeURIComponent(file.raw_url);
+    watchLink.textContent = 'watch \u25B6';
+    watchLink.addEventListener('click', function (e) { e.stopPropagation(); });
+
+    a.append(badge, fname, fsize, dl, watchLink);
 
     var fileLink = fileLinks && fileLinks[name];
     if (fileLink) {
@@ -455,13 +463,8 @@ a { color: inherit; text-decoration: none; }
         thumb.src = 'https://img.youtube.com/vi/' + ytMatch[1] + '/mqdefault.jpg';
         thumb.alt = '';
         thumb.loading = 'lazy';
-        a.appendChild(thumb);
-        var watchBtn = document.createElement('a');
-        watchBtn.className = 'watch-btn mono';
-        watchBtn.href = 'watch.html?v=' + ytMatch[1] + '&sub=' + encodeURIComponent(file.raw_url);
-        watchBtn.textContent = 'watch \u25B6';
-        watchBtn.addEventListener('click', function (e) { e.stopPropagation(); });
-        a.appendChild(watchBtn);
+        a.insertBefore(thumb, watchLink);
+        watchLink.href = 'watch.html?v=' + ytMatch[1] + '&sub=' + encodeURIComponent(file.raw_url);
       }
       var linkBtn = document.createElement('a');
       linkBtn.className = 'folder-tmdb mono';
