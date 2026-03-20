@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-19T21:37:06.844Z",
+  "generated_at": "2026-03-20T14:42:38.765Z",
   "contributors": [
     {
       "name": "ChigyuSubs",
@@ -59,6 +59,11 @@
           "path": "the-great-escape/s00/s00e02.en.vtt",
           "raw_url": "https://raw.githubusercontent.com/chigyusubs/subtitles/main/the-great-escape/s00/s00e02.en.vtt",
           "size": 14633
+        },
+        {
+          "path": "the-great-escape/s00/s00e03.en.vtt",
+          "raw_url": "https://raw.githubusercontent.com/chigyusubs/subtitles/main/the-great-escape/s00/s00e03.en.vtt",
+          "size": 96682
         },
         {
           "path": "the-great-escape/s01/s01e01.en.vtt",
