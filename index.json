@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-21T12:05:08.614Z",
+  "generated_at": "2026-03-21T13:43:06.410Z",
   "contributors": [
     {
       "name": "ChigyuSubs",
@@ -129,6 +129,16 @@
           "path": "the-great-escape/s02/s02e07.en.vtt",
           "raw_url": "https://raw.githubusercontent.com/chigyusubs/subtitles/main/the-great-escape/s02/s02e07.en.vtt",
           "size": 52357
+        },
+        {
+          "path": "the-great-escape/s03/s03e01.en.vtt",
+          "raw_url": "https://raw.githubusercontent.com/chigyusubs/subtitles/main/the-great-escape/s03/s03e01.en.vtt",
+          "size": 55649
+        },
+        {
+          "path": "the-great-escape/s03/s03e02.en.vtt",
+          "raw_url": "https://raw.githubusercontent.com/chigyusubs/subtitles/main/the-great-escape/s03/s03e02.en.vtt",
+          "size": 72834
         },
         {
           "path": "youtube/killah-kuts-s01e02.en.vtt",
