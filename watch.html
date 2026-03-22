@@ -478,6 +478,13 @@ a { color: inherit; text-decoration: none; }
         };
         reader.readAsText(subFile);
       } else if (subUrl) {
+        // Update URL bar so the link is shareable
+        if (!videoFile && urlInput.value.trim()) {
+          var shareParams = new URLSearchParams();
+          shareParams.set('src', urlInput.value.trim());
+          shareParams.set('sub', subUrl);
+          history.replaceState(null, '', '?' + shareParams.toString());
+        }
         initPlayer('native', { videoSrc: vSrc, subUrl: subUrl });
       }
     });
