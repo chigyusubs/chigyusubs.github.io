@@ -28,15 +28,15 @@ You can link directly to the watch page with video and subtitle pre-loaded using
 
 **YouTube with subs:**
 ```
-https://chigyusubs.github.io/watch.html?v=gGDj3MsVqRc&sub=https%3A%2F%2Fraw.githubusercontent.com%2Fchigyusubs%2Fsubtitles%2Fmain%2Fyoutube%2Fthe-great-escape-s03e01.en.vtt
+https://chigyusubs.github.io/watch.html?v=gGDj3MsVqRc&sub=https://raw.githubusercontent.com/chigyusubs/subtitles/main/youtube/the-great-escape-s03e01.en.vtt
 ```
 
 **Direct video with subs:**
 ```
-https://chigyusubs.github.io/watch.html?src=https://example.com/video.mp4&sub=https%3A%2F%2Fraw.githubusercontent.com%2Fchigyusubs%2Fsubtitles%2Fmain%2Fthe-great-escape%2Fs03%2Fs03e01.en.vtt
+https://chigyusubs.github.io/watch.html?src=https://example.com/video.mp4&sub=https://raw.githubusercontent.com/chigyusubs/subtitles/main/the-great-escape/s03/s03e01.en.vtt
 ```
 
-URL-encode the `sub` parameter value (replace `://` with `%3A%2F%2F`, `/` with `%2F`).
+URL-encode `sub` and `src` values if they contain `&` or `=` characters. Simple URLs work without encoding.
 
 ## How it works
 
