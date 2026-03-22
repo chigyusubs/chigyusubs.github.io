@@ -16,6 +16,28 @@ Community subtitles for Japanese variety shows.
   - Subtitle offset controls
 - **Community contributions** — anyone can register their subtitle repo
 
+## Sharing links
+
+You can link directly to the watch page with video and subtitle pre-loaded using URL parameters:
+
+| Parameter | Description |
+|---|---|
+| `v` | YouTube video ID |
+| `src` | Direct video URL |
+| `sub` | Subtitle file URL (must be a direct/raw link) |
+
+**YouTube with subs:**
+```
+https://chigyusubs.github.io/watch.html?v=gGDj3MsVqRc&sub=https%3A%2F%2Fraw.githubusercontent.com%2Fchigyusubs%2Fsubtitles%2Fmain%2Fyoutube%2Fthe-great-escape-s03e01.en.vtt
+```
+
+**Direct video with subs:**
+```
+https://chigyusubs.github.io/watch.html?src=https://example.com/video.mp4&sub=https%3A%2F%2Fraw.githubusercontent.com%2Fchigyusubs%2Fsubtitles%2Fmain%2Fthe-great-escape%2Fs03%2Fs03e01.en.vtt
+```
+
+URL-encode the `sub` parameter value (replace `://` with `%3A%2F%2F`, `/` with `%2F`).
+
 ## How it works
 
 1. Contributors add their GitHub repo to [`registry.json`](registry.json)
