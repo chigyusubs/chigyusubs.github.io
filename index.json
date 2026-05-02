@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-02T07:45:51.414Z",
+  "generated_at": "2026-05-02T11:30:06.857Z",
   "contributors": [
     {
       "name": "ChigyuSubs",
@@ -164,6 +164,11 @@
           "path": "the-great-escape/s03/s03e07.en.vtt",
           "raw_url": "https://raw.githubusercontent.com/chigyusubs/subtitles/main/the-great-escape/s03/s03e07.en.vtt",
           "size": 92302
+        },
+        {
+          "path": "youtube/comedy-proof-jinnai-oogiri.en.vtt",
+          "raw_url": "https://raw.githubusercontent.com/chigyusubs/subtitles/main/youtube/comedy-proof-jinnai-oogiri.en.vtt",
+          "size": 64696
         },
         {
           "path": "youtube/killah-kuts-s01e02.en.vtt",
